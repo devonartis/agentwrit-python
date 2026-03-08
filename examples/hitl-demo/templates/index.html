@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentAuth SDK Demo — Ephemeral Agent Credentialing</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+<div class="container-wide">
+    <header>
+        <div>
+            <h1><span>AgentAuth</span> SDK Demo</h1>
+            <span class="header-sub">Ephemeral Agent Credentialing v1.2 · NIST IR 8596 · OWASP ASI03/ASI07</span>
+        </div>
+        {% if sdk_ready %}
+        <span class="status-badge ok">{{ client_id }}</span>
+        {% else %}
+        <span class="status-badge err">{{ init_error }}</span>
+        {% endif %}
+    </header>
+
+    <!-- Top: Quick Scenarios + Get Token side by side -->
+    <div class="grid-2">
+        <!-- Left: Quick Scenarios -->
+        <div class="panel">
+            <h3>Quick Scenarios</h3>
+            <div class="scenario-grid">
+                <button class="scenario-btn" onclick="runScenario('read-immediate')">
+                    <strong>Read Data</strong>
+                    <span>Immediate, no approval</span>
+                    <div><span class="badge badge-c1">C1</span> <span class="badge badge-c2">C2</span></div>
+                </button>
+                <button class="scenario-btn" onclick="runScenario('write-hitl')">
+                    <strong>Write (HITL)</strong>
+                    <span>Human approval required</span>
+                    <div><span class="badge badge-hitl">HITL</span> <span class="badge badge-c5">C5</span></div>
+                </button>
+                <button class="scenario-btn" onclick="runScenario('scope-violation')">
+                    <strong>Scope Violation</strong>
+                    <span>Exceed ceiling</span>
+                    <div><span class="badge badge-owasp">ASI03</span></div>
+                </button>
+                <button class="scenario-btn" onclick="runScenario('delegate')">
+                    <strong>Delegation</strong>
+                    <span>Attenuate scope</span>
+                    <div><span class="badge badge-c7">C7</span></div>
+                </button>
+                <button class="scenario-btn" onclick="runScenario('full-lifecycle')">
+                    <strong>Full Lifecycle</strong>
+                    <span>Get → revoke → verify</span>
+                    <div><span class="badge badge-c1">C1</span> <span class="badge badge-c4">C4</span></div>
+                </button>
+                <button class="scenario-btn" onclick="runScenario('blast-radius')">
+                    <strong>Blast Radius</strong>
+                    <span>CVE containment</span>
+                    <div><span class="badge badge-nist">CVE-68664</span></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right: Get Agent Token -->
+        <div class="panel">
+            <h3>Get Agent Token</h3>
+            <form hx-post="/htmx/get-token" hx-target="#token-result" hx-swap="innerHTML">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="agent_name">Agent Name</label>
+                        <input id="agent_name" name="agent_name" value="data-reader" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="scope">Scope</label>
+                        <input id="scope" name="scope" value="read:data:*" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task_id">Task ID</label>
+                        <input id="task_id" name="task_id" value="" placeholder="optional">
+                    </div>
+                    <div class="form-group">
+                        <label for="orch_id">Orchestrator</label>
+                        <input id="orch_id" name="orch_id" value="" placeholder="optional">
+                    </div>
+                </div>
+                <button type="submit" class="primary">Get Token</button>
+            </form>
+            <div id="token-result"></div>
+        </div>
+    </div>
+
+    <!-- Bottom: Delegation + Inspect/Revoke side by side -->
+    <div class="grid-2">
+        <!-- Left: Delegation -->
+        <div class="panel">
+            <h3>Delegate to Another Agent</h3>
+            <p class="story-id">C7 — scope can only narrow, never widen</p>
+            <form hx-post="/htmx/delegate" hx-target="#delegate-result" hx-swap="innerHTML">
+                <div class="form-group">
+                    <label>Delegator Token</label>
+                    <textarea id="delegator_token" name="delegator_token" rows="2" placeholder="Click 'Use for Delegation' above"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Delegate Agent</label>
+                        <input id="delegate_agent" name="delegate_agent" value="sub-agent">
+                    </div>
+                    <div class="form-group">
+                        <label>Delegated Scope</label>
+                        <input id="delegate_scope" name="delegate_scope" value="read:data:results">
+                    </div>
+                </div>
+                <button type="submit" class="primary">Delegate</button>
+            </form>
+            <div id="delegate-result"></div>
+        </div>
+
+        <!-- Right: Inspect/Revoke -->
+        <div class="panel">
+            <h3>Inspect / Validate / Revoke</h3>
+            <p class="story-id">C3 Zero-Trust · C4 Revocation</p>
+            <div class="form-group">
+                <label>Token</label>
+                <textarea id="inspect-token" name="token" rows="2" placeholder="Click 'Use for Inspect/Revoke' above"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="secondary"
+                        hx-post="/htmx/validate" hx-target="#inspect-result" hx-swap="innerHTML"
+                        hx-include="#inspect-token">Validate</button>
+                <button class="danger"
+                        hx-post="/htmx/revoke" hx-target="#inspect-result" hx-swap="innerHTML"
+                        hx-include="#inspect-token">Revoke</button>
+                <button class="secondary"
+                        hx-post="/htmx/validate" hx-target="#inspect-result" hx-swap="innerHTML"
+                        hx-include="#inspect-token">Verify Revoked</button>
+            </div>
+            <div id="inspect-result"></div>
+        </div>
+    </div>
+
+    <!-- Audit + Standards in a compact row -->
+    <div class="grid-2">
+        <div class="panel">
+            <h3>Audit Trail <span class="badge badge-c5" style="margin-left:4px;">C5</span></h3>
+            <button class="secondary" style="margin-bottom:8px;"
+                    hx-post="/htmx/audit" hx-target="#audit-result" hx-swap="innerHTML">
+                Load Events</button>
+            <div id="audit-result"></div>
+        </div>
+        <div class="panel" style="border-color: var(--accent);">
+            <h3>Standards</h3>
+            <table class="claims-table" style="font-size:0.75rem;">
+                <tr><td>Pattern</td><td><a href="https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md" style="color:var(--accent);">EAC v1.2</a></td></tr>
+                <tr><td>NIST IR 8596</td><td>Unique AI identities</td></tr>
+                <tr><td>NIST SP 800-207</td><td>Zero Trust</td></tr>
+                <tr><td>NIST NCCoE</td><td>Agent IAM response</td></tr>
+                <tr><td>OWASP 2026</td><td>ASI03, ASI07</td></tr>
+                <tr><td>IETF WIMSE</td><td>Workload identity</td></tr>
+                <tr><td>CVE-2025-68664</td><td>Blast radius containment</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function runScenario(name) {
+    const f = {
+        agent_name: document.getElementById('agent_name'),
+        scope: document.getElementById('scope'),
+        task_id: document.getElementById('task_id'),
+        orch_id: document.getElementById('orch_id'),
+    };
+    const s = {
+        'read-immediate': { agent:'data-reader', scope:'read:data:*', task:'quarterly-review', orch:'analytics' },
+        'write-hitl': { agent:'risk-writer', scope:'write:data:records', task:'risk-assessment', orch:'compliance' },
+        'scope-violation': { agent:'rogue-agent', scope:'admin:everything:*', task:'unauthorized', orch:'test' },
+        'delegate': { agent:'orchestrator', scope:'read:data:*', task:'multi-agent', orch:'delegation-demo' },
+        'full-lifecycle': { agent:'lifecycle-agent', scope:'read:data:*', task:'lifecycle', orch:'demo' },
+        'blast-radius': { agent:'blast-test', scope:'read:data:*', task:'cve-demo', orch:'security' },
+    }[name];
+    if (s) {
+        f.agent_name.value = s.agent;
+        f.scope.value = s.scope;
+        f.task_id.value = s.task;
+        f.orch_id.value = s.orch;
+        htmx.trigger(f.agent_name.closest('form'), 'submit');
+    }
+}
+</script>
+</body>
+</html>

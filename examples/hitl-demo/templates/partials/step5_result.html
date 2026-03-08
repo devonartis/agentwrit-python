@@ -1,0 +1,34 @@
+<div class="result-panel result-ok">
+    <strong>Pipeline complete -- all credentials revoked</strong>
+    {% if revoked %}
+    <p style="margin-top:6px; font-size:0.85rem;">
+        Revoked: {{ revoked | join(', ') }}
+    </p>
+    {% endif %}
+    {% if verified %}
+    <table class="claims-table" style="margin-top:8px;">
+        <tr style="border-bottom:2px solid var(--border);">
+            <td><strong>Credential</strong></td>
+            <td><strong>Status After Revocation</strong></td>
+        </tr>
+        {% for v in verified %}
+        <tr>
+            <td><code>{{ v.name }}</code></td>
+            <td>
+                {% if v.valid %}
+                <span style="color:var(--danger);">Still valid (revocation failed!)</span>
+                {% else %}
+                <span style="color:var(--success);">Revoked -- broker rejects it</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+    <p style="margin-top:10px; font-size:0.85rem; color:var(--text-secondary);">
+        The agent has surrendered all credentials. The broker's audit trail shows
+        <code>token_released</code> events for each revoked token. You can run
+        another scenario by selecting a different pipeline task above and starting
+        from Step 1.
+    </p>
+</div>

@@ -1,0 +1,37 @@
+<div class="result-panel result-hitl">
+    <strong>Human Approval Required</strong>
+    <p style="margin-top:8px; font-size:0.85rem;">
+        The agent wants to write its risk assessment to customer records. The broker
+        requires a human to approve this action because <code>write:data:*</code> is
+        a HITL-gated scope.
+    </p>
+    <table class="claims-table" style="margin:10px 0;">
+        <tr><td>Approval ID</td><td><code>{{ approval_id }}</code></td></tr>
+        <tr><td>Expires At</td><td>{{ expires_at }}</td></tr>
+        <tr><td>What agent wants to write</td><td>{{ analysis }}</td></tr>
+    </table>
+
+    <p style="font-size:0.85rem; margin-bottom:8px;">
+        <strong>Step 4: You are the human in the loop.</strong> Review the agent's
+        request and decide whether to approve or deny.
+    </p>
+
+    <form hx-post="/htmx/step4-approve" hx-target="#step3-result" hx-swap="innerHTML">
+        <input type="hidden" name="approval_id" value="{{ approval_id }}">
+        <input type="hidden" name="task_name" value="{{ task_name }}">
+        <div class="form-group">
+            <label for="principal">Your identity (who is approving this?)</label>
+            <input id="principal" name="principal" value="user:analyst@company.com" required>
+        </div>
+        <div class="btn-row">
+            <button type="submit" class="success">Approve -- Issue Write Credential</button>
+            <button type="button" class="danger"
+                    hx-post="/htmx/step4-deny"
+                    hx-target="#step3-result"
+                    hx-swap="innerHTML"
+                    hx-vals='{"approval_id": "{{ approval_id }}"}'>
+                Deny -- Block the Write
+            </button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,28 @@
+<div class="result-panel result-ok">
+    <strong>Delegation Successful</strong>
+    <span class="badge badge-c7" style="margin-left:6px;">C7 Delegation Chain</span>
+
+    <table class="claims-table" style="margin-top:10px;">
+        <tr><td>Delegate Agent</td><td><code>{{ delegate_sub }}</code></td></tr>
+        <tr><td>Delegated Scope</td><td><code>{{ delegate_scope }}</code></td></tr>
+    </table>
+
+    <div class="security-note">
+        <strong>C7 (Delegation Chain):</strong> Permissions narrowed from the delegator's scope
+        to <code>{{ delegate_scope }}</code>. The broker enforces that scope can only shrink.
+        <br><strong>IETF WIMSE:</strong> "Each hop must explicitly scope and re-bind the security context."
+    </div>
+
+    <label style="margin-top:10px; display:block; font-size:0.78rem; color:var(--text-secondary);">
+        Delegated JWT (editable — use for inspection)
+    </label>
+    <textarea class="token-display" rows="3" style="width:100%; resize:vertical;"
+              onclick="this.select()"
+              id="last-delegated-token">{{ delegated_token }}</textarea>
+    <div class="btn-row" style="margin-top:6px;">
+        <button class="secondary" type="button"
+                onclick="document.getElementById('inspect-token').value = document.getElementById('last-delegated-token').value;">
+            Use for Inspect/Revoke
+        </button>
+    </div>
+</div>

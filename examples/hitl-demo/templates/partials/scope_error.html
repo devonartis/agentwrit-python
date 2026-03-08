@@ -1,0 +1,17 @@
+<div class="result-panel result-error">
+    <strong>Scope Ceiling Violation</strong>
+    <span class="badge badge-c2" style="margin-left:6px;">C2</span>
+    <span class="badge badge-owasp" style="margin-left:2px;">ASI03</span>
+
+    <p style="margin-top:8px; font-size:0.85rem;">
+        Requested: <code>{{ scope }}</code><br>
+        {{ error }}
+    </p>
+
+    <div class="security-note">
+        <strong>Pattern C2 (Task-Scoped Tokens):</strong> Scope attenuation is a one-way
+        operation — permissions can only narrow, never widen. The app was registered with a
+        scope ceiling, and this request exceeded it. This addresses <em>OWASP ASI03</em>
+        (Identity and Privilege Abuse): an agent cannot escalate beyond what the operator authorized.
+    </div>
+</div>

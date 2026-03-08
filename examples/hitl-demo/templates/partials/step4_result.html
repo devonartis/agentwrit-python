@@ -1,0 +1,17 @@
+<div class="result-panel result-ok">
+    <strong>Approved! Write credential issued.</strong>
+    <p style="margin-top:6px; font-size:0.85rem;">
+        Approved by <code>{{ principal }}</code> -- this identity is now cryptographically
+        bound to the credential via the <code>original_principal</code> JWT claim.
+        The audit trail shows exactly who authorized this agent to write.
+    </p>
+    <table class="claims-table" style="margin-top:8px;">
+        <tr><td>Agent</td><td><code>{{ claims.get('sub', 'N/A') }}</code></td></tr>
+        <tr><td>Scope</td><td><code>{{ claims.get('scope', []) }}</code></td></tr>
+        <tr><td>Approved By</td><td><code>{{ claims.get('original_principal', 'N/A') }}</code></td></tr>
+    </table>
+    <details style="margin-top:8px;">
+        <summary style="font-size:0.75rem; color:var(--text-secondary); cursor:pointer;">Show JWT</summary>
+        <div class="token-display">{{ token }}</div>
+    </details>
+</div>

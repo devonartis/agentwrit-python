@@ -1,0 +1,13 @@
+<div class="result-panel result-ok">
+    <strong>Read credential issued (no approval needed)</strong>
+    <table class="claims-table">
+        <tr><td>Agent</td><td><code>{{ claims.get('sub', 'N/A') }}</code></td></tr>
+        <tr><td>Scope</td><td><code>{{ claims.get('scope', []) }}</code></td></tr>
+        <tr><td>Task</td><td><code>{{ claims.get('task_id', 'N/A') }}</code></td></tr>
+        <tr><td>Orchestrator</td><td><code>{{ claims.get('orch_id', 'N/A') }}</code></td></tr>
+    </table>
+    <details style="margin-top:8px;">
+        <summary style="font-size:0.75rem; color:var(--text-secondary); cursor:pointer;">Show JWT</summary>
+        <div class="token-display">{{ token }}</div>
+    </details>
+</div>

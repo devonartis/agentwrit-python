@@ -1,0 +1,17 @@
+{% if result.valid %}
+<div class="result-panel result-ok">
+    <strong>Valid</strong>
+    {% if result.claims %}
+    <table class="claims-table">
+        {% for key, value in result.claims.items() %}
+        <tr><td>{{ key }}</td><td><code>{{ value }}</code></td></tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% else %}
+<div class="result-panel result-error">
+    <strong>Invalid</strong>
+    {% if result.error %}<br>{{ result.error }}{% endif %}
+</div>
+{% endif %}

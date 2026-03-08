@@ -1,0 +1,41 @@
+<div class="result-panel result-info">
+    <strong>Audit Trail</strong>
+    <span class="badge badge-c5" style="margin-left:6px;">C5 Immutable Audit</span>
+    <span style="font-size:0.75rem; color:var(--text-secondary); margin-left:8px;">
+        {{ events|length }} most recent events
+    </span>
+
+    <table class="claims-table" style="margin-top:10px; font-size:0.78rem;">
+        <tr style="border-bottom:2px solid var(--border);">
+            <td><strong>Event</strong></td>
+            <td><strong>Agent/Detail</strong></td>
+            <td><strong>Outcome</strong></td>
+        </tr>
+        {% for e in events %}
+        <tr>
+            <td>
+                <code>{{ e.event_type }}</code>
+                <br><span style="color:var(--text-secondary); font-size:0.7rem;">{{ e.timestamp }}</span>
+            </td>
+            <td>
+                {% if e.agent_id %}<code style="font-size:0.7rem;">{{ e.agent_id }}</code>{% endif %}
+                {% if e.detail %}<br><span style="font-size:0.72rem;">{{ e.detail }}</span>{% endif %}
+            </td>
+            <td>
+                {% if e.outcome == 'success' %}
+                <span style="color:var(--success);">{{ e.outcome }}</span>
+                {% else %}
+                <span style="color:var(--danger);">{{ e.outcome }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="security-note" style="margin-top:10px;">
+        <strong>Pattern C5:</strong> Every event is hash-chained (prev_hash links to the
+        previous event). PII is sanitized. The audit trail is append-only and tamper-evident.
+        This implements the <em>NIST NCCoE</em> recommendation: "test whether audit logs can
+        reconstruct the full story of a multi-agent workflow after the fact."
+    </div>
+</div>

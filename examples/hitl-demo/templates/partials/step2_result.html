@@ -1,0 +1,28 @@
+<div class="result-panel result-info">
+    <strong>Data retrieved ({{ records|length }} records)</strong>
+    <table class="claims-table" style="margin-top:8px;">
+        <tr style="border-bottom:2px solid var(--border);">
+            <td><strong>ID</strong></td>
+            <td><strong>Customer</strong></td>
+            <td><strong>Revenue</strong></td>
+            <td><strong>Risk</strong></td>
+        </tr>
+        {% for r in records %}
+        <tr>
+            <td><code>{{ r.id }}</code></td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.revenue }}</td>
+            <td>
+                {% if r.risk == 'medium' %}
+                <span style="color:var(--warning);">{{ r.risk }}</span>
+                {% else %}
+                {{ r.risk }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p style="margin-top:10px; font-size:0.85rem;">
+        <strong>Agent analysis:</strong> {{ analysis }}
+    </p>
+</div>
