@@ -286,9 +286,9 @@ The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devona
 
 | Guide | Description |
 |-------|-------------|
-| [Concepts](docs/concepts.md) | Architecture, security model, scopes, HITL, and delegation |
+| [Concepts](docs/concepts.md) | Architecture, security model, scopes, and delegation |
 | [Getting Started](docs/getting-started.md) | Install, connect, and issue your first credential in 5 minutes |
-| [Developer Guide](docs/developer-guide.md) | HITL UI patterns, multi-agent delegation, error handling, and framework integration |
+| [Developer Guide](docs/developer-guide.md) | Multi-agent delegation, error handling, and framework integration |
 | [API Reference](docs/api-reference.md) | Complete method signatures, exception hierarchy, and behavior reference |
 
 For broker setup and administration, see the [AgentAuth broker documentation](https://github.com/devonartis/agentAuth/tree/develop/docs).

@@ -11,7 +11,7 @@ This document explains why AgentAuth exists, how it works, and the security mode
 - [Why Use the SDK](#why-use-the-sdk)
 - [Key Concepts](#key-concepts)
   - [Scopes](#scopes)
-  - [Human-in-the-Loop (HITL)](#human-in-the-loop-hitl)
+
   - [SPIFFE Identities](#spiffe-identities)
   - [Delegation](#delegation)
   - [Token Lifecycle](#token-lifecycle)
@@ -48,8 +48,6 @@ AgentAuth implements the [Ephemeral Agent Credentialing](https://github.com/devo
 
 **Credentials die with the task.** Token TTL is 5 minutes by default. When the agent finishes, it revokes its own credential. A stolen token is useless within minutes.
 
-**Sensitive operations require human approval.** When an agent requests `write:accounts:transfers`, the broker refuses until a human explicitly approves. The approving human's identity is cryptographically embedded in the credential — not just logged, but provably bound to the authorization.
-
 **Delegation can only narrow, never widen.** When Agent A gives Agent B a subset of its permissions, the broker enforces that the scope strictly narrows. The delegation chain is signed at every hop.
 
 ---
@@ -70,7 +68,6 @@ graph TB
         AuthGroup["App Auth<br/>/v1/app/auth<br/>/v1/app/launch-tokens"]
         CredGroup["Credentials<br/>/v1/challenge<br/>/v1/register"]
         MgmtGroup["Management<br/>/v1/delegate<br/>/v1/token/validate<br/>/v1/token/release"]
-        HITLGroup["HITL Approvals<br/>/v1/app/approvals/*"]
     end
 
     Agents["🤖 Your AI Agents"]
@@ -87,7 +84,7 @@ graph TB
     style AuthGroup fill:#fef9c3,stroke:#eab308
     style CredGroup fill:#fef9c3,stroke:#eab308
     style MgmtGroup fill:#fef9c3,stroke:#eab308
-    style HITLGroup fill:#fef9c3,stroke:#eab308
+
 ```
 
 ---
@@ -203,7 +200,7 @@ reg_resp = requests.post(f"{broker_url}/v1/register", json={
 token = reg_resp.json()["access_token"]
 
 # You STILL need to handle: token caching, renewal, app JWT renewal,
-# HITL approval flow, retry with backoff, thread safety, secret protection...
+# retry with backoff, thread safety, secret protection...
 ```
 
 ### With the SDK (3 lines)
@@ -221,7 +218,7 @@ The SDK eliminates three categories of bugs:
 
 **Timing bugs.** The nonce has a 30-second TTL. If your code does anything slow between getting the nonce and registering, registration fails silently. The SDK fetches the nonce and registers in the same flow — well under 1 second.
 
-**State management.** App JWT renewal, token caching, HITL flow control, retry with backoff, thread safety — all handled internally.
+**State management.** App JWT renewal, token caching, retry with backoff, thread safety — all handled internally.
 
 ---
 
@@ -268,44 +265,6 @@ graph LR
     style OK fill:#bbf7d0,stroke:#16a34a
     style ERR fill:#fecaca,stroke:#dc2626
 ```
-
-### Human-in-the-Loop (HITL)
-
-The operator can designate certain scopes as requiring human approval. When your agent requests a HITL-gated scope, the SDK raises `HITLApprovalRequired` — this is not an error, it is a flow control signal.
-
-```mermaid
-sequenceDiagram
-    participant Agent as 🤖 Agent Code
-    participant SDK as 📦 SDK
-    participant Broker as 🔐 Broker
-    participant Human as 👤 Human Approver
-
-    rect rgb(254, 226, 226)
-        Note over Agent,Broker: Initial Request — Blocked
-        Agent->>SDK: get_token("writer", ["write:data:*"])
-        SDK->>Broker: POST /v1/app/launch-tokens
-        Broker-->>SDK: 403 hitl_approval_required
-        SDK-->>Agent: raise HITLApprovalRequired
-    end
-
-    rect rgb(219, 234, 254)
-        Note over Agent,Human: Human Review
-        Agent->>Human: Show approval dialog
-        Human-->>Agent: Approved ✓
-    end
-
-    rect rgb(209, 250, 229)
-        Note over Agent,Broker: Approved Retry — Success
-        Agent->>Broker: POST /v1/app/approvals/{id}/approve
-        Broker-->>Agent: approval_token
-        Agent->>SDK: get_token(approval_token=...)
-        SDK->>Broker: POST /v1/register
-        Broker-->>SDK: JWT with original_principal
-        SDK-->>Agent: token ✓
-    end
-```
-
-The `original_principal` claim in the JWT is not a log entry that someone might or might not check later. It is cryptographically embedded in the credential. Every system that validates this token can verify exactly who approved the agent's access.
 
 ### SPIFFE Identities
 
@@ -399,7 +358,7 @@ The SDK enforces these security properties automatically:
 | **Ephemeral keys** | Every `get_token()` call generates a fresh Ed25519 keypair in memory. The private key never touches disk. Even if the process memory is dumped, the key only exists in volatile memory and goes out of scope after signing. |
 | **Task-scoped tokens** | Agents can only access what they request, within the app's scope ceiling. No master keys, no broad permissions. |
 | **Short TTLs** | Tokens expire in minutes. A stolen token becomes useless quickly — unlike the 24-hour OAuth tokens common in traditional systems. |
-| **HITL provenance** | When a human approves, their identity is cryptographically bound to the JWT — not just logged. Every downstream system can verify who authorized the action. |
+
 | **Scope attenuation** | Delegation can only narrow permissions. An agent cannot grant more access than it was given. |
 | **Thread safety** | Token cache and app authentication state are protected by `threading.Lock`. Safe for concurrent agents in multi-threaded applications. |
 | **TLS by default** | Broker connections verify TLS certificates. The `verify` parameter defaults to `True` per NIST SP 800-207 guidance. |
@@ -409,7 +368,7 @@ The SDK enforces these security properties automatically:
 
 ## Standards Alignment
 
-The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md) pattern (v1.2), with seven core components:
+The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md) pattern (v1.2), with six core components:
 
 | Component | Standard | What It Does |
 |-----------|----------|-------------|
@@ -417,7 +376,7 @@ The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devona
 | **C2: Task-Scoped Tokens** | NIST IR 8596 | `action:resource:identifier` scopes with ceiling enforcement |
 | **C3: Zero-Trust Enforcement** | NIST SP 800-207 | Every request validated independently; no implicit trust |
 | **C4: Expiration & Revocation** | OWASP ASI03 | Short TTLs + explicit `revoke_token()` + broker-side JTI revocation |
-| **C5: HITL Authorization** | NIST NCCoE | Human approval cryptographically embedded in credential |
+
 | **C6: Comprehensive Audit** | SOC 2 / NIST | All credential operations logged with agent identity and scope |
 | **C7: Delegation Chain Verification** | IETF WIMSE | Scope attenuation + chain signing at every delegation hop |
 
@@ -433,6 +392,5 @@ Additional standards alignment:
 | Where to Go | What You'll Learn |
 |-------------|-------------------|
 | [Getting Started](getting-started.md) | Install the SDK, connect to a broker, issue your first credential |
-| [Developer Guide](developer-guide.md) | HITL UI patterns, multi-agent delegation, error handling, complete examples |
-| [HITL Implementation Guide](hitl-implementation-guide.md) | Four patterns for building human approval workflows |
+| [Developer Guide](developer-guide.md) | Multi-agent delegation, error handling, complete examples |
 | [API Reference](api-reference.md) | Complete method signatures, exceptions, caching behavior |

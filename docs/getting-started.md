@@ -10,7 +10,6 @@ Get your first agent credential in 5 minutes.
 - [Connect and Authenticate](#connect-and-authenticate)
 - [Issue Your First Token](#issue-your-first-token)
 - [Use the Token](#use-the-token)
-- [Handle HITL Approval](#handle-hitl-approval)
 - [Revoke When Done](#revoke-when-done)
 - [What Just Happened](#what-just-happened)
 - [Next Steps](#next-steps)
@@ -108,31 +107,6 @@ print(resp.json())
 
 ---
 
-## Handle HITL Approval
-
-Some scopes require human approval before the broker issues a credential. The SDK tells you when this happens:
-
-```python
-from agentauth import HITLApprovalRequired
-
-try:
-    token = client.get_token("writer", ["write:data:records"])
-except HITLApprovalRequired as e:
-    print(f"Approval needed: {e.approval_id}")
-    print(f"Must approve before: {e.expires_at}")
-
-    # Present e.approval_id to a human for review.
-    # After they approve, retry with the resulting token:
-    token = client.get_token(
-        "writer", ["write:data:records"],
-        approval_token=approved_token,
-    )
-```
-
-See the [HITL Implementation Guide](hitl-implementation-guide.md) for four patterns to build approval workflows.
-
----
-
 ## Revoke When Done
 
 When your agent finishes its task, revoke the credential:
@@ -176,5 +150,4 @@ On subsequent calls with the same agent name and scope, step 1 returns the cache
 |-------|-------------------|
 | [Concepts](concepts.md) | Architecture, security model, and why AgentAuth works this way |
 | [Developer Guide](developer-guide.md) | Multi-agent delegation, error handling, framework integration, complete examples |
-| [HITL Implementation Guide](hitl-implementation-guide.md) | Four patterns for building human approval UIs |
 | [API Reference](api-reference.md) | Complete method signatures and exception reference |
