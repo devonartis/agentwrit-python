@@ -141,7 +141,7 @@ client = AgentAuthClient(broker_url, client_id, client_secret, max_retries=5)
 
 Expected: On transient failures, the SDK retries up to `max_retries` times with
 exponential backoff. On 429, the SDK waits for `Retry-After` seconds before retrying.
-On permanent 4xx errors (401, 403 except HITL), the SDK raises immediately without
+On permanent 4xx errors (401, 403), the SDK raises immediately without
 retry. If all retries are exhausted, `BrokerUnavailableError` is raised.
 
 ---
@@ -178,56 +178,6 @@ Expected: `ScopeCeilingError` is raised. The exception message includes the
 requested scope and is actionable (the developer knows what to fix). The exception
 has attributes for programmatic access (e.g., `e.requested_scope`, `e.detail`).
 No 403 is raised as a generic error.
-
----
-
-### SDK-S6: HITL Approval Flow
-
-Who: The developer.
-
-What: The developer requests a scope that overlaps the app's `hitl_scopes`. The
-broker returns 403 with `error: "hitl_approval_required"`, `approval_id`, and
-`expires_at` from `POST /v1/app/launch-tokens`. The SDK raises `HITLApprovalRequired`
-with the approval_id and expires_at. The developer's app surfaces this to the
-end-user. After the human approves (via `POST /v1/app/approvals/{id}/approve` with
-`principal: "user:alice@company.com"`), the developer retries `get_token` with the
-`approval_token` returned by the approval endpoint. The SDK passes this token to
-`POST /v1/app/launch-tokens` as `approval_token`, and the flow completes normally.
-
-Why: HITL is the core security innovation of AgentAuth. Some scopes (like
-`write:accounts:transfers`) are too dangerous for automated issuance -- a human
-must approve. The SDK must make this flow ergonomic: raise a specific exception
-(not a generic 403), include all the data the developer needs to build an approval
-UI, and accept the approval token on retry. The human in the loop is the END-USER,
-not the operator.
-
-Setup: Test app registered with `hitl_scopes: ["write:data:*"]`. Broker running.
-Admin secret available for approval endpoint calls.
-
-Code:
-```python
-from agentauth.errors import HITLApprovalRequired
-
-try:
-    token = client.get_token("action-agent", ["write:data:sensitive"])
-except HITLApprovalRequired as e:
-    # e.approval_id -- the approval request ID (e.g., "apr-a1b2c3d4e5f6")
-    # e.expires_at -- when the approval expires (RFC3339)
-    # Developer's app shows approval UI to end-user...
-    # After human approves, developer gets approval_token back
-
-    # Retry with approval token
-    token = client.get_token(
-        "action-agent",
-        ["write:data:sensitive"],
-        approval_token=approval_token,
-    )
-```
-
-Expected: First `get_token` raises `HITLApprovalRequired` with `approval_id` (string,
-`apr-` prefix) and `expires_at` (RFC3339 string). After approval, second `get_token`
-with `approval_token` succeeds and returns a valid JWT. The JWT's `original_principal`
-claim contains the approving human's identity.
 
 ---
 
@@ -475,7 +425,7 @@ during backoff.
 | crypto | `src/agentauth/crypto.py` | Ed25519 keygen + nonce signing |
 | retry | `src/agentauth/retry.py` | HTTP retry with backoff + 429 handling |
 | client (auth) | `src/agentauth/client.py` | `__init__`, `_authenticate_app`, `_ensure_app_token` |
-| client (get_token) | `src/agentauth/client.py` | `get_token` with full 8-step flow + HITL |
+| client (get_token) | `src/agentauth/client.py` | `get_token` with challenge-response flow |
 | client (ops) | `src/agentauth/client.py` | `delegate`, `revoke_token`, `validate_token` |
 | token cache | `src/agentauth/token.py` | In-memory token cache with renewal tracking |
 
@@ -488,7 +438,7 @@ during backoff.
 | SDK-S10 | `test_errors.py` | Secret not in any string output |
 | SDK-S4, S13 | `test_retry.py` | Retries on 5xx/429, no retry on 4xx, respects Retry-After |
 | SDK-S1 | `test_client_auth.py` | Client init calls /v1/app/auth, bad creds raise AuthenticationError |
-| SDK-S2, S6 | `test_client_get_token.py` | get_token calls 3 endpoints, HITL raises HITLApprovalRequired |
+| SDK-S2 | `test_client_get_token.py` | get_token calls 3 endpoints, errors raise correct exceptions |
 | SDK-S7, S8 | `test_client_ops.py` | delegate/revoke/validate call correct endpoints |
 | SDK-S3 | `test_token_cache.py` | Cache hit, scope-order invariant, renewal threshold, expiry eviction |
 | SDK-S11 | code review | No verify=False in source |
@@ -500,7 +450,6 @@ during backoff.
 | SDK-S1 | `test_app_auth.py` | Client initializes against real broker |
 | SDK-S2 | `test_get_token.py` | JWT returned, validates with broker |
 | SDK-S3 | `test_get_token.py` | Same token on second call |
-| SDK-S6 | `test_hitl.py` | HITLApprovalRequired raised, retry with approval_token works |
 | SDK-S7 | `test_delegation.py` | Delegated JWT has attenuated scope |
 | SDK-S8 | `test_revocation.py` | Token invalid after revoke |
 | SDK-S12 | `test_app_auth.py` | Audit events match standard flow |
