@@ -1,6 +1,6 @@
 [project]
 name = "agentauth"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python SDK for the AgentAuth broker -- ephemeral scoped credentials for AI agents via Ed25519 challenge-response"
 readme = "README.md"
 license = { text = "MIT" }
