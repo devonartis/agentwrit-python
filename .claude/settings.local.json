@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export AA_ADMIN_SECRET=\"live-test-secret-32bytes-long-ok\")",
+      "Read(//Users/divineartis/proj/agentauth-core/**)",
+      "Bash(./scripts/stack_up.sh)",
+      "Bash(curl:*)",
+      "Bash(./scripts/stack_down.sh)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rm:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(grep -ri \"hitl\\\\|approval\\\\|oidc\\\\|federation\\\\|sidecar\" src/ tests/ --include=*.py)",
+      "Bash(grep -n \"HITL\\\\|Human.*Approv\\\\|approval\" docs/*.md README.md)",
+      "Bash(grep -n \"HITLGroup\\\\|hitl\" docs/*.md README.md)",
+      "Bash(export AGENTAUTH_BROKER_URL=http://127.0.0.1:8080)",
+      "Bash(export AGENTAUTH_ADMIN_SECRET=\"live-test-secret-32bytes-long-ok\")",
+      "Bash(export AGENTAUTH_CLIENT_ID=\"si-eb1f407632bc\")",
+      "Bash(export AGENTAUTH_CLIENT_SECRET=\"45d2850f0089d71d811e370fd5577230720cd7f5d9033d2071185f281101813d\")",
+      "Bash(git merge:*)"
+    ]
+  }
+}
