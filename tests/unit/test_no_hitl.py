@@ -7,8 +7,6 @@ import inspect
 import pathlib
 from typing import Final
 
-import pytest
-
 SRC_DIR: Final[pathlib.Path] = pathlib.Path(__file__).resolve().parent.parent.parent / "src"
 
 

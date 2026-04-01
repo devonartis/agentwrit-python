@@ -100,8 +100,7 @@ class TestTokenCaching:
     def test_different_scope_gets_different_token(self, client: AgentAuthClient) -> None:
         """Different scopes produce separate cache entries (scope is part of the key).
 
-        Uses two read scopes -- write:data:* is HITL-gated on the test app
-        and would raise HITLApprovalRequired, not demonstrate cache isolation.
+        Uses two read scopes to demonstrate cache isolation by scope key.
         """
         token_all: str = client.get_token("cache-key-agent", ["read:data:*"])
         token_narrow: str = client.get_token("cache-key-agent", ["read:data:logs"])

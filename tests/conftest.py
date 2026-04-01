@@ -98,8 +98,8 @@ def admin_token(broker_url: str) -> str:
     """Admin JWT used for audit queries in tests.
 
     Admin token has: admin:launch-tokens:*, admin:revoke:*, admin:audit:*
-    NOTE: The approval endpoint POST /v1/app/approvals/{id}/approve requires
-    app:launch-tokens:* scope -- use app_token fixture for that, not this one.
+    NOTE: Some endpoints require app:launch-tokens:* scope --
+    use app_token fixture for those, not this one.
     """
     secret: str | None = os.environ.get("AGENTAUTH_ADMIN_SECRET")
     if not secret:
