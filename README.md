@@ -25,7 +25,6 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 - **Ephemeral identities** — every agent instance gets a unique Ed25519 keypair, generated in memory and never persisted to disk
 - **Task-scoped tokens** — credentials are limited to exactly what the agent needs (`read:data:customers`, not `read:*:*`)
 - **Short-lived by default** — tokens expire in minutes, not hours or days
-- **Human-in-the-loop** — sensitive operations require explicit human approval, cryptographically bound to the issued credential
 - **Delegation chains** — agents can delegate narrower permissions to other agents, with scope attenuation enforced at every hop
 
 The SDK wraps the [AgentAuth broker](https://github.com/devonartis/agentAuth) API into simple Python calls. What takes 40+ lines of manual Ed25519 key management, nonce signing, and token caching becomes three lines:
@@ -55,7 +54,7 @@ pip install git+https://github.com/devonartis/agentauth-python-sdk
 
 ```python
 import os
-from agentauth import AgentAuthClient, HITLApprovalRequired
+from agentauth import AgentAuthClient
 
 # 1. Connect — authenticates your app with the broker on creation
 client = AgentAuthClient(
@@ -74,23 +73,13 @@ resp = requests.get(
     headers={"Authorization": f"Bearer {token}"},
 )
 
-# 4. Handle human-in-the-loop approval for sensitive scopes
-try:
-    write_token = client.get_token("writer", scope=["write:data:records"])
-except HITLApprovalRequired as e:
-    # Present e.approval_id to a human, get their approval, then retry
-    write_token = client.get_token(
-        "writer", scope=["write:data:records"],
-        approval_token=approved_token,
-    )
-
-# 5. Delegate a narrower scope to another agent
+# 4. Delegate a narrower scope to another agent
 delegated = client.delegate(
     token, to_agent_id="spiffe://agentauth/agent/summarizer",
     scope=["read:data:reports"], ttl=120,
 )
 
-# 6. Validate and revoke
+# 5. Validate and revoke
 result = client.validate_token(token)  # {"valid": True, "claims": {...}}
 client.revoke_token(token)             # Immediate invalidation
 ```
@@ -111,7 +100,6 @@ graph TB
         AuthGroup["App Auth<br/>/v1/app/auth<br/>/v1/app/launch-tokens"]
         CredGroup["Credentials<br/>/v1/challenge<br/>/v1/register"]
         MgmtGroup["Management<br/>/v1/delegate<br/>/v1/token/validate<br/>/v1/token/release"]
-        HITLGroup["HITL Approvals<br/>/v1/app/approvals/*"]
     end
 
     Agents["🤖 Your AI Agents"]
@@ -128,7 +116,6 @@ graph TB
     style AuthGroup fill:#fef9c3,stroke:#eab308
     style CredGroup fill:#fef9c3,stroke:#eab308
     style MgmtGroup fill:#fef9c3,stroke:#eab308
-    style HITLGroup fill:#fef9c3,stroke:#eab308
 ```
 
 ## Deployment Topology
@@ -164,18 +151,13 @@ graph LR
         Ext["External SaaS"]
     end
 
-    Human["👤 Human Approver<br/><i>HITL approval UI</i>"]
-
     SDK ==>|"TLS · mTLS optional"| BrokerAPI
     A1 ==>|"Bearer JWT"| DB
     A2 ==>|"Bearer JWT"| Files
     A3 ==>|"Bearer JWT"| Ext
-    Human -.->|"Approve / Deny"| BrokerAPI
-
     style AppHost fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
     style BrokerHost fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
     style Downstream fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
-    style Human fill:#fce7f3,stroke:#ec4899,stroke-width:2px
 ```
 
 ## The Credential Flow
@@ -233,42 +215,6 @@ sequenceDiagram
     SDK-->>App: JWT string
 ```
 
-## HITL (Human-in-the-Loop) Approval
-
-When an agent requests a sensitive scope, the broker requires human approval:
-
-```mermaid
-sequenceDiagram
-    participant Agent as 🤖 Agent Code
-    participant SDK as 📦 SDK
-    participant Broker as 🔐 Broker
-    participant Human as 👤 Human Approver
-
-    rect rgb(254, 226, 226)
-        Note over Agent,Broker: Phase 1 — Request Blocked
-        Agent->>SDK: get_token("writer", ["write:data:*"])
-        SDK->>Broker: POST /v1/app/launch-tokens
-        Broker-->>SDK: 403 hitl_approval_required
-        SDK-->>Agent: raise HITLApprovalRequired
-    end
-
-    rect rgb(219, 234, 254)
-        Note over Agent,Human: Phase 2 — Human Review
-        Agent->>Human: Show approval dialog
-        Human-->>Agent: Approved ✓
-    end
-
-    rect rgb(209, 250, 229)
-        Note over Agent,Broker: Phase 3 — Approved Retry
-        Agent->>Broker: POST /v1/app/approvals/{id}/approve
-        Broker-->>Agent: approval_token
-        Agent->>SDK: get_token(approval_token=...)
-        SDK->>Broker: POST /v1/register
-        Broker-->>SDK: JWT with original_principal
-        SDK-->>Agent: token ✓
-    end
-```
-
 ## Delegation Chain
 
 Agents can delegate narrower permissions to other agents:
@@ -302,7 +248,6 @@ graph TD
 
     Base --> Auth["<b>AuthenticationError</b><br/>HTTP 401 · Bad credentials"]
     Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
-    Base --> HITL["<b>HITLApprovalRequired</b><br/>HTTP 403 · Human approval needed"]
     Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
     Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
     Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
@@ -310,7 +255,6 @@ graph TD
     style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
     style Auth fill:#ef4444,color:#fff,stroke:#dc2626
     style Scope fill:#ef4444,color:#fff,stroke:#dc2626
-    style HITL fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
     style Rate fill:#ef4444,color:#fff,stroke:#dc2626
     style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
     style Expired fill:#ef4444,color:#fff,stroke:#dc2626
@@ -323,7 +267,6 @@ graph TD
 | **Ephemeral keys** | Ed25519 keypairs generated in memory per `get_token()` call. Private keys never touch disk. |
 | **Task-scoped tokens** | `action:resource:identifier` scope format enforced by the broker. |
 | **Short TTLs** | Default 5-minute token lifetime. Stolen tokens expire quickly. |
-| **HITL provenance** | Approving human's identity is cryptographically embedded in the JWT (`original_principal` claim). |
 | **Scope attenuation** | Delegation can only narrow permissions. Enforced at every hop in the chain. |
 | **Thread safety** | Token cache and app auth state protected by `threading.Lock`. |
 | **TLS by default** | Certificate verification enabled. No silent `verify=False`. |
@@ -343,10 +286,9 @@ The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devona
 
 | Guide | Description |
 |-------|-------------|
-| [Concepts](docs/concepts.md) | Architecture, security model, scopes, HITL, and delegation |
+| [Concepts](docs/concepts.md) | Architecture, security model, scopes, and delegation |
 | [Getting Started](docs/getting-started.md) | Install, connect, and issue your first credential in 5 minutes |
-| [Developer Guide](docs/developer-guide.md) | HITL UI patterns, multi-agent delegation, error handling, and framework integration |
-| [HITL Implementation Guide](docs/hitl-implementation-guide.md) | Four patterns for building human approval workflows |
+| [Developer Guide](docs/developer-guide.md) | Multi-agent delegation, error handling, and framework integration |
 | [API Reference](docs/api-reference.md) | Complete method signatures, exception hierarchy, and behavior reference |
 
 For broker setup and administration, see the [AgentAuth broker documentation](https://github.com/devonartis/agentAuth/tree/develop/docs).

@@ -3,7 +3,6 @@
 Translates broker HTTP errors into actionable Python exceptions that map to
 the Ephemeral Agent Credentialing pattern:
   - ScopeCeilingError: C2 (Task-Scoped Tokens) -- scope attenuation enforced
-  - HITLApprovalRequired: HITL gate -- human authorization required (NIST NCCoE)
   - RateLimitError: broker rate limiting respected (C3 Zero-Trust)
   - BrokerUnavailableError: transient failure (retry exhausted)
   - TokenExpiredError: C4 (Automatic Expiration)
@@ -11,9 +10,7 @@ the Ephemeral Agent Credentialing pattern:
 All SDK exceptions inherit from AgentAuthError. The parse_error_response()
 function converts broker HTTP error bodies into the appropriate exception type.
 
-The broker returns two error formats:
-  - RFC 7807 application/problem+json (most errors)
-  - HITL format: {"error": "hitl_approval_required", "approval_id": ..., "expires_at": ...}
+The broker returns RFC 7807 application/problem+json for all errors.
 
 SECURITY INVARIANT: client_secret must NEVER appear in any error message,
 repr, or log output from this module.
@@ -74,28 +71,6 @@ class ScopeCeilingError(AgentAuthError):
         super().__init__(message, status_code=status_code, error_code=error_code)
 
 
-class HITLApprovalRequired(AgentAuthError):  # noqa: N818
-    """Scope requires human-in-the-loop approval (HTTP 403, hitl_approval_required).
-
-    The developer's app must present the approval_id to the end-user,
-    then retry the request with the resulting approval_token.
-    """
-
-    def __init__(
-        self,
-        *,
-        approval_id: str,
-        expires_at: str,
-    ) -> None:
-        self.approval_id = approval_id
-        self.expires_at = expires_at
-        super().__init__(
-            f"HITL approval required (approval_id={approval_id})",
-            status_code=403,
-            error_code="hitl_approval_required",
-        )
-
-
 class RateLimitError(AgentAuthError):
     """Broker rate limit exceeded (HTTP 429)."""
 
@@ -122,7 +97,7 @@ class TokenExpiredError(AgentAuthError):
 # ── Response parser ────────────────────────────────────────────────────────
 
 
-# Broker error body shapes (RFC 7807 and HITL-specific)
+# Broker error body shapes (RFC 7807)
 class _RFC7807Body:
     """Type alias for RFC 7807 problem+json response fields."""
 
@@ -136,8 +111,7 @@ def parse_error_response(
 ) -> AgentAuthError:
     """Convert a broker HTTP error response into the appropriate exception.
 
-    Checks for the HITL format first (body has "error": "hitl_approval_required"),
-    then dispatches on status_code and error_code.
+    Dispatches on status_code and error_code from the RFC 7807 body.
 
     Args:
         status_code: HTTP status code from the broker response.
@@ -160,12 +134,6 @@ def parse_error_response(
         parsed_body = body
     else:
         parsed_body = {}
-
-    # HITL format takes priority -- different from RFC 7807
-    if parsed_body.get("error") == "hitl_approval_required":
-        approval_id: str = str(parsed_body.get("approval_id", ""))
-        expires_at: str = str(parsed_body.get("expires_at", ""))
-        return HITLApprovalRequired(approval_id=approval_id, expires_at=expires_at)
 
     detail_raw: object = parsed_body.get("detail", parsed_body.get("title", ""))
     detail: str = str(detail_raw) if detail_raw else ""

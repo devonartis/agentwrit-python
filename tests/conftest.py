@@ -4,12 +4,12 @@
 
 Integration tests use a single broker app called "sdk-integration" registered
 with two scope tiers:
-  - read:data:*   -- issued immediately, no human approval needed
-  - write:data:*  -- HITL-gated: requires human approval before token is issued
+  - read:data:*   -- issued immediately
+  - write:data:*  -- issued immediately
 
 This single app covers all test scenarios:
   - Normal flow: client.get_token("agent", ["read:data:*"]) → JWT directly
-  - HITL flow:   client.get_token("agent", ["write:data:*"]) → HITLApprovalRequired
+  - Write flow:  client.get_token("agent", ["write:data:*"]) → JWT directly
 
 The app ID (app-sdk-integration-...) and client credentials below are local
 test fixtures only -- valid against a locally running broker Docker container.
@@ -32,15 +32,14 @@ They are NOT production credentials and NOT shared anywhere.
    # Response: {"access_token": "eyJ...", "expires_in": 300}
    ```
 
-3. Register the test app (read:data:* immediate, write:data:* requires HITL):
+3. Register the test app:
    ```bash
    curl -s -X POST http://127.0.0.1:8080/v1/admin/apps \\
      -H "Authorization: Bearer <admin-token>" \\
      -H "Content-Type: application/json" \\
      -d '{
        "name": "sdk-integration",
-       "scopes": ["read:data:*", "write:data:*"],
-       "hitl_scopes": ["write:data:*"]
+       "scopes": ["read:data:*", "write:data:*"]
      }'
    # Response: {"client_id": "...", "client_secret": "..."}
    # Save these values as env vars below.
@@ -81,7 +80,7 @@ def app_credentials() -> dict[str, str]:
     """Credentials for the sdk-integration test app.
 
     This is a LOCAL test app registered against the Docker broker.
-    It has scopes ["read:data:*", "write:data:*"] with hitl_scopes=["write:data:*"].
+    It has scopes ["read:data:*", "write:data:*"].
     Set AGENTAUTH_CLIENT_ID and AGENTAUTH_CLIENT_SECRET before running.
     """
     client_id: str | None = os.environ.get("AGENTAUTH_CLIENT_ID")
@@ -96,11 +95,11 @@ def app_credentials() -> dict[str, str]:
 
 @pytest.fixture(scope="session")
 def admin_token(broker_url: str) -> str:
-    """Admin JWT used for audit queries and HITL approval in tests.
+    """Admin JWT used for audit queries in tests.
 
     Admin token has: admin:launch-tokens:*, admin:revoke:*, admin:audit:*
-    NOTE: The approval endpoint POST /v1/app/approvals/{id}/approve requires
-    app:launch-tokens:* scope -- use app_token fixture for that, not this one.
+    NOTE: Some endpoints require app:launch-tokens:* scope --
+    use app_token fixture for those, not this one.
     """
     secret: str | None = os.environ.get("AGENTAUTH_ADMIN_SECRET")
     if not secret:
@@ -122,8 +121,7 @@ def app_token(client: AgentAuthClient) -> str:
     """App-level JWT for the sdk-integration test app.
 
     Carries scope: app:launch-tokens:*, app:agents:*, app:audit:read
-    Used by HITL tests to call POST /v1/app/approvals/{id}/approve,
-    which requires app:launch-tokens:* scope (not admin scope).
+    Used by tests that need an app-scoped JWT.
 
     Reuses the already-authenticated client's token to avoid making a second
     POST /v1/app/auth call that would hit the per-client_id rate limit.
@@ -143,7 +141,7 @@ def client(broker_url: str, app_credentials: dict[str, str]) -> AgentAuthClient:
 
     Scopes available:
       - read:data:*   → issued immediately
-      - write:data:*  → raises HITLApprovalRequired (HITL-gated)
+      - write:data:*  → issued immediately
     """
     return AgentAuthClient(
         broker_url=broker_url,

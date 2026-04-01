@@ -1,16 +1,15 @@
 # Developer Guide
 
-A comprehensive guide to building Python applications with the AgentAuth SDK. This covers credential management, HITL approval handling, multi-agent delegation, error handling, and framework integration.
+A comprehensive guide to building Python applications with the AgentAuth SDK. This covers credential management, multi-agent delegation, error handling, and framework integration.
 
 ## Table of Contents
 
 - [Part 1: Agent Credentials](#part-1-agent-credentials)
-- [Part 2: Human-in-the-Loop Approval](#part-2-human-in-the-loop-approval)
-- [Part 3: Multi-Agent Delegation](#part-3-multi-agent-delegation)
-- [Part 4: Credential Lifecycle](#part-4-credential-lifecycle)
-- [Part 5: Error Handling](#part-5-error-handling)
-- [Part 6: Security Properties](#part-6-security-properties)
-- [Part 7: Framework Integration](#part-7-framework-integration)
+- [Part 2: Multi-Agent Delegation](#part-2-multi-agent-delegation)
+- [Part 3: Credential Lifecycle](#part-3-credential-lifecycle)
+- [Part 4: Error Handling](#part-4-error-handling)
+- [Part 5: Security Properties](#part-5-security-properties)
+- [Part 6: Framework Integration](#part-6-framework-integration)
 - [Complete Example](#complete-example)
 
 ---
@@ -128,90 +127,7 @@ If omitted, `task_id` defaults to `"default"` and `orch_id` defaults to `"sdk"`.
 
 ---
 
-## Part 2: Human-in-the-Loop Approval
-
-Some operations are too sensitive for an AI agent to perform without human oversight. The operator can designate certain scopes as requiring HITL approval.
-
-### How HITL Works in Code
-
-When you request a HITL-gated scope, the SDK raises `HITLApprovalRequired` instead of returning a token. This is not an error — it is a flow control signal.
-
-```python
-from agentauth import HITLApprovalRequired
-
-try:
-    token = client.get_token("writer", ["write:data:records"])
-except HITLApprovalRequired as approval:
-    # The broker wants a human to approve this
-    print(f"Approval needed: {approval.approval_id}")
-    print(f"Must be approved before: {approval.expires_at}")
-```
-
-### The Approval Workflow
-
-```mermaid
-sequenceDiagram
-    participant Code as 🔧 Your Code
-    participant UI as 🖥️ App UI
-    participant Broker as 🔐 Broker
-
-    rect rgb(254, 226, 226)
-        Code->>Broker: get_token()
-        Broker-->>Code: HITLApprovalRequired
-    end
-
-    rect rgb(219, 234, 254)
-        Code->>UI: Show approval dialog
-        UI->>UI: User clicks Approve
-    end
-
-    rect rgb(209, 250, 229)
-        UI->>Broker: POST /v1/app/approvals/{id}/approve
-        Broker-->>UI: approval_token
-        UI-->>Code: approval_token
-        Code->>Broker: get_token(approval_token=...)
-        Broker-->>Code: JWT (with original_principal)
-    end
-```
-
-### Building the Approval UI
-
-Your application is responsible for showing the approval request to the right person. A minimal implementation:
-
-```python
-import requests as http
-
-# 1. Show the approval to your user (translate scope to plain language)
-show_approval_dialog(
-    approval_id=approval.approval_id,
-    what_agent_wants="Write risk assessment to customer records",
-    expires=approval.expires_at,
-)
-
-# 2. When the user approves, call the broker's approval endpoint
-app_token = client._ensure_app_token()
-resp = http.post(
-    f"{broker_url}/v1/app/approvals/{approval.approval_id}/approve",
-    headers={"Authorization": f"Bearer {app_token}"},
-    json={"principal": "user:alice@company.com"},
-)
-approval_token = resp.json()["approval_token"]
-
-# 3. Retry get_token with the approval token
-token = client.get_token(
-    "writer",
-    ["write:data:records"],
-    approval_token=approval_token,
-)
-```
-
-The `original_principal` claim in the resulting JWT is cryptographically embedded — not just a log entry. Every system that validates this token can verify who approved the agent's access.
-
-For detailed UI patterns (inline, polling, webhook, Slack), see the [HITL Implementation Guide](hitl-implementation-guide.md).
-
----
-
-## Part 3: Multi-Agent Delegation
+## Part 2: Multi-Agent Delegation
 
 In multi-agent pipelines, an orchestrator agent might need to give a worker agent a subset of its own permissions.
 
@@ -275,7 +191,7 @@ graph TD
 
 ---
 
-## Part 4: Credential Lifecycle
+## Part 3: Credential Lifecycle
 
 ### Revoking When Done
 
@@ -318,7 +234,7 @@ else:
 
 ---
 
-## Part 5: Error Handling
+## Part 4: Error Handling
 
 ### Exception Hierarchy
 
@@ -330,7 +246,6 @@ graph TD
 
     Base --> Auth["<b>AuthenticationError</b><br/>HTTP 401 · Bad credentials"]
     Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
-    Base --> HITL["<b>HITLApprovalRequired</b><br/>HTTP 403 · Human approval needed"]
     Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
     Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
     Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
@@ -338,20 +253,16 @@ graph TD
     style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
     style Auth fill:#ef4444,color:#fff,stroke:#dc2626
     style Scope fill:#ef4444,color:#fff,stroke:#dc2626
-    style HITL fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
     style Rate fill:#ef4444,color:#fff,stroke:#dc2626
     style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
     style Expired fill:#ef4444,color:#fff,stroke:#dc2626
 ```
 
 ```python
-from agentauth import AgentAuthError, HITLApprovalRequired, ScopeCeilingError
+from agentauth import AgentAuthError, ScopeCeilingError
 
 try:
     token = client.get_token("agent", scope)
-except HITLApprovalRequired:
-    # Handle HITL flow specifically
-    ...
 except ScopeCeilingError as e:
     # Fix the scope or contact your operator
     print(f"Scope too broad: {e}")
@@ -428,7 +339,7 @@ flowchart TD
 
 ---
 
-## Part 6: Security Properties
+## Part 5: Security Properties
 
 When you use this SDK, these security properties are enforced automatically:
 
@@ -437,7 +348,7 @@ When you use this SDK, these security properties are enforced automatically:
 | **Ephemeral keys** | Every `get_token` call generates a fresh Ed25519 keypair in memory. The private key never touches disk. Even if your process is dumped, the key only exists in volatile memory. |
 | **Task-scoped tokens** | Agents can only access what they request, within the app's scope ceiling. No master keys. |
 | **Short TTLs** | Tokens expire in minutes. A stolen token is useless quickly. |
-| **HITL provenance** | When a human approves, their identity is in the JWT — not just in a log. Every downstream system can verify who authorized the action. |
+
 | **Scope attenuation** | Delegation can only narrow permissions. An agent cannot grant more access than it has. |
 | **Thread safety** | Token cache and app auth state are protected by locks. Safe for concurrent agents. |
 | **TLS by default** | Broker connections verify TLS certificates. No silent `verify=False`. |
@@ -445,7 +356,7 @@ When you use this SDK, these security properties are enforced automatically:
 
 ---
 
-## Part 7: Framework Integration
+## Part 6: Framework Integration
 
 ### FastAPI
 
@@ -498,7 +409,7 @@ def analyze():
 
 ```python
 from celery import Celery
-from agentauth import AgentAuthClient, HITLApprovalRequired
+from agentauth import AgentAuthClient
 
 app = Celery("tasks", broker="redis://localhost:6379")
 
@@ -523,14 +434,14 @@ def process_data(task_id: str):
 
 ## Complete Example
 
-A data pipeline agent that reads, analyzes, writes (with HITL), and cleans up:
+A data pipeline agent that reads, analyzes, writes, and cleans up:
 
 ```python
 """Data pipeline agent with credential lifecycle management."""
 
 import os
 import requests as http
-from agentauth import AgentAuthClient, HITLApprovalRequired
+from agentauth import AgentAuthClient
 
 # Connect to the broker
 client = AgentAuthClient(
@@ -539,7 +450,7 @@ client = AgentAuthClient(
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
 )
 
-# Step 1: Get read credentials (automatic, no approval needed)
+# Step 1: Get read credentials
 read_token = client.get_token(
     "data-reader",
     ["read:data:*"],
@@ -555,29 +466,14 @@ data = http.get(
 ).json()
 print(f"Read {len(data)} customer records")
 
-# Step 3: Request write credentials (may require HITL approval)
-try:
-    write_token = client.get_token(
-        "risk-writer",
-        ["write:data:records"],
-        task_id="quarterly-analysis",
-    )
-except HITLApprovalRequired as approval:
-    print(f"Human approval needed: {approval.approval_id}")
+# Step 3: Get write credentials
+write_token = client.get_token(
+    "risk-writer",
+    ["write:data:records"],
+    task_id="quarterly-analysis",
+)
 
-    # In production: show approval UI to the human
-    # This is a simplified example — see HITL Implementation Guide
-    # for full patterns
-    approval_token = get_approval_from_human(approval.approval_id)
-
-    write_token = client.get_token(
-        "risk-writer",
-        ["write:data:records"],
-        approval_token=approval_token,
-    )
-    print("Write token issued (with human approval)")
-
-# Step 4: Write results using the approved credential
+# Step 4: Write results
 http.post(
     "https://api.internal/risk-assessments",
     headers={"Authorization": f"Bearer {write_token}"},
@@ -596,6 +492,5 @@ print("All credentials revoked. Pipeline complete.")
 
 | Guide | What You'll Learn |
 |-------|-------------------|
-| [HITL Implementation Guide](hitl-implementation-guide.md) | Four patterns for building human approval workflows |
 | [API Reference](api-reference.md) | Complete method signatures and exception reference |
 | [Concepts](concepts.md) | Architecture, security model, and standards alignment |

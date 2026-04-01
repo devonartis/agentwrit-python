@@ -15,7 +15,7 @@ Complete reference for the AgentAuth Python SDK public API.
   - [AgentAuthError](#agentautherror)
   - [AuthenticationError](#authenticationerror)
   - [ScopeCeilingError](#scopeceilingerror)
-  - [HITLApprovalRequired](#hitlapprovalrequired)
+
   - [RateLimitError](#ratelimiterror)
   - [BrokerUnavailableError](#brokerunavailableerror)
   - [TokenExpiredError](#tokenexpirederror)
@@ -88,7 +88,6 @@ client.get_token(
     *,
     task_id: str | None = None,
     orch_id: str | None = None,
-    approval_token: str | None = None,
 ) -> str
 ```
 
@@ -102,15 +101,13 @@ Obtains a scoped agent credential. Handles the full 8-step flow internally: cach
 | `scope` | `list[str]` | required | Scopes to request (e.g., `["read:data:*"]`). Must be within the app's scope ceiling. |
 | `task_id` | `str \| None` | `None` | Task identifier. Appears in the JWT claims and the SPIFFE subject. Defaults to `"default"` if not provided. |
 | `orch_id` | `str \| None` | `None` | Orchestrator identifier. Appears in the JWT claims and the SPIFFE subject. Defaults to `"sdk"` if not provided. |
-| `approval_token` | `str \| None` | `None` | HITL approval token from the broker's approval endpoint. Pass this on retry after catching `HITLApprovalRequired`. |
-
 **Returns:** `str` — JWT string (EdDSA-signed, three dot-separated parts).
 
 **Raises:**
 
 | Exception | When | What to Do |
 |-----------|------|-----------|
-| `HITLApprovalRequired` | Scope overlaps operator-defined HITL scopes | Present `exc.approval_id` to user, retry with `approval_token` after approval |
+
 | `ScopeCeilingError` | Scope exceeds the app's ceiling | Fix the scope or contact your operator to expand the ceiling |
 | `AuthenticationError` | App JWT expired and re-authentication failed | Check credentials |
 | `BrokerUnavailableError` | All retries exhausted (5xx or connection error) | Broker is down |
@@ -130,13 +127,6 @@ token = client.get_token(
     ["read:data:customers"],
     task_id="q4-analysis",
     orch_id="data-pipeline",
-)
-
-# With HITL approval (retry after catching HITLApprovalRequired)
-token = client.get_token(
-    "writer",
-    ["write:data:records"],
-    approval_token=approval_token,
 )
 ```
 
@@ -272,7 +262,7 @@ from agentauth import (
     AgentAuthError,
     AuthenticationError,
     ScopeCeilingError,
-    HITLApprovalRequired,
+
     RateLimitError,
     BrokerUnavailableError,
     TokenExpiredError,
@@ -287,7 +277,6 @@ graph TD
 
     Base --> Auth["<b>AuthenticationError</b><br/>HTTP 401 · Bad credentials"]
     Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
-    Base --> HITL["<b>HITLApprovalRequired</b><br/>HTTP 403 · Human approval needed"]
     Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
     Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
     Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
@@ -295,7 +284,6 @@ graph TD
     style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
     style Auth fill:#ef4444,color:#fff,stroke:#dc2626
     style Scope fill:#ef4444,color:#fff,stroke:#dc2626
-    style HITL fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
     style Rate fill:#ef4444,color:#fff,stroke:#dc2626
     style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
     style Expired fill:#ef4444,color:#fff,stroke:#dc2626
@@ -350,19 +338,6 @@ Raised when the requested scope exceeds the app's allowed ceiling (HTTP 403, `sc
 | `error_code` | `str \| None` | Broker error code |
 
 **Resolution:** Request a narrower scope, or ask your operator to expand the app's scope ceiling.
-
----
-
-### HITLApprovalRequired
-
-Raised when the scope requires human-in-the-loop approval (HTTP 403, `hitl_approval_required`). **This is not a failure** — it is a flow control signal indicating that a human must approve before the credential can be issued.
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `approval_id` | `str` | Unique approval request ID (e.g., `"apr-a1b2c3d4e5f6"`) |
-| `expires_at` | `str` | RFC 3339 timestamp — approval must be completed before this time |
-
-**Handling:** Present `approval_id` to a human, get their approval via the broker's approval endpoint, then retry `get_token` with the resulting `approval_token`. See the [HITL Implementation Guide](hitl-implementation-guide.md) for patterns.
 
 ---
 
@@ -471,5 +446,4 @@ The SDK uses the same broker API as any other client — no special endpoints, n
 |-------|-------------------|
 | [Concepts](concepts.md) | Architecture, security model, and standards alignment |
 | [Getting Started](getting-started.md) | Install the SDK and issue your first credential |
-| [Developer Guide](developer-guide.md) | HITL patterns, delegation, error handling, and complete examples |
-| [HITL Implementation Guide](hitl-implementation-guide.md) | Four patterns for building human approval workflows |
+| [Developer Guide](developer-guide.md) | Delegation, error handling, and complete examples |

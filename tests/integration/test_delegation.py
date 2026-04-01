@@ -16,7 +16,6 @@ import pytest
 import requests as requests_lib
 
 from agentauth import AgentAuthClient
-from agentauth.errors import ScopeCeilingError
 
 
 @pytest.mark.integration
@@ -28,11 +27,9 @@ class TestDelegation:
     ) -> None:
         """Delegated JWT has the requested attenuated scope.
 
-        Uses read:data:* as the delegator scope (not write:data:* which is
-        HITL-gated on the test app). Scope attenuation is demonstrated by
-        delegating read:data:results (a narrower subset of read:data:*).
+        Uses read:data:* as the delegator scope. Scope attenuation is
+        demonstrated by delegating read:data:results (a narrower subset).
         """
-        # Get a token with read:data:* scope (no HITL required)
         agent_token: str = client.get_token("delegator-agent", ["read:data:*"])
 
         # Validate to get agent_id (SPIFFE ID) for the delegate
@@ -42,8 +39,6 @@ class TestDelegation:
             timeout=10,
         )
         assert validate_resp.status_code == 200
-        delegator_claims: dict[str, object] = validate_resp.json()["claims"]  # type: ignore[assignment]
-
         # Register a second agent to receive the delegation
         delegate_token: str = client.get_token(
             "delegate-agent",

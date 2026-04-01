@@ -30,7 +30,6 @@ tests/
   integration/            -- integration tests (broker required)
     test_app_auth.py      -- app authentication flow
     test_get_token.py     -- full token acquisition flow
-    test_hitl.py          -- HITL approval flow
     test_delegation.py    -- delegation flow
     test_errors.py        -- error scenarios against real broker
   <feature>/
@@ -86,8 +85,7 @@ Before running integration tests:
 2. Register a test app:
    ```bash
    ./bin/aactl app register --name sdk-test \
-     --scopes "read:data:*,write:data:*" \
-     --hitl-scopes "write:data:*"
+     --scopes "read:data:*,write:data:*"
    ```
    Save the `client_id` and `client_secret`.
 

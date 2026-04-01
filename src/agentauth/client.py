@@ -55,6 +55,7 @@ class _ChallengeResponse(TypedDict):
     """GET /v1/challenge response -- 64-char hex nonce with 30s TTL."""
 
     nonce: str
+    expires_in: int
 
 
 class _RegisterResponse(TypedDict):
@@ -227,7 +228,6 @@ class AgentAuthClient:
         *,
         task_id: str | None = None,
         orch_id: str | None = None,
-        approval_token: str | None = None,
     ) -> str:
         """Obtain a scoped agent credential via the 3-step broker flow.
 
@@ -248,16 +248,10 @@ class AgentAuthClient:
             scope: List of scope strings (e.g. ``["read:data:*"]``).
             task_id: Optional task identifier threaded through to /v1/register.
             orch_id: Optional orchestrator identifier threaded through.
-            approval_token: HITL approval token returned after human approval.
-                Pass this on retry after catching :exc:`HITLApprovalRequired`.
-
         Returns:
             Agent JWT string.
 
         Raises:
-            HITLApprovalRequired: Scope requires human approval. Catch this,
-                present ``exc.approval_id`` to the user, then retry with
-                ``approval_token=<user-approved token>``.
             ScopeCeilingError: Requested scope exceeds the app's ceiling.
             AgentAuthError: On any other broker error.
         """
@@ -272,16 +266,12 @@ class AgentAuthClient:
         # 3. POST /v1/app/launch-tokens
         # The launch token is a single-use, short-lived token that authorizes
         # one agent registration. It binds the agent_name and scope to a
-        # specific registration attempt. If approval_token is provided
-        # (from a HITL approval), it is attached here so the broker knows
-        # this request has been human-approved.
+        # specific registration attempt.
         launch_url = f"{self._broker_url}/v1/app/launch-tokens"
         launch_payload: dict[str, object] = {
             "agent_name": agent_name,
             "allowed_scope": scope,
         }
-        if approval_token is not None:
-            launch_payload["approval_token"] = approval_token
 
         launch_resp = self._request(
             "POST",
