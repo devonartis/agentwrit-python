@@ -16,7 +16,6 @@ import pytest
 import requests as requests_lib
 
 from agentauth import AgentAuthClient
-from agentauth.errors import ScopeCeilingError
 
 
 @pytest.mark.integration
@@ -40,8 +39,6 @@ class TestDelegation:
             timeout=10,
         )
         assert validate_resp.status_code == 200
-        delegator_claims: dict[str, object] = validate_resp.json()["claims"]  # type: ignore[assignment]
-
         # Register a second agent to receive the delegation
         delegate_token: str = client.get_token(
             "delegate-agent",

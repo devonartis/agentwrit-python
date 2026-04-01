@@ -7,7 +7,10 @@ import inspect
 import pathlib
 from typing import Final
 
-SRC_DIR: Final[pathlib.Path] = pathlib.Path(__file__).resolve().parent.parent.parent / "src"
+REPO_ROOT: Final[pathlib.Path] = pathlib.Path(__file__).resolve().parent.parent.parent
+SRC_DIR: Final[pathlib.Path] = REPO_ROOT / "src"
+DOCS_DIR: Final[pathlib.Path] = REPO_ROOT / "docs"
+README_PATH: Final[pathlib.Path] = REPO_ROOT / "README.md"
 
 
 class TestNoHITLContamination:
@@ -57,6 +60,32 @@ class TestNoHITLContamination:
                 if "approval" in line.lower():
                     violations.append(f"{py_file.relative_to(SRC_DIR)}:{i}")
         assert violations == [], f"Approval references found: {violations}"
+
+    def test_no_hitl_strings_in_docs(self) -> None:
+        """No doc file under docs/ or README.md may contain 'hitl' (case-insensitive)."""
+        violations: list[str] = []
+        scan_files: list[pathlib.Path] = list(DOCS_DIR.rglob("*.md")) + [README_PATH]
+        for md_file in scan_files:
+            if not md_file.exists():
+                continue
+            content: str = md_file.read_text()
+            for i, line in enumerate(content.splitlines(), 1):
+                if "hitl" in line.lower():
+                    violations.append(f"{md_file.relative_to(REPO_ROOT)}:{i}")
+        assert violations == [], f"HITL references found in docs: {violations}"
+
+    def test_no_approval_strings_in_docs(self) -> None:
+        """No doc file under docs/ or README.md may contain 'approval' (case-insensitive)."""
+        violations: list[str] = []
+        scan_files: list[pathlib.Path] = list(DOCS_DIR.rglob("*.md")) + [README_PATH]
+        for md_file in scan_files:
+            if not md_file.exists():
+                continue
+            content: str = md_file.read_text()
+            for i, line in enumerate(content.splitlines(), 1):
+                if "approval" in line.lower():
+                    violations.append(f"{md_file.relative_to(REPO_ROOT)}:{i}")
+        assert violations == [], f"Approval references found in docs: {violations}"
 
     def test_version_is_0_2_0(self) -> None:
         """Package version must be 0.2.0 after HITL removal."""
