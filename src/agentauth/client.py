@@ -55,6 +55,7 @@ class _ChallengeResponse(TypedDict):
     """GET /v1/challenge response -- 64-char hex nonce with 30s TTL."""
 
     nonce: str
+    expires_in: int
 
 
 class _RegisterResponse(TypedDict):
