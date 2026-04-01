@@ -24,7 +24,7 @@ Extracted from `devonartis/agentauth-clients` (monorepo) on 2026-04-01 using `gi
 
 ## Current State
 
-**Status:** v0.2.0 merged. Demo app design approved — ready for spec (devflow Step 2).
+**Status:** v0.2.0 merged. Demo app fully planned — ready for coding (devflow Step 6).
 
 **What's done:**
 - HITL contamination fully removed (src/, tests/, docs/, README, examples)
@@ -33,13 +33,16 @@ Extracted from `devonartis/agentauth-clients` (monorepo) on 2026-04-01 using `gi
 - mypy --strict clean, contamination guard tests in CI
 - Version bumped to 0.2.0
 - `/broker` slash command for managing test broker
-- Demo app design approved: `.plans/designs/2026-04-01-demo-app-design.md`
+- Demo app v2 design approved: `.plans/designs/2026-04-01-demo-app-design-v2.md`
+- Spec written: `.plans/specs/2026-04-01-demo-app-spec.md`
+- 12 acceptance stories: `tests/demo-app/user-stories.md` (3 PC + 9 ACC)
+- Implementation plan: `.plans/2026-04-01-demo-app-plan.md` (10 tasks)
+- Tracker created: `.plans/tracker.jsonl`
 
 **What's next:**
-- Demo app: devflow Step 2 (Write Spec). Run `/devflow-client` to continue.
-- Design: financial data pipeline webapp (FastAPI + Jinja2 + HTMX) with 4 sections: contrast view, pipeline runner, SDK explorer, live dashboard. All 8 v1.3 pattern components. All SDK methods.
-- Key insight: demo must show "Before/After" — static API keys (Okta/AWS) vs AgentAuth. The contrast is the adoption pitch.
-- Design language reference: `~/proj/agentauth-app/app/dashboard/` (dark theme, being archived)
+- Demo app: devflow Step 6 (Code). Open fresh session, invoke `superpowers:executing-plans`, point at `.plans/2026-04-01-demo-app-plan.md`.
+- Design: real multi-agent LLM pipeline — 5 Claude-powered agents process 12 financial transactions with scoped credentials. 2 adversarial payloads test prompt injection containment.
+- Key insight: v1 design (showcase booth) was rejected. The LLM IS the point — without it, AgentAuth solves a problem that doesn't exist for deterministic code.
 
 **What's NOT done (see FLOW.md roadmap):**
 - Demo application (design approved, code not started)

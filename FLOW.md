@@ -59,10 +59,27 @@ Code review caught docs/ contamination — fixed before merge.
 
 **Reference for design language:** `~/proj/agentauth-app/app/dashboard/` has the dark theme CSS, tabbed layout, HTMX partials. That app is stale and being deleted, but its visual design is the starting point.
 
-**What the next session should do:**
-1. Run `/devflow-client` — it will see Step 2 (Write Spec)
-2. Write spec from design doc using SPEC-TEMPLATE
-3. Continue through devflow: plan → acceptance tests → code → review → live test → merge
+### 2026-04-01 — Demo App Redesign (v2) + Full Planning
+
+**Design v1 rejected** — showcase booth (staged buttons, SDK Explorer, contrast view) isn't a real-world app. Rethought from scratch.
+
+**Design v2 approved** — real multi-agent LLM pipeline. 5 Claude-powered agents process 12 financial transactions. AgentAuth manages every credential. 2 adversarial transactions with prompt injection payloads. Security story emerges from watching real operations.
+
+Key decisions:
+1. LLM agents are mandatory, not optional — without them the app solves a problem that doesn't exist (deterministic code doesn't need AgentAuth)
+2. Claude via Anthropic SDK directly — no provider abstraction (YAGNI)
+3. Killed contrast view — the running pipeline IS the contrast
+4. Killed SDK Explorer — the pipeline exercises every method naturally
+5. Sample data baked in, not user-provided
+
+**Artifacts produced (commit `92193de`):**
+- Design v2: `.plans/designs/2026-04-01-demo-app-design-v2.md`
+- Spec: `.plans/specs/2026-04-01-demo-app-spec.md`
+- Stories: `tests/demo-app/user-stories.md` (3 preconditions + 9 acceptance)
+- Plan: `.plans/2026-04-01-demo-app-plan.md` (10 tasks)
+- Tracker: `.plans/tracker.jsonl`
+
+**Devflow Steps 1-5 complete.** Next: Step 6 (Code) via `superpowers:executing-plans` in a fresh session.
 
 ---
 
