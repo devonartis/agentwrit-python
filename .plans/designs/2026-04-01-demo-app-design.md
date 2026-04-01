@@ -1,7 +1,7 @@
 # Design: Financial Data Pipeline Demo App
 
 **Created:** 2026-04-01
-**Status:** APPROVED
+**Status:** SUPERSEDED by `2026-04-01-demo-app-design-v2.md` — rejected as showcase booth, not real-world app
 **Scope:** Runnable web app showcasing all 8 Ephemeral Agent Credentialing v1.3 components, all SDK methods, and both happy/error paths through a financial data pipeline scenario.
 
 ---
