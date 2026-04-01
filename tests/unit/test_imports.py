@@ -19,7 +19,6 @@ def test_import_errors():
         AgentAuthError,
         AuthenticationError,
         BrokerUnavailableError,
-        HITLApprovalRequired,
         RateLimitError,
         ScopeCeilingError,
         TokenExpiredError,
@@ -30,7 +29,6 @@ def test_import_errors():
         for e in (
             AuthenticationError,
             BrokerUnavailableError,
-            HITLApprovalRequired,
             RateLimitError,
             ScopeCeilingError,
             TokenExpiredError,

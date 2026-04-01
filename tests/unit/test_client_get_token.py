@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests as requests_lib
 
-from agentauth.errors import HITLApprovalRequired, ScopeCeilingError
+from agentauth.errors import ScopeCeilingError
 
 # ---------------------------------------------------------------------------
 # Fixtures / constants
@@ -53,13 +53,6 @@ REGISTER_200 = {
     "agent_id": "spiffe://cluster/ns/default/sa/my-agent",
     "access_token": "agent-jwt-token",
     "expires_in": 300,
-}
-
-# 403 HITL body
-HITL_403_BODY = {
-    "error": "hitl_approval_required",
-    "approval_id": "apr-abc123",
-    "expires_at": "2026-03-07T00:10:00Z",
 }
 
 # 403 scope violation (RFC 7807)
@@ -223,7 +216,7 @@ class TestGetTokenSuccessFlow:
 
 
 class TestGetTokenPassthrough:
-    """task_id, orch_id, and approval_token are passed through correctly."""
+    """task_id and orch_id are passed through correctly."""
 
     def test_task_id_and_orch_id_in_register_body(self):
         """task_id and orch_id appear in the /v1/register request body."""
@@ -250,48 +243,6 @@ class TestGetTokenPassthrough:
 
         assert register_body["task_id"] == "task-xyz"
         assert register_body["orch_id"] == "orch-abc"
-
-    def test_approval_token_in_launch_tokens_body(self):
-        """approval_token is included in the /v1/app/launch-tokens body when provided."""
-        session = MagicMock()
-        client = _make_client(session)
-        session.request.reset_mock()
-
-        launch_resp = _make_mock_response(201, LAUNCH_TOKEN_201)
-        challenge_resp = _make_mock_response(200, CHALLENGE_200)
-        register_resp = _make_mock_response(200, REGISTER_200)
-
-        session.request.side_effect = [launch_resp, challenge_resp, register_resp]
-
-        client.get_token(
-            "my-agent",
-            ["read:data:*"],
-            approval_token="approval-eyJtest",
-        )
-
-        first_call = session.request.call_args_list[0]
-        launch_body = first_call[1].get("json") or first_call[0][2]
-
-        assert launch_body.get("approval_token") == "approval-eyJtest"
-
-    def test_approval_token_omitted_when_none(self):
-        """approval_token key must NOT appear in launch-tokens body when not provided."""
-        session = MagicMock()
-        client = _make_client(session)
-        session.request.reset_mock()
-
-        launch_resp = _make_mock_response(201, LAUNCH_TOKEN_201)
-        challenge_resp = _make_mock_response(200, CHALLENGE_200)
-        register_resp = _make_mock_response(200, REGISTER_200)
-
-        session.request.side_effect = [launch_resp, challenge_resp, register_resp]
-
-        client.get_token("my-agent", ["read:data:*"])
-
-        first_call = session.request.call_args_list[0]
-        launch_body = first_call[1].get("json") or first_call[0][2]
-
-        assert "approval_token" not in launch_body
 
     def test_register_body_has_launch_token_not_bearer_header(self):
         """POST /v1/register must have launch_token in body, NOT a Bearer header.
@@ -324,40 +275,7 @@ class TestGetTokenPassthrough:
 
 
 class TestGetTokenErrors:
-    """Error cases: HITL 403 and scope violation 403."""
-
-    def test_hitl_403_raises_hitl_approval_required(self):
-        """A 403 hitl_approval_required response raises HITLApprovalRequired."""
-        session = MagicMock()
-        client = _make_client(session)
-        session.request.reset_mock()
-
-        hitl_resp = _make_mock_response(403, HITL_403_BODY, ok=False)
-        session.request.return_value = hitl_resp
-
-        with pytest.raises(HITLApprovalRequired) as exc_info:
-            client.get_token("my-agent", ["write:data:*"])
-
-        assert exc_info.value.approval_id == "apr-abc123"
-
-    def test_hitl_403_approval_id_correct(self):
-        """HITLApprovalRequired carries the approval_id from the broker response."""
-        session = MagicMock()
-        client = _make_client(session)
-        session.request.reset_mock()
-
-        hitl_resp = _make_mock_response(403, HITL_403_BODY, ok=False)
-        session.request.return_value = hitl_resp
-
-        exc = None
-        try:
-            client.get_token("my-agent", ["write:data:*"])
-        except HITLApprovalRequired as e:
-            exc = e
-
-        assert exc is not None
-        assert exc.approval_id == HITL_403_BODY["approval_id"]
-        assert exc.expires_at == HITL_403_BODY["expires_at"]
+    """Error cases: scope violation 403."""
 
     def test_scope_violation_403_raises_scope_ceiling_error(self):
         """A 403 scope_violation response raises ScopeCeilingError."""

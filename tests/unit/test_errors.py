@@ -8,7 +8,6 @@ from agentauth.errors import (
     AgentAuthError,
     AuthenticationError,
     BrokerUnavailableError,
-    HITLApprovalRequired,
     RateLimitError,
     ScopeCeilingError,
     TokenExpiredError,
@@ -29,9 +28,6 @@ class TestExceptionHierarchy:
 
     def test_scope_ceiling_error_inherits(self):
         assert issubclass(ScopeCeilingError, AgentAuthError)
-
-    def test_hitl_approval_required_inherits(self):
-        assert issubclass(HITLApprovalRequired, AgentAuthError)
 
     def test_rate_limit_error_inherits(self):
         assert issubclass(RateLimitError, AgentAuthError)
@@ -123,46 +119,6 @@ class TestScopeCeilingError:
         assert err.status_code == 403
 
 
-# ── HITLApprovalRequired ──────────────────────────────────────────────────
-
-
-class TestHITLApprovalRequired:
-    def test_approval_id_attribute(self):
-        err = HITLApprovalRequired(
-            approval_id="apr-abc123",
-            expires_at="2026-03-07T12:00:00Z",
-        )
-        assert err.approval_id == "apr-abc123"
-
-    def test_expires_at_attribute(self):
-        err = HITLApprovalRequired(
-            approval_id="apr-abc123",
-            expires_at="2026-03-07T12:00:00Z",
-        )
-        assert err.expires_at == "2026-03-07T12:00:00Z"
-
-    def test_message_includes_approval_id(self):
-        err = HITLApprovalRequired(
-            approval_id="apr-abc123",
-            expires_at="2026-03-07T12:00:00Z",
-        )
-        assert "apr-abc123" in str(err)
-
-    def test_status_code_is_403(self):
-        err = HITLApprovalRequired(
-            approval_id="apr-abc123",
-            expires_at="2026-03-07T12:00:00Z",
-        )
-        assert err.status_code == 403
-
-    def test_error_code(self):
-        err = HITLApprovalRequired(
-            approval_id="apr-abc123",
-            expires_at="2026-03-07T12:00:00Z",
-        )
-        assert err.error_code == "hitl_approval_required"
-
-
 # ── RateLimitError ─────────────────────────────────────────────────────────
 
 
@@ -223,29 +179,6 @@ class TestParseErrorResponse:
         err = parse_error_response(403, body)
         assert isinstance(err, ScopeCeilingError)
         assert err.status_code == 403
-
-    def test_403_hitl_returns_hitl_approval_required(self):
-        """HITL 403 uses a different body format -- not RFC 7807."""
-        body = {
-            "error": "hitl_approval_required",
-            "approval_id": "apr-xyz789",
-            "expires_at": "2026-03-07T12:00:00Z",
-        }
-        err = parse_error_response(403, body)
-        assert isinstance(err, HITLApprovalRequired)
-        assert err.approval_id == "apr-xyz789"
-        assert err.expires_at == "2026-03-07T12:00:00Z"
-
-    def test_hitl_takes_priority_over_scope_violation(self):
-        """If body has 'error: hitl_approval_required', it's HITL even at 403."""
-        body = {
-            "error": "hitl_approval_required",
-            "approval_id": "apr-001",
-            "expires_at": "2026-03-07T12:00:00Z",
-            "error_code": "scope_violation",  # should be ignored
-        }
-        err = parse_error_response(403, body)
-        assert isinstance(err, HITLApprovalRequired)
 
     def test_429_returns_rate_limit_error(self):
         body = {
