@@ -1,0 +1,13 @@
+# Keep dev-only paths off main when merging from develop.
+# Requires local driver config (documented in develop's CLAUDE.md):
+#   git config merge.ours.driver true
+#
+# Without this, merges from develop → main would re-add planning docs,
+# memory files, Claude Code tooling, and internal test evidence.
+
+.plans/**            merge=ours
+.claude/**           merge=ours
+tests/sdk-core/**    merge=ours
+CLAUDE.md            merge=ours
+MEMORY.md            merge=ours
+FLOW.md              merge=ours
