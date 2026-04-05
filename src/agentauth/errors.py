@@ -5,7 +5,6 @@ the Ephemeral Agent Credentialing pattern:
   - ScopeCeilingError: C2 (Task-Scoped Tokens) -- scope attenuation enforced
   - RateLimitError: broker rate limiting respected (C3 Zero-Trust)
   - BrokerUnavailableError: transient failure (retry exhausted)
-  - TokenExpiredError: C4 (Automatic Expiration)
 
 All SDK exceptions inherit from AgentAuthError. The parse_error_response()
 function converts broker HTTP error bodies into the appropriate exception type.
@@ -88,10 +87,6 @@ class RateLimitError(AgentAuthError):
 
 class BrokerUnavailableError(AgentAuthError):
     """Broker is unreachable or returned a 5xx error."""
-
-
-class TokenExpiredError(AgentAuthError):
-    """Agent token has expired and must be re-obtained."""
 
 
 # ── Response parser ────────────────────────────────────────────────────────

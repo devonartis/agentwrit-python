@@ -18,7 +18,6 @@ Complete reference for the AgentAuth Python SDK public API.
 
   - [RateLimitError](#ratelimiterror)
   - [BrokerUnavailableError](#brokerunavailableerror)
-  - [TokenExpiredError](#tokenexpirederror)
 - [Retry Behavior](#retry-behavior)
 - [Token Caching](#token-caching)
 - [Thread Safety](#thread-safety)
@@ -265,7 +264,6 @@ from agentauth import (
 
     RateLimitError,
     BrokerUnavailableError,
-    TokenExpiredError,
 )
 ```
 
@@ -279,14 +277,12 @@ graph TD
     Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
     Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
     Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
-    Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
 
     style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
     style Auth fill:#ef4444,color:#fff,stroke:#dc2626
     style Scope fill:#ef4444,color:#fff,stroke:#dc2626
     style Rate fill:#ef4444,color:#fff,stroke:#dc2626
     style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
-    style Expired fill:#ef4444,color:#fff,stroke:#dc2626
 ```
 
 All exceptions carry optional `status_code` and `error_code` attributes from the broker response.
@@ -358,12 +354,6 @@ Raised when the broker returns HTTP 429 after all retries are exhausted.
 ### BrokerUnavailableError
 
 Raised when the broker is unreachable after all retry attempts. This includes persistent HTTP 5xx responses and connection errors (`requests.ConnectionError`).
-
----
-
-### TokenExpiredError
-
-Raised when an agent token has expired and automatic renewal failed.
 
 ---
 

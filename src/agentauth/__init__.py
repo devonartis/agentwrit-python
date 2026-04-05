@@ -20,7 +20,6 @@ Exports:
     ScopeCeilingError       — 403: scope exceeds app ceiling
     RateLimitError          — 429: rate limited after all retries
     BrokerUnavailableError  — 5xx / connection failure after all retries
-    TokenExpiredError       — Token has expired
 """
 
 __version__ = "0.2.0"
@@ -32,7 +31,6 @@ from agentauth.errors import (
     BrokerUnavailableError,
     RateLimitError,
     ScopeCeilingError,
-    TokenExpiredError,
 )
 
 __all__ = [
@@ -43,5 +41,4 @@ __all__ = [
     "BrokerUnavailableError",
     "RateLimitError",
     "ScopeCeilingError",
-    "TokenExpiredError",
 ]

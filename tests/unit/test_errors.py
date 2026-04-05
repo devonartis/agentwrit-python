@@ -10,7 +10,6 @@ from agentauth.errors import (
     BrokerUnavailableError,
     RateLimitError,
     ScopeCeilingError,
-    TokenExpiredError,
     parse_error_response,
 )
 
@@ -34,9 +33,6 @@ class TestExceptionHierarchy:
 
     def test_broker_unavailable_error_inherits(self):
         assert issubclass(BrokerUnavailableError, AgentAuthError)
-
-    def test_token_expired_error_inherits(self):
-        assert issubclass(TokenExpiredError, AgentAuthError)
 
 
 # ── Base Error ─────────────────────────────────────────────────────────────
@@ -143,10 +139,6 @@ class TestSimpleSubclasses:
     def test_broker_unavailable_instantiates(self):
         err = BrokerUnavailableError("broker down")
         assert str(err) == "broker down"
-
-    def test_token_expired_instantiates(self):
-        err = TokenExpiredError("token expired")
-        assert str(err) == "token expired"
 
 
 # ── parse_error_response ──────────────────────────────────────────────────

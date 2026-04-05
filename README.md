@@ -250,14 +250,12 @@ graph TD
     Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
     Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
     Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
-    Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
 
     style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
     style Auth fill:#ef4444,color:#fff,stroke:#dc2626
     style Scope fill:#ef4444,color:#fff,stroke:#dc2626
     style Rate fill:#ef4444,color:#fff,stroke:#dc2626
     style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
-    style Expired fill:#ef4444,color:#fff,stroke:#dc2626
 ```
 
 ## Security Properties
