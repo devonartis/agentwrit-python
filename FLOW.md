@@ -97,6 +97,16 @@ Key decisions:
 
 **Next:** Draft Phase 2 acceptance stories + impl plan (`superpowers:writing-plans`), then execute (`superpowers:executing-plans`). Phase 2 first because it's contained and unblocks Phase 3's cache integration.
 
+### 2026-04-05 — Phase 2 plan drafted + archive cleanup
+
+**Decision:** Phase 2 impl plan saved to `.plans/2026-04-05-v0.3.0-phase2-cache-correctness-plan.md` (TDD tasks for G13/G14/G15/G16). Phase 2 acceptance stories (SDK-P2-S1..S4) extracted to `tests/sdk-core/user-stories.md`.
+
+**Decision:** 12 stale planning docs archived into `.plans/ARCHIVE/` with Unicode strikethrough (U+0336) on filenames + `~~Status~~` banners inside. Active vs. archived is now visible at a glance in Finder/ls/VS Code. All moves via `git mv` (history preserved).
+
+**Decision:** In-repo broker (replacing `~/proj/agentauth-core` coupling) confirmed as Option A — vendor Go source + aactl + docs into `broker/`. Design doc NOT yet saved (interrupted).
+
+**Next:** Finish in-repo broker design doc (include docs copy), get approval, then plan + execute broker setup. Phase 2 code execution runs against that in-repo broker.
+
 ---
 
 **Roadmap (after v0.3.0 closure):**
