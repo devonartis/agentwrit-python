@@ -25,3 +25,12 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# Local AI tooling artifacts
+.playwright-mcp/
+.claude/settings.local.json
