@@ -37,9 +37,21 @@ class _Entry(NamedTuple):
     expires_in: int  # TTL in seconds as provided by the broker
 
 
-def _make_key(agent_name: str, scope: list[str]) -> tuple[str, frozenset[str]]:
-    """Build a cache key that is invariant to scope order."""
-    return (agent_name, frozenset(scope))
+# Full cache key: agent_name + scope (order-invariant) + task_id + orch_id (G13).
+# task_id/orch_id are embedded in broker JWT claims AND the SPIFFE subject, so two
+# callers sharing name+scope but differing on task_id must NOT alias in this cache.
+_CacheKey = tuple[str, frozenset[str], str | None, str | None]
+
+
+def _make_key(
+    agent_name: str,
+    scope: list[str],
+    *,
+    task_id: str | None = None,
+    orch_id: str | None = None,
+) -> _CacheKey:
+    """Build a cache key that is invariant to scope order and includes task/orch identity."""
+    return (agent_name, frozenset(scope), task_id, orch_id)
 
 
 class TokenCache:
@@ -53,16 +65,23 @@ class TokenCache:
 
     def __init__(self, renewal_threshold: float = 0.8) -> None:
         self._renewal_threshold = renewal_threshold
-        self._store: dict[tuple[str, frozenset[str]], _Entry] = {}
+        self._store: dict[_CacheKey, _Entry] = {}
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def get(self, agent_name: str, scope: list[str]) -> str | None:
+    def get(
+        self,
+        agent_name: str,
+        scope: list[str],
+        *,
+        task_id: str | None = None,
+        orch_id: str | None = None,
+    ) -> str | None:
         """Return the cached token, or *None* if absent or expired."""
-        key = _make_key(agent_name, scope)
+        key = _make_key(agent_name, scope, task_id=task_id, orch_id=orch_id)
         with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -79,6 +98,8 @@ class TokenCache:
         token: str,
         *,
         expires_in: int,
+        task_id: str | None = None,
+        orch_id: str | None = None,
     ) -> None:
         """Store *token* in the cache.
 
@@ -87,8 +108,10 @@ class TokenCache:
             scope: List of scope strings (order is irrelevant).
             token: The JWT or opaque token string to cache.
             expires_in: Token lifetime in seconds, as returned by the broker.
+            task_id: Task identifier threaded through the registration flow (G13).
+            orch_id: Orchestrator identifier threaded through the registration flow (G13).
         """
-        key = _make_key(agent_name, scope)
+        key = _make_key(agent_name, scope, task_id=task_id, orch_id=orch_id)
         entry = _Entry(
             token=token,
             stored_at=time.time(),
@@ -97,13 +120,20 @@ class TokenCache:
         with self._lock:
             self._store[key] = entry
 
-    def needs_renewal(self, agent_name: str, scope: list[str]) -> bool:
+    def needs_renewal(
+        self,
+        agent_name: str,
+        scope: list[str],
+        *,
+        task_id: str | None = None,
+        orch_id: str | None = None,
+    ) -> bool:
         """Return *True* when the token has consumed >= *renewal_threshold* of its TTL.
 
         Returns *False* if the key is unknown.
         Thread-safe: entry fields are captured inside the lock before release.
         """
-        key = _make_key(agent_name, scope)
+        key = _make_key(agent_name, scope, task_id=task_id, orch_id=orch_id)
         with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -118,9 +148,16 @@ class TokenCache:
         fraction_elapsed: float = elapsed / expires_in_secs
         return fraction_elapsed >= self._renewal_threshold
 
-    def remove(self, agent_name: str, scope: list[str]) -> None:
+    def remove(
+        self,
+        agent_name: str,
+        scope: list[str],
+        *,
+        task_id: str | None = None,
+        orch_id: str | None = None,
+    ) -> None:
         """Remove a cache entry.  No-op if the key does not exist."""
-        key = _make_key(agent_name, scope)
+        key = _make_key(agent_name, scope, task_id=task_id, orch_id=orch_id)
         with self._lock:
             self._store.pop(key, None)
 

@@ -255,9 +255,13 @@ class AgentAuthApp:
             ScopeCeilingError: Requested scope exceeds the app's ceiling.
             AgentAuthError: On any other broker error.
         """
-        # 1. Cache check -- BEFORE any HTTP calls
-        cached = self._token_cache.get(agent_name, scope)
-        if cached is not None and not self._token_cache.needs_renewal(agent_name, scope):
+        # 1. Cache check -- BEFORE any HTTP calls (G13: include task_id/orch_id in key)
+        cached = self._token_cache.get(
+            agent_name, scope, task_id=task_id, orch_id=orch_id,
+        )
+        if cached is not None and not self._token_cache.needs_renewal(
+            agent_name, scope, task_id=task_id, orch_id=orch_id,
+        ):
             return cached
 
         # 2. Ensure app token is fresh
@@ -347,8 +351,15 @@ class AgentAuthApp:
         agent_token: str = reg_data["access_token"]
         expires_in: int = reg_data["expires_in"]
 
-        # 8. Cache the result
-        self._token_cache.put(agent_name, scope, agent_token, expires_in=expires_in)
+        # 8. Cache the result (G13: include task_id/orch_id in key)
+        self._token_cache.put(
+            agent_name,
+            scope,
+            agent_token,
+            expires_in=expires_in,
+            task_id=task_id,
+            orch_id=orch_id,
+        )
 
         return agent_token
 
