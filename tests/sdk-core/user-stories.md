@@ -415,6 +415,140 @@ during backoff.
 
 ---
 
+## Phase 2: Cache Correctness Fixes (v0.3.0)
+
+Stories for the cache correctness fixes in `.plans/specs/2026-04-05-v0.3.0-phase2-cache-correctness-spec.md`.
+Findings addressed: G13 (task_id/orch_id keying), G14 (eviction on release), G15 (per-key locking), G16 (TokenExpiredError removal).
+
+---
+
+### SDK-P2-S1: Task-Scoped Cache Entries Are Isolated (G13)
+
+Who: The developer calling `get_token()` with different `task_id` values.
+
+What: The developer calls `get_token("analyst", ["read:data:*"], task_id="q4-2026")`, receives a token,
+then calls `get_token("analyst", ["read:data:*"], task_id="q1-2026")`. Before v0.3.0, the second call
+returns the SAME token from cache as the first (aliased by `(agent_name, frozenset(scope))` alone).
+After this fix, the cache key includes `task_id` and `orch_id`, so the second call performs a fresh
+registration and returns a DIFFERENT token with a different SPIFFE ID.
+
+Why: The broker embeds `task_id` and `orch_id` in JWT claims AND in the SPIFFE subject
+(`spiffe://.../agent/{orch}/{task}/{instance}`). When the cache aliases these calls, a token minted
+for task "q4-2026" gets served to a caller working on task "q1-2026" — breaking task isolation and
+corrupting the audit trail. Two distinct tasks appear to share one agent identity.
+
+Setup: Broker running. Test app with `read:data:*` ceiling. `AgentAuthApp` initialized.
+
+Code:
+```python
+result_q4 = app.get_token("analyst", ["read:data:*"], task_id="q4-2026")
+result_q1 = app.get_token("analyst", ["read:data:*"], task_id="q1-2026")
+assert result_q4.token != result_q1.token
+assert result_q4.agent_id != result_q1.agent_id  # different SPIFFE IDs
+```
+
+Expected: `result_q4` and `result_q1` are distinct `TokenResult` objects with distinct JWTs and
+distinct SPIFFE IDs. Mock session verifies `/v1/register` was called twice (not once).
+
+---
+
+### SDK-P2-S2: Released Tokens Are Evicted from Cache (G14)
+
+Who: The developer cleaning up after a task.
+
+What: The developer obtains a token via `get_token`, uses it, then calls `release_token()` to
+explicitly release it (Phase 5 renames `revoke_token` → `release_token`; Phase 2 keeps the old name
+but adds cache eviction to it). A subsequent `get_token()` call with the same arguments should
+perform a fresh broker registration, NOT return the released (dead) token from cache.
+
+Why: Before this fix, after `revoke_token()` succeeds the cache entry remains. The next `get_token`
+call returns the revoked token with zero broker calls. The caller then uses that dead token on a
+downstream API and gets a confusing 401 with no obvious cause. Cache must evict on release.
+
+Setup: Broker running. App initialized. A token issued and cached.
+
+Code:
+```python
+result1 = app.get_token("worker", ["read:data:*"], task_id="t1")
+app.revoke_token(result1.token)  # cache entry evicted
+result2 = app.get_token("worker", ["read:data:*"], task_id="t1")
+assert result2.token != result1.token  # fresh registration
+```
+
+Expected: `result2.token` differs from `result1.token`. Mock session verifies
+`/v1/register` called twice. `cache.get("worker", ["read:data:*"], task_id="t1")` after the revoke
+returns None.
+
+---
+
+### SDK-P2-S3: Concurrent `get_token()` Produces Exactly One Registration (G15)
+
+Who: An internal concurrent caller (e.g., a multi-threaded pipeline).
+
+What: Ten threads simultaneously call `app.get_token("shared", scope, task_id="T")` on a cold cache.
+Before this fix, the cache-miss path was not serialized per key — all 10 threads completed the full
+launch-token → challenge → register flow, each receiving a different SPIFFE ID from the broker.
+After this fix, a per-key lock serializes the miss path: exactly 1 thread registers, the other 9
+acquire the lock in turn, re-check the cache (populated now), and return the cached result.
+
+Why: Without serialization, duplicate SPIFFE identities are minted under load. The last writer's
+cache entry wins; the other 9 tokens are orphaned — valid at the broker, unreferenced in SDK,
+cannot be revoked. Over time this leaks identities and confuses the broker's audit trail with
+phantom registrations.
+
+Setup: App initialized. Mocked broker responses (each `/v1/register` returns a distinct SPIFFE ID).
+
+Code:
+```python
+from concurrent.futures import ThreadPoolExecutor
+results = []
+with ThreadPoolExecutor(max_workers=10) as pool:
+    futures = [pool.submit(lambda: app.get_token("shared", ["read:*"], task_id="T"))
+               for _ in range(10)]
+    results = [f.result() for f in futures]
+
+# All 10 results should be identical
+assert all(r.token == results[0].token for r in results)
+# Only one registration should have happened
+assert mock_session.register_call_count == 1
+```
+
+Expected: All 10 threads receive the same `TokenResult`. Mock broker sees exactly 1 call to
+`/v1/register`. No orphaned tokens.
+
+---
+
+### SDK-P2-S4: `TokenExpiredError` Is Removed from Public API (G16)
+
+Who: The developer catching SDK exceptions.
+
+What: Before this fix, `TokenExpiredError` was exported from `agentauth` and documented in the
+README — but the SDK never raised it anywhere in the source. A developer writing
+`except TokenExpiredError:` handlers would never see those handlers fire. After this fix, the
+class is deleted entirely. The caller uses `TokenResult.expires_at` (from Phase 3) to check
+expiry directly.
+
+Why: Exporting an exception the SDK never raises is a silent API lie — it trains developers
+to write handlers that do nothing and creates the false impression that the SDK proactively
+signals expiry. v0.3.0 makes expiry checkable via `TokenResult.expires_at`, so the exception
+is redundant.
+
+Setup: Verify deletion is complete.
+
+Code:
+```bash
+grep -rn "TokenExpiredError" src/ tests/ docs/ README.md
+# Must return zero matches
+
+python -c "from agentauth import TokenExpiredError"
+# Must raise ImportError
+```
+
+Expected: `grep` returns nothing. `from agentauth import TokenExpiredError` raises `ImportError`.
+The class does not appear in `agentauth.__all__` or the package docstring.
+
+---
+
 ## Story-to-Test Mapping
 
 ### Source modules (small files, one concern each)

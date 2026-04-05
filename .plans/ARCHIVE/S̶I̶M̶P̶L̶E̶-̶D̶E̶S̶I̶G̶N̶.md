@@ -1,4 +1,7 @@
-Three Stories, One Demo, One Broker
+# ~~Three Stories, One Demo, One Broker~~
+
+> **Status:** ~~ARCHIVED~~ — demo design sketch. Superseded by `2026-04-01-demo-app-design-v3.md` (also archived). Kept for historical reference.
+
 The user types a scenario in plain English. The LLM reads it, decides which agents are needed, and agentauth spawns each one with exactly the tools it needs — nothing more. Every agent is born, does its job, and dies. The broker controls everything in between.
 
 Story 1 — Healthcare: Patient Triage

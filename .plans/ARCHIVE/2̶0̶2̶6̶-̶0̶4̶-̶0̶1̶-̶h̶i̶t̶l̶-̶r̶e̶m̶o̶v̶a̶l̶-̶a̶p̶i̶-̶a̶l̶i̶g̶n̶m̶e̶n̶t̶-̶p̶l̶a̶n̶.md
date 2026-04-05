@@ -1,4 +1,6 @@
-# HITL Removal & API Alignment Implementation Plan
+# ~~HITL Removal & API Alignment Implementation Plan~~
+
+> **Status:** ~~DONE~~ — shipped in v0.2.0, merged to `main` 2026-04-01. Kept for historical reference.
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

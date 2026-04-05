@@ -1,4 +1,6 @@
-# 8x8 Real-World Scenarios for AgentAuth Components
+# ~~8x8 Real-World Scenarios for AgentAuth Components~~
+
+> **Status:** ~~ARCHIVED~~ — demo-supporting educational doc. Kept for historical reference; may inform demo rebuild after v0.3.0.
 
 **Created:** 2026-04-01
 **Purpose:** Demonstrate deep understanding of how all 8 AgentAuth components appear in real-world multi-agent systems. Each domain has 8 scenarios — one per component. Some scenarios naturally don't need all components, and that's called out.

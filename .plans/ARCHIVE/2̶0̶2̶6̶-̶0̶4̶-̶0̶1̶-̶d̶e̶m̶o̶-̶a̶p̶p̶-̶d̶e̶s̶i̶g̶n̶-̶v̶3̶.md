@@ -1,4 +1,6 @@
-# Design: Three Stories, One Demo, One Broker (v3)
+# ~~Design: Three Stories, One Demo, One Broker (v3)~~
+
+> **Status:** ~~ARCHIVED~~ — demo app shelved 2026-04-04. Kept for historical reference; will inform v0.3.0 demo rebuild.
 
 **Created:** 2026-04-01
 **Status:** APPROVED

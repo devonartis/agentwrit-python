@@ -1,4 +1,6 @@
-# PRD — Demo App + SDK Gap Closure
+# ~~PRD — Demo App + SDK Gap Closure~~
+
+> **Status:** ~~SUPERSEDED~~ — demo portion archived with demo app. SDK portion folded into `.plans/designs/2026-04-04-v0.3.0-sdk-design.md` + phase specs. Kept for historical reference.
 
 > **Date:** 2026-04-04
 > **Status:** Draft — synthesized from transcript review of 2026-04-02 demo-app build sessions

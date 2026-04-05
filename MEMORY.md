@@ -24,38 +24,65 @@ Extracted from `devonartis/agentauth-clients` (monorepo) on 2026-04-01 using `gi
 
 ## Current State
 
-**Status:** v0.2.0 merged. Demo app fully planned — ready for coding (devflow Step 6).
+**Status:** v0.3.0 SDK closure in flight on branch `feature/v0.3.0-sdk-closure`. Phase 1 done, Phases 2–7 specs drafted, ready for plans + execution.
+
+**Active line of work:** v0.3.0 SDK closure — 25 findings from two audits (field-level gap review + Codex adversarial pass + developer-docs re-audit). Recovers dropped broker response fields, fixes cache correctness bugs, adds missing endpoints, observability, and docs.
+
+**Demo app ARCHIVED** (commit `958541f`, 2026-04-04). The v2 "5-agent LLM pipeline" design exposed that the SDK couldn't support it cleanly (no `delegation_chain` client-side, no SPIFFE ID in `get_token()`, no `request_id` correlation). Fix the SDK first, rebuild the demo after v0.3.0 ships. Demo design docs preserved for future rebuild: `.plans/designs/2026-04-01-demo-app-design-v2.md`, `.plans/designs/2026-04-01-demo-app-design-v3.md`.
 
 **What's done:**
-- HITL contamination fully removed (src/, tests/, docs/, README, examples)
-- API contract verified against live broker — all fields aligned
-- 119 unit tests, 13 integration tests passing
-- mypy --strict clean, contamination guard tests in CI
-- Version bumped to 0.2.0
-- `/broker` slash command for managing test broker
-- Demo app v2 design approved: `.plans/designs/2026-04-01-demo-app-design-v2.md`
-- Spec written: `.plans/specs/2026-04-01-demo-app-spec.md`
-- 12 acceptance stories: `tests/demo-app/user-stories.md` (3 PC + 9 ACC)
-- Implementation plan: `.plans/2026-04-01-demo-app-plan.md` (10 tasks)
-- Tracker created: `.plans/tracker.jsonl`
+- v0.2.0 shipped — HITL removed, API aligned, 119 unit + 13 integration tests green
+- Two SDK audits complete: `.plans/2026-04-02-sdk-broker-gap-review.md` (G1–G15 + Codex review), `.plans/designs/2026-04-04-v0.3.0-sdk-design.md` (G0, G16–G25)
+- v0.3.0 design doc locked in (`.plans/designs/2026-04-04-v0.3.0-sdk-design.md` — 526 lines, 25 findings, 7 phases, all decisions resolved)
+- **Phase 1 (G0) shipped** — `AgentAuthClient` → `AgentAuthApp` rename, commit `33fb2f4`
+- **Phase 2–7 specs drafted** (2026-04-05, `.plans/specs/2026-04-05-v0.3.0-phase{2..7}-*-spec.md`, 6 files, 2173 lines total)
 
-**What's next:**
-- Demo app: devflow Step 6 (Code). Open fresh session, invoke `superpowers:executing-plans`, point at `.plans/2026-04-01-demo-app-plan.md`.
-- Design: real multi-agent LLM pipeline — 5 Claude-powered agents process 12 financial transactions with scoped credentials. 2 adversarial payloads test prompt injection containment.
-- Key insight: v1 design (showcase booth) was rejected. The LLM IS the point — without it, AgentAuth solves a problem that doesn't exist for deterministic code.
+**What's next (in dependency order):**
+1. Phase 2 (Cache Correctness — G13/G14/G15/G16) — smallest, most contained, unblocks everything
+2. Phase 3 (Result Types — G1–G4, G8, G11, G17, G18) — biggest phase; `TokenResult`, `DelegationResult`, `TokenClaims` dataclasses
+3. Phase 4 (Missing Endpoints — G5 `renew_token`, G24 `decode_claims`)
+4. Phase 5 (Ergonomics — G19 rename, G20 idempotent release, G21 nonce freshness, G23 pre-flight scope)
+5. Phase 6 (Observability — G6/G7/G10/G22 + logging; can run parallel to 4/5)
+6. Phase 7 (Docs + Release — G25 CHANGELOG scrub + full doc refresh + 0.3.0 version bump)
+
+**Immediate next step:** Draft Phase 2 acceptance stories + impl plan via `superpowers:writing-plans`, then execute via `superpowers:executing-plans`.
 
 **What's NOT done (see FLOW.md roadmap):**
-- Demo application (design approved, code not started)
+- v0.3.0 Phases 2–7 (coding)
+- Demo application rebuild (blocked on v0.3.0)
 - No CI (GitHub Actions)
 - Not on PyPI yet
-- Not pushed to GitHub yet
-- Not pushed to GitHub yet
+- Not pushed to GitHub as `divineartis/agentauth-python` yet
 
 ## Tech Debt
 
-None yet — this is a fresh extraction. Tech debt will be tracked here as it's discovered.
+**All 25 items enumerated in v0.3.0 design doc (`.plans/designs/2026-04-04-v0.3.0-sdk-design.md`).** v0.3.0 closes them; this section stays sparse until post-v0.3.0.
+
+- **Tracker drift:** `.plans/tracker.jsonl` still holds archived demo-app stories (DEMO-PC1..DEMO-S9). Needs archival + v0.3.0 phase story registration during devflow Step 5.
 
 ## Recent Lessons (last 3 sessions)
+
+### v0.3.0 Planning + Archive Cleanup Session (2026-04-05)
+
+**What happened:**
+- Confirmed coverage of prior audits (SDK-broker field-level gap review + Codex adversarial pass + v0.3.0 design doc re-audit) — 12 dropped-field findings + 4 correctness bugs + 9 others = 25 total
+- Drafted one umbrella spec covering all 24 remaining findings, then broke it up into **6 phase-scoped specs** per user feedback ("no big specs"): `.plans/specs/2026-04-05-v0.3.0-phase{2..7}-*-spec.md`
+- Drafted Phase 2 (Cache Correctness) impl plan via `superpowers:writing-plans`: `.plans/2026-04-05-v0.3.0-phase2-cache-correctness-plan.md`
+- Extracted Phase 2 acceptance stories (SDK-P2-S1..S4) into `tests/sdk-core/user-stories.md`
+- Started brainstorming in-repo broker setup (replace `~/proj/agentauth-core` coupling) — design-in-progress, NOT yet saved
+- **Archive cleanup:** 12 stale planning docs (demo app v1/v2/v3, HITL removal, PRD) moved to `.plans/ARCHIVE/` with:
+  1. Unicode strikethrough (U+0336) applied to filenames → visible crossed-out in ls/Finder/VS Code sidebar
+  2. `~~Title~~` markdown strikethrough + `> **Status:** ~~DONE/ARCHIVED/REJECTED/SUPERSEDED~~` banners inside each file
+- All moves via `git mv` — history preserved
+
+**Key decisions captured in specs:**
+- `TokenExpiredError` deleted outright (not wired up) — `TokenResult.expires_at` makes expiry checkable by caller
+- `decode_claims()` implements inline base64url decoder — no new `pyjwt` dep
+- Pre-flight scope check is conservative — only obvious wildcard root mismatches rejected; ceiling wildcard `*` always defers to broker
+- `X-Request-ID` auto-generated per-request, overridable via `app.request_context(...)` thread-local context manager
+- Cache reverse-index is linear scan on `remove_by_token()` — O(n) fine for in-memory sizes
+
+**Immediate next step:** Finish in-repo broker design doc (include docs-copy per user addition) → get user approval → writing-plans for broker implementation → then Phase 2 code execution against that in-repo broker.
 
 ### Dev Flow Session 2 (2026-04-01)
 

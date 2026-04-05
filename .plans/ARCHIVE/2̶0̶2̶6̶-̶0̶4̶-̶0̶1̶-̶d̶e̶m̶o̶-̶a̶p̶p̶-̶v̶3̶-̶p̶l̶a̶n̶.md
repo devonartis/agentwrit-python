@@ -1,4 +1,6 @@
-# Demo App v3 — "Three Stories, One Broker" Implementation Plan
+# ~~Demo App v3 — "Three Stories, One Broker" Implementation Plan~~
+
+> **Status:** ~~ARCHIVED~~ — demo app shelved 2026-04-04 (commit `958541f`). Will rebuild after v0.3.0. Kept for historical reference.
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

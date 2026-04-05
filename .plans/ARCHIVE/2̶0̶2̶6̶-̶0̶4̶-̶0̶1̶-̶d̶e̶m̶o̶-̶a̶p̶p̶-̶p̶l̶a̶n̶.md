@@ -1,4 +1,6 @@
-# Demo App Implementation Plan
+# ~~Demo App Implementation Plan~~
+
+> **Status:** ~~ARCHIVED~~ — demo app shelved 2026-04-04 (commit `958541f`). SDK can't support it until v0.3.0 closure lands. Will rebuild after v0.3.0. Kept for historical reference.
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

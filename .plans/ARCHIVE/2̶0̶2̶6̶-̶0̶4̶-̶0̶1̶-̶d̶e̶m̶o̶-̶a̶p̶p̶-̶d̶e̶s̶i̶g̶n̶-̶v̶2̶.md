@@ -1,4 +1,6 @@
-# Design: Financial Transaction Analysis Pipeline (v2)
+# ~~Design: Financial Transaction Analysis Pipeline (v2)~~
+
+> **Status:** ~~ARCHIVED~~ — demo app shelved 2026-04-04 after discovering SDK gaps blocking the design. Kept for historical reference; will inform v0.3.0 demo rebuild.
 
 **Created:** 2026-04-01
 **Status:** APPROVED

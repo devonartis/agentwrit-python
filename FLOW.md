@@ -81,9 +81,26 @@ Key decisions:
 
 **Devflow Steps 1-5 complete.** Next: Step 6 (Code) via `superpowers:executing-plans` in a fresh session.
 
+### 2026-04-04 — Demo app archived, v0.3.0 SDK closure takes priority
+
+**Decision:** Archive the demo app (commit `958541f`). SDK can't support the v2 multi-agent design — no `delegation_chain` exposed, no SPIFFE ID from `get_token()`, no `request_id` correlation. Fix the SDK first.
+
+**Decision:** v0.3.0 design locked in (`.plans/designs/2026-04-04-v0.3.0-sdk-design.md`). 25 findings from 3 audits. 7 phases. Hard breaks only (pre-release, no aliases).
+
+**Status:** Phase 1 (G0 rename `AgentAuthClient` → `AgentAuthApp`) shipped in commit `33fb2f4`.
+
+**Next:** Phases 2–7 specs + impl plans.
+
+### 2026-04-05 — v0.3.0 specs broken into per-phase files
+
+**Decision:** 6 phase-scoped specs instead of one umbrella. Each spec is independently reviewable/mergeable with own goals, stories, and TDD order. Files: `.plans/specs/2026-04-05-v0.3.0-phase{2..7}-*-spec.md`.
+
+**Next:** Draft Phase 2 acceptance stories + impl plan (`superpowers:writing-plans`), then execute (`superpowers:executing-plans`). Phase 2 first because it's contained and unblocks Phase 3's cache integration.
+
 ---
 
-**Roadmap (after demo app):**
+**Roadmap (after v0.3.0 closure):**
+- Demo app rebuild (unblocked by v0.3.0)
 1. Push to GitHub as `divineartis/agentauth-python`
 2. CI setup — GitHub Actions for lint, type check, unit tests on every PR
 3. PyPI publishing — `agentauth` package on PyPI

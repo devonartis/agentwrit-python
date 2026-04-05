@@ -1,4 +1,6 @@
-# HITL Removal & API Alignment: Clean the SDK for open-source release
+# ~~HITL Removal & API Alignment: Clean the SDK for open-source release~~
+
+> **Status:** ~~DONE~~ — shipped in v0.2.0, merged to `main` 2026-04-01. Kept for historical reference.
 
 **Status:** Spec
 **Priority:** P0 — blocks v0.2.0 release and all downstream work

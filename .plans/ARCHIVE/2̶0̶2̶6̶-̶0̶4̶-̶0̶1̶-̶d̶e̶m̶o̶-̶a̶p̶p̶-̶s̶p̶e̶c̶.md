@@ -1,4 +1,6 @@
-# Demo App: Financial Transaction Analysis Pipeline
+# ~~Demo App: Financial Transaction Analysis Pipeline~~
+
+> **Status:** ~~ARCHIVED~~ — demo app shelved 2026-04-04. Will rebuild after v0.3.0 SDK closure. Kept for historical reference.
 
 **Status:** Spec
 **Priority:** P1 — the demo is the adoption pitch; without it the SDK is an undiscoverable library

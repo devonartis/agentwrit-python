@@ -1,4 +1,6 @@
-# Why Traditional IAM Fails for AI Agents
+# ~~Why Traditional IAM Fails for AI Agents~~
+
+> **Status:** ~~ARCHIVED~~ — demo-supporting educational doc. Kept for historical reference; may inform demo rebuild after v0.3.0.
 
 **Created:** 2026-04-01
 **Purpose:** Concrete scenarios showing what goes wrong when you use AWS IAM, Okta, Azure AD, or static API keys to secure multi-agent AI systems — and what AgentAuth does differently.

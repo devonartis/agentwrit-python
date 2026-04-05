@@ -1,4 +1,6 @@
-# Design: Financial Data Pipeline Demo App
+# ~~Design: Financial Data Pipeline Demo App~~
+
+> **Status:** ~~REJECTED~~ — v1 "showcase booth" design rejected 2026-04-01. Superseded by v2 design (itself later archived). Kept for historical reference.
 
 **Created:** 2026-04-01
 **Status:** SUPERSEDED by `2026-04-01-demo-app-design-v2.md` — rejected as showcase booth, not real-world app
