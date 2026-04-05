@@ -67,6 +67,9 @@ class TokenCache:
         self._renewal_threshold = renewal_threshold
         self._store: dict[_CacheKey, _Entry] = {}
         self._lock = threading.Lock()
+        # G15: per-key locks serialize the cache-miss / renewal path so that
+        # concurrent callers with the same key produce exactly one registration.
+        self._key_locks: dict[_CacheKey, threading.Lock] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -166,13 +169,40 @@ class TokenCache:
 
         Called after a successful /v1/token/release to prevent the revoked
         token from being returned from cache on the next get() call. Linear
-        scan -- O(n) in cache size, acceptable for in-memory caches.
+        scan -- O(n) in cache size, acceptable for in-memory caches. Also
+        cleans up the per-key lock so the dict doesn't grow unbounded.
         """
         with self._lock:
             for key, entry in list(self._store.items()):
                 if entry.token == token:
                     del self._store[key]
+                    self._key_locks.pop(key, None)
                     return
+
+    def acquire_key_lock(
+        self,
+        agent_name: str,
+        scope: list[str],
+        *,
+        task_id: str | None = None,
+        orch_id: str | None = None,
+    ) -> threading.Lock:
+        """Return (creating if needed) the per-key lock for this cache entry (G15).
+
+        Callers wrap the cache-miss / renewal path in `with lock:` to serialize
+        registration, preventing duplicate SPIFFE identities from concurrent
+        cache-miss threads. Distinct keys hold distinct locks, so unrelated
+        callers do not serialize against each other.
+
+        Thread-safe: mutation of the lock dict is guarded by self._lock.
+        """
+        key = _make_key(agent_name, scope, task_id=task_id, orch_id=orch_id)
+        with self._lock:
+            lock = self._key_locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                self._key_locks[key] = lock
+            return lock
 
     # ------------------------------------------------------------------
     # Internal helpers

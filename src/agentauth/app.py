@@ -255,7 +255,7 @@ class AgentAuthApp:
             ScopeCeilingError: Requested scope exceeds the app's ceiling.
             AgentAuthError: On any other broker error.
         """
-        # 1. Cache check -- BEFORE any HTTP calls (G13: include task_id/orch_id in key)
+        # 1. Fast-path cache check -- lock-free (G13: key includes task_id/orch_id)
         cached = self._token_cache.get(
             agent_name, scope, task_id=task_id, orch_id=orch_id,
         )
@@ -264,104 +264,122 @@ class AgentAuthApp:
         ):
             return cached
 
-        # 2. Ensure app token is fresh
-        app_token = self._ensure_app_token()
-
-        # 3. POST /v1/app/launch-tokens
-        # The launch token is a single-use, short-lived token that authorizes
-        # one agent registration. It binds the agent_name and scope to a
-        # specific registration attempt.
-        launch_url = f"{self._broker_url}/v1/app/launch-tokens"
-        launch_payload: dict[str, object] = {
-            "agent_name": agent_name,
-            "allowed_scope": scope,
-        }
-
-        launch_resp = self._request(
-            "POST",
-            launch_url,
-            json=launch_payload,
-            auth_token=app_token,
+        # 2. Acquire per-key lock to serialize concurrent miss-path callers (G15).
+        #    Without this, 10 threads racing on a cold cache would all run the
+        #    full 3-call registration flow and receive 10 distinct SPIFFE IDs,
+        #    9 of which become orphaned (valid at broker, unreferenced in SDK).
+        key_lock = self._token_cache.acquire_key_lock(
+            agent_name, scope, task_id=task_id, orch_id=orch_id,
         )
-        if not launch_resp.ok:
-            try:
-                body = launch_resp.json()
-            except Exception:
-                body = {}
-            raise parse_error_response(launch_resp.status_code, body)
+        with key_lock:
+            # 3. Double-checked read -- another thread may have populated
+            #    the cache while we were waiting for the lock.
+            cached = self._token_cache.get(
+                agent_name, scope, task_id=task_id, orch_id=orch_id,
+            )
+            if cached is not None and not self._token_cache.needs_renewal(
+                agent_name, scope, task_id=task_id, orch_id=orch_id,
+            ):
+                return cached
 
-        launch_data = launch_resp.json()
-        launch_token = launch_data["launch_token"]
+            # 4. Ensure app token is fresh
+            app_token = self._ensure_app_token()
 
-        # 4. Generate ephemeral Ed25519 keypair (never persisted to disk)
-        private_key, public_key_b64 = generate_keypair()
+            # 5. POST /v1/app/launch-tokens
+            # The launch token is a single-use, short-lived token that authorizes
+            # one agent registration. It binds the agent_name and scope to a
+            # specific registration attempt.
+            launch_url = f"{self._broker_url}/v1/app/launch-tokens"
+            launch_payload: dict[str, object] = {
+                "agent_name": agent_name,
+                "allowed_scope": scope,
+            }
 
-        # 5. GET /v1/challenge
-        challenge_url = f"{self._broker_url}/v1/challenge"
-        challenge_resp = self._request("GET", challenge_url)
-        if not challenge_resp.ok:
-            try:
-                body = challenge_resp.json()
-            except Exception:
-                body = {}
-            raise parse_error_response(challenge_resp.status_code, body)
+            launch_resp = self._request(
+                "POST",
+                launch_url,
+                json=launch_payload,
+                auth_token=app_token,
+            )
+            if not launch_resp.ok:
+                try:
+                    body = launch_resp.json()
+                except Exception:
+                    body = {}
+                raise parse_error_response(launch_resp.status_code, body)
 
-        nonce = challenge_resp.json()["nonce"]
+            launch_data = launch_resp.json()
+            launch_token = launch_data["launch_token"]
 
-        # 6. Sign the nonce
-        signature = sign_nonce(private_key, nonce)
+            # 6. Generate ephemeral Ed25519 keypair (never persisted to disk)
+            private_key, public_key_b64 = generate_keypair()
 
-        # 7. POST /v1/register
-        # This is the core identity issuance step (C1 Ephemeral Identity).
-        # IMPORTANT: This endpoint does NOT use Bearer auth. The launch_token
-        # in the body IS the authentication. The broker validates:
-        #   - launch_token is valid and unused
-        #   - nonce matches the challenge and is within its 30-second TTL
-        #   - public_key matches the signature over the nonce
-        #   - requested_scope is within the launch token's allowed_scope
-        # On success, the broker returns an agent JWT with a unique SPIFFE ID.
-        #
-        # orch_id and task_id are REQUIRED by the broker but the SDK makes
-        # them optional for the developer with sensible defaults.
-        register_url = f"{self._broker_url}/v1/register"
-        register_payload: dict[str, object] = {
-            "launch_token": launch_token,
-            "nonce": nonce,
-            "public_key": public_key_b64,
-            "signature": signature,
-            "requested_scope": scope,
-            "orch_id": orch_id or "sdk",
-            "task_id": task_id or "default",
-        }
+            # 7. GET /v1/challenge
+            challenge_url = f"{self._broker_url}/v1/challenge"
+            challenge_resp = self._request("GET", challenge_url)
+            if not challenge_resp.ok:
+                try:
+                    body = challenge_resp.json()
+                except Exception:
+                    body = {}
+                raise parse_error_response(challenge_resp.status_code, body)
 
-        register_resp = self._request(
-            "POST",
-            register_url,
-            json=register_payload,
-            # auth_token intentionally omitted -- launch_token in body is the auth
-        )
-        if not register_resp.ok:
-            try:
-                body = register_resp.json()
-            except Exception:
-                body = {}
-            raise parse_error_response(register_resp.status_code, body)
+            nonce = challenge_resp.json()["nonce"]
 
-        reg_data: _RegisterResponse = register_resp.json()
-        agent_token: str = reg_data["access_token"]
-        expires_in: int = reg_data["expires_in"]
+            # 8. Sign the nonce
+            signature = sign_nonce(private_key, nonce)
 
-        # 8. Cache the result (G13: include task_id/orch_id in key)
-        self._token_cache.put(
-            agent_name,
-            scope,
-            agent_token,
-            expires_in=expires_in,
-            task_id=task_id,
-            orch_id=orch_id,
-        )
+            # 9. POST /v1/register
+            # This is the core identity issuance step (C1 Ephemeral Identity).
+            # IMPORTANT: This endpoint does NOT use Bearer auth. The launch_token
+            # in the body IS the authentication. The broker validates:
+            #   - launch_token is valid and unused
+            #   - nonce matches the challenge and is within its 30-second TTL
+            #   - public_key matches the signature over the nonce
+            #   - requested_scope is within the launch token's allowed_scope
+            # On success, the broker returns an agent JWT with a unique SPIFFE ID.
+            #
+            # orch_id and task_id are REQUIRED by the broker but the SDK makes
+            # them optional for the developer with sensible defaults.
+            register_url = f"{self._broker_url}/v1/register"
+            register_payload: dict[str, object] = {
+                "launch_token": launch_token,
+                "nonce": nonce,
+                "public_key": public_key_b64,
+                "signature": signature,
+                "requested_scope": scope,
+                "orch_id": orch_id or "sdk",
+                "task_id": task_id or "default",
+            }
 
-        return agent_token
+            register_resp = self._request(
+                "POST",
+                register_url,
+                json=register_payload,
+                # auth_token intentionally omitted -- launch_token in body is the auth
+            )
+            if not register_resp.ok:
+                try:
+                    body = register_resp.json()
+                except Exception:
+                    body = {}
+                raise parse_error_response(register_resp.status_code, body)
+
+            reg_data: _RegisterResponse = register_resp.json()
+            agent_token: str = reg_data["access_token"]
+            expires_in: int = reg_data["expires_in"]
+
+            # 10. Cache the result (G13: include task_id/orch_id in key)
+            self._token_cache.put(
+                agent_name,
+                scope,
+                agent_token,
+                expires_in=expires_in,
+                task_id=task_id,
+                orch_id=orch_id,
+            )
+
+            return agent_token
 
     def delegate(
         self,
