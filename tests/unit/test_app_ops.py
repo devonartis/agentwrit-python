@@ -200,6 +200,48 @@ class TestRevokeToken:
         headers = call_kwargs.get("headers", {})
         assert headers.get("Authorization") == f"Bearer {AGENT_TOKEN}"
 
+    def test_revoke_token_evicts_cache_entry(self):
+        """G14: a successful revoke_token evicts the token from the in-memory cache."""
+        revoke_resp = _make_response(204)
+        mock_session_cls, mock_session_instance = _make_session_cls_and_instance([revoke_resp])
+
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            client = _make_client(mock_session_instance)
+            # Simulate a cached token directly (bypassing the full register flow)
+            client._token_cache.put(
+                "worker", ["read:data:*"], AGENT_TOKEN, expires_in=300, task_id="t1",
+            )
+            assert client._token_cache.get(
+                "worker", ["read:data:*"], task_id="t1",
+            ) == AGENT_TOKEN
+
+            client.revoke_token(token=AGENT_TOKEN)
+
+        # Cache entry should be gone — next get() returns None, forcing re-registration
+        assert client._token_cache.get(
+            "worker", ["read:data:*"], task_id="t1",
+        ) is None
+
+    def test_revoke_token_failure_does_not_evict_cache(self):
+        """G14: if revoke fails (non-2xx), the cache entry must remain."""
+        revoke_resp = _make_response(500, {"detail": "boom"})
+        mock_session_cls, mock_session_instance = _make_session_cls_and_instance([revoke_resp])
+
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            client = _make_client(mock_session_instance)
+            client._token_cache.put(
+                "worker", ["read:data:*"], AGENT_TOKEN, expires_in=300, task_id="t1",
+            )
+
+            import pytest
+            with pytest.raises(Exception):
+                client.revoke_token(token=AGENT_TOKEN)
+
+        # revoke raised — cache entry remains (broker state diverged; caller can retry)
+        assert client._token_cache.get(
+            "worker", ["read:data:*"], task_id="t1",
+        ) == AGENT_TOKEN
+
 
 # ---------------------------------------------------------------------------
 # validate_token() tests

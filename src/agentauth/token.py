@@ -161,6 +161,19 @@ class TokenCache:
         with self._lock:
             self._store.pop(key, None)
 
+    def remove_by_token(self, token: str) -> None:
+        """Evict whichever cache entry holds this JWT. No-op if not found (G14).
+
+        Called after a successful /v1/token/release to prevent the revoked
+        token from being returned from cache on the next get() call. Linear
+        scan -- O(n) in cache size, acceptable for in-memory caches.
+        """
+        with self._lock:
+            for key, entry in list(self._store.items()):
+                if entry.token == token:
+                    del self._store[key]
+                    return
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

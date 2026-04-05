@@ -414,6 +414,8 @@ class AgentAuthApp:
             except Exception:
                 revoke_error_body = {}
             raise parse_error_response(response.status_code, revoke_error_body)
+        # G14: evict cache entry so the next get_token re-registers
+        self._token_cache.remove_by_token(token)
 
     def validate_token(self, token: str) -> _ValidateTokenResponse:
         """POST /v1/token/validate -- online token validation (no auth required).

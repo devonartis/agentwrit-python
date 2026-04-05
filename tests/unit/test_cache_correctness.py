@@ -35,3 +35,25 @@ def test_missing_task_id_does_not_alias_to_present_task_id() -> None:
     cache.put("agent", ["read:*"], "token-tagged", expires_in=300, task_id="X")
     assert cache.get("agent", ["read:*"]) is None  # task_id=None -- no match
     assert cache.get("agent", ["read:*"], task_id="X") == "token-tagged"
+
+
+def test_remove_by_token_evicts_matching_entry() -> None:
+    """G14: cache.remove_by_token evicts whichever entry holds this JWT."""
+    cache = TokenCache()
+    cache.put("agent", ["read:*"], "jwt-abc", expires_in=300, task_id="t1")
+    cache.put("agent", ["read:*"], "jwt-xyz", expires_in=300, task_id="t2")
+
+    cache.remove_by_token("jwt-abc")
+
+    assert cache.get("agent", ["read:*"], task_id="t1") is None
+    assert cache.get("agent", ["read:*"], task_id="t2") == "jwt-xyz"
+
+
+def test_remove_by_token_no_match_is_noop() -> None:
+    """G14: remove_by_token is idempotent when the JWT is not cached."""
+    cache = TokenCache()
+    cache.put("agent", ["read:*"], "jwt-abc", expires_in=300)
+
+    cache.remove_by_token("jwt-nonexistent")  # must not raise
+
+    assert cache.get("agent", ["read:*"]) == "jwt-abc"
