@@ -57,8 +57,8 @@ returns a valid JWT.
 **Setup:** Broker running in Docker. App registered with `read:data:*` scope ceiling.
 **Code:**
 ```python
-from agentauth import AgentAuthClient
-client = AgentAuthClient(broker_url, client_id, client_secret)
+from agentauth import AgentAuthApp
+client = AgentAuthApp(broker_url, client_id, client_secret)
 token = client.get_token("my-agent", ["read:data:*"])
 ```
 **Expected:** `token` is a valid JWT string. Decoding it shows `scope: ["read:data:*"]` and a SPIFFE-format `sub`.
@@ -136,11 +136,11 @@ Integration tests use a live broker and exercise the full SDK flow:
 # tests/integration/test_get_token.py
 import os
 import pytest
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 @pytest.fixture
 def client():
-    return AgentAuthClient(
+    return AgentAuthApp(
         broker_url=os.environ["AGENTAUTH_BROKER_URL"],
         client_id=os.environ["AGENTAUTH_CLIENT_ID"],
         client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],

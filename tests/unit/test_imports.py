@@ -2,9 +2,9 @@
 
 
 def test_import_client_from_top_level():
-    from agentauth import AgentAuthClient
+    from agentauth import AgentAuthApp
 
-    assert AgentAuthClient is not None
+    assert AgentAuthApp is not None
 
 
 def test_version_is_string():

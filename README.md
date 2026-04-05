@@ -30,9 +30,9 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 The SDK wraps the [AgentAuth broker](https://github.com/devonartis/agentAuth) API into simple Python calls. What takes 40+ lines of manual Ed25519 key management, nonce signing, and token caching becomes three lines:
 
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(broker_url, client_id, client_secret)
+client = AgentAuthApp(broker_url, client_id, client_secret)
 token = client.get_token("data-analyst", ["read:data:customers"])
 ```
 
@@ -54,10 +54,10 @@ pip install git+https://github.com/devonartis/agentauth-python-sdk
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 # 1. Connect — authenticates your app with the broker on creation
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
@@ -90,7 +90,7 @@ client.revoke_token(token)             # Immediate invalidation
 graph TB
     subgraph App["🔧 Your Application"]
         direction TB
-        Client["<b>AgentAuthClient</b><br/>get_token() · delegate()<br/>revoke_token() · validate_token()"]
+        Client["<b>AgentAuthApp</b><br/>get_token() · delegate()<br/>revoke_token() · validate_token()"]
         Cache["Token Cache<br/><i>Thread-safe · Auto-renewal at 80% TTL</i>"]
         Client --- Cache
     end
@@ -125,7 +125,7 @@ graph LR
     subgraph AppHost["🖥️ Your Infrastructure"]
         direction TB
         App["Python App<br/><i>FastAPI · Flask · Celery</i>"]
-        SDK["AgentAuthClient<br/><i>pip install agentauth</i>"]
+        SDK["AgentAuthApp<br/><i>pip install agentauth</i>"]
         A1["🤖 Agent: reader"]
         A2["🤖 Agent: writer"]
         A3["🤖 Agent: analyst"]

@@ -1,6 +1,6 @@
-"""Unit tests for AgentAuthClient.get_token().
+"""Unit tests for AgentAuthApp.get_token().
 
-Patch point: agentauth.client.requests.Session
+Patch point: agentauth.app.requests.Session
 No broker required -- all HTTP is mocked.
 
 Key: _authenticate_app calls session.post() directly (not via _request).
@@ -86,7 +86,7 @@ def _make_mock_response(status_code: int, json_body: dict, ok: bool | None = Non
 
 
 def _make_client(session_instance):
-    """Construct an AgentAuthClient against the provided session mock.
+    """Construct an AgentAuthApp against the provided session mock.
 
     _authenticate_app calls session.post() directly (not via _request).
     get_token calls _request -> request_with_retry -> session.request().
@@ -100,10 +100,10 @@ def _make_client(session_instance):
 
     mock_session_cls = MagicMock(return_value=session_instance)
 
-    with patch("agentauth.client.requests.Session", mock_session_cls):
-        from agentauth.client import AgentAuthClient  # noqa: PLC0415
+    with patch("agentauth.app.requests.Session", mock_session_cls):
+        from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-        client = AgentAuthClient(
+        client = AgentAuthApp(
             broker_url=BROKER_URL,
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,

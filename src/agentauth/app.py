@@ -1,4 +1,4 @@
-"""AgentAuthClient -- main entry point for the AgentAuth Python SDK.
+"""AgentAuthApp -- main entry point for the AgentAuth Python SDK.
 
 Implements the Ephemeral Agent Credentialing pattern (v1.2):
   - C1 (Ephemeral Identity Issuance): Ed25519 challenge-response via get_token()
@@ -81,7 +81,7 @@ class _ValidateTokenResponse(TypedDict, total=False):
     error: str
 
 
-class AgentAuthClient:
+class AgentAuthApp:
     """Client for the AgentAuth credential broker.
 
     Handles app authentication automatically on construction and re-authenticates
@@ -430,4 +430,4 @@ class AgentAuthClient:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return f"AgentAuthClient(broker_url={self._broker_url!r}, client_id={self._client_id!r})"
+        return f"AgentAuthApp(broker_url={self._broker_url!r}, client_id={self._client_id!r})"

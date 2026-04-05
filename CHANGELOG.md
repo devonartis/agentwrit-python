@@ -6,7 +6,7 @@ Initial release of the AgentAuth Python SDK.
 
 ### Features
 
-- **AgentAuthClient** -- main entry point with app authentication on init
+- **AgentAuthApp** -- main entry point with app authentication on init
 - **get_token()** -- full 8-step credential flow (app auth, launch token, Ed25519 challenge-response, caching)
 - **HITL support** -- `HITLApprovalRequired` exception with `approval_id` and `expires_at`, retry with `approval_token`
 - **delegate()** -- scope-attenuated delegation to another registered agent (C7 Delegation Chain)

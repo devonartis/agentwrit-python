@@ -43,7 +43,7 @@ Correct model:
 
 Claude had inverted this: giving ceilings to agents and letting the app be generic.
 
-#### 3. The name "AgentAuthClient" is wrong — it should be "AgentAuthApp"
+#### 3. The name "AgentAuthApp" is wrong — it should be "AgentAuthApp"
 
 > **10:07:58** — "i think what can confusing you saying authclient butits not really auth client it is auth app"
 
@@ -52,7 +52,7 @@ The broker has a **3-tier trust hierarchy**:
 2. The **App** authenticates (`POST /v1/app/auth`) and creates launch tokens for its **Agents**
 3. **Agents** register (`POST /v1/register`) and get JWTs
 
-The SDK class named `AgentAuthClient` is *acting as the App*. It holds `client_id`/`client_secret`, authenticates to `/v1/app/auth`, and creates launch tokens via `/v1/app/launch-tokens`. **It is the App identity, not a generic "client".**
+The SDK class named `AgentAuthApp` is *acting as the App*. It holds `client_id`/`client_secret`, authenticates to `/v1/app/auth`, and creates launch tokens via `/v1/app/launch-tokens`. **It is the App identity, not a generic "client".**
 
 The naming misled Claude repeatedly about what the class is for.
 
@@ -120,8 +120,8 @@ This PRD has **two parallel workstreams**: the SDK gaps need closing *before* th
 
 | # | Item | Effort | Why |
 |---|------|--------|-----|
-| A1.1 | Rename `AgentAuthClient` → `AgentAuthApp` (primary name) | 2 hr | Class represents the App identity in broker's 3-tier trust model |
-| A1.2 | Keep `AgentAuthClient` as deprecated alias with `DeprecationWarning` | 30 min | Back-compat for v0.2.0 users |
+| A1.1 | Rename `AgentAuthApp` → `AgentAuthApp` (primary name) | 2 hr | Class represents the App identity in broker's 3-tier trust model |
+| A1.2 | Keep `AgentAuthApp` as deprecated alias with `DeprecationWarning` | 30 min | Back-compat for v0.2.0 users |
 | A1.3 | Update 32 files: src/, tests/, docs/, examples/, README.md | 2 hr | Full codebase rename |
 | A1.4 | Update all docstrings to use "app" terminology | 1 hr | Reinforce mental model |
 | A1.5 | Add section to docs: "What is an App vs an Agent?" | 30 min | Prevent others repeating this mistake |
@@ -226,7 +226,7 @@ Combining the original 15-item gap review + the naming issue + any discovered mi
 
 | # | Gap | Severity | Workstream |
 |---|-----|----------|------------|
-| 0 | Class name `AgentAuthClient` misrepresents the App identity | **High (UX)** | A1 |
+| 0 | Class name `AgentAuthApp` misrepresents the App identity | **High (UX)** | A1 |
 | 1 | `get_token()` drops `agent_id` | High | A2.1 |
 | 2 | `get_token()` hides `expires_in` | Medium | A2.2 |
 | 3 | `delegate()` drops `expires_in` | Medium | A2.2 |
@@ -254,7 +254,7 @@ Combining the original 15-item gap review + the naming issue + any discovered mi
 - No API changes
 
 ### v0.3.0 (minor — naming + SDK closure, BREAKING deprecation)
-- A1 (rename to `AgentAuthApp`, deprecate `AgentAuthClient`)
+- A1 (rename to `AgentAuthApp`, deprecate `AgentAuthApp`)
 - A2 (expose dropped fields via result objects)
 - A3 (add `renew_token()`)
 - A4 (fix cache correctness bugs)

@@ -36,9 +36,9 @@ class TestNoHITLContamination:
 
     def test_no_approval_token_parameter(self) -> None:
         """get_token() must not accept an approval_token parameter."""
-        from agentauth.client import AgentAuthClient
+        from agentauth.app import AgentAuthApp
 
-        sig: inspect.Signature = inspect.signature(AgentAuthClient.get_token)
+        sig: inspect.Signature = inspect.signature(AgentAuthApp.get_token)
         assert "approval_token" not in sig.parameters
 
     def test_no_hitl_strings_in_source(self) -> None:

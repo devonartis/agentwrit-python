@@ -1,6 +1,6 @@
-"""Unit tests for AgentAuthClient.delegate, revoke_token, validate_token.
+"""Unit tests for AgentAuthApp.delegate, revoke_token, validate_token.
 
-Patch point: agentauth.client.requests.Session
+Patch point: agentauth.app.requests.Session
 No broker required -- all HTTP is mocked.
 
 TDD order: these tests are written before the methods exist in client.py.
@@ -33,14 +33,14 @@ def _make_response(status_code: int, json_body: dict | None = None) -> MagicMock
 
 
 def _make_client(session: MagicMock):
-    """Construct an AgentAuthClient with a pre-wired mock session.
+    """Construct an AgentAuthApp with a pre-wired mock session.
 
     The session mock must already be set up so that .post() returns a 200
     app-auth response (so __init__ doesn't blow up).
     """
-    from agentauth.client import AgentAuthClient  # noqa: PLC0415
+    from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-    return AgentAuthClient(
+    return AgentAuthApp(
         broker_url="http://broker.example.com",
         client_id="app-123",
         client_secret="super-secret",
@@ -87,7 +87,7 @@ class TestDelegate:
         delegate_resp = _make_response(200, self.DELEGATE_200)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([delegate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             result = client.delegate(
                 token=AGENT_TOKEN,
@@ -103,7 +103,7 @@ class TestDelegate:
         delegate_resp = _make_response(200, self.DELEGATE_200)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([delegate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.delegate(
                 token=AGENT_TOKEN,
@@ -121,7 +121,7 @@ class TestDelegate:
         delegate_resp = _make_response(200, self.DELEGATE_200)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([delegate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.delegate(
                 token=AGENT_TOKEN,
@@ -141,7 +141,7 @@ class TestDelegate:
         delegate_resp = _make_response(200, self.DELEGATE_200)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([delegate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.delegate(
                 token=AGENT_TOKEN,
@@ -168,7 +168,7 @@ class TestRevokeToken:
         revoke_resp = _make_response(204)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([revoke_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             result = client.revoke_token(token=AGENT_TOKEN)
 
@@ -179,7 +179,7 @@ class TestRevokeToken:
         revoke_resp = _make_response(204)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([revoke_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.revoke_token(token=AGENT_TOKEN)
 
@@ -192,7 +192,7 @@ class TestRevokeToken:
         revoke_resp = _make_response(204)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([revoke_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.revoke_token(token=AGENT_TOKEN)
 
@@ -228,7 +228,7 @@ class TestValidateToken:
         validate_resp = _make_response(200, self.VALIDATE_200_VALID)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([validate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             result = client.validate_token(token="some.jwt.string")
 
@@ -241,7 +241,7 @@ class TestValidateToken:
         validate_resp = _make_response(200, self.VALIDATE_200_VALID)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([validate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.validate_token(token="some.jwt.string")
 
@@ -254,7 +254,7 @@ class TestValidateToken:
         validate_resp = _make_response(200, self.VALIDATE_200_VALID)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([validate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.validate_token(token="some.jwt.string")
 
@@ -267,7 +267,7 @@ class TestValidateToken:
         validate_resp = _make_response(200, self.VALIDATE_200_VALID)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([validate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             client.validate_token(token="some.jwt.string")
 
@@ -280,7 +280,7 @@ class TestValidateToken:
         validate_resp = _make_response(200, self.VALIDATE_200_INVALID)
         mock_session_cls, mock_session_instance = _make_session_cls_and_instance([validate_resp])
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
+        with patch("agentauth.app.requests.Session", mock_session_cls):
             client = _make_client(mock_session_instance)
             result = client.validate_token(token="expired.jwt.string")
 

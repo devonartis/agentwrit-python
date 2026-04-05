@@ -6,15 +6,15 @@ function calls, handling key generation, token caching, renewal, and retry.
 
 Quick start::
 
-    from agentauth import AgentAuthClient
+    from agentauth import AgentAuthApp
 
-    client = AgentAuthClient(broker_url, client_id, client_secret)
+    client = AgentAuthApp(broker_url, client_id, client_secret)
     token = client.get_token("my-agent", ["read:data:*"])
 
 For full documentation, see: https://github.com/devonartis/agentauth-python-sdk
 
 Exports:
-    AgentAuthClient         — Main client class (the primary entry point)
+    AgentAuthApp         — Main client class (the primary entry point)
     AgentAuthError          — Base exception for all SDK errors
     AuthenticationError     — 401: bad credentials
     ScopeCeilingError       — 403: scope exceeds app ceiling
@@ -25,7 +25,7 @@ Exports:
 
 __version__ = "0.2.0"
 
-from agentauth.client import AgentAuthClient
+from agentauth.app import AgentAuthApp
 from agentauth.errors import (
     AgentAuthError,
     AuthenticationError,
@@ -36,7 +36,7 @@ from agentauth.errors import (
 )
 
 __all__ = [
-    "AgentAuthClient",
+    "AgentAuthApp",
     "__version__",
     "AgentAuthError",
     "AuthenticationError",

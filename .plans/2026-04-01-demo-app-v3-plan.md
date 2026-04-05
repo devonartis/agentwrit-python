@@ -10,7 +10,7 @@
 
 **Design doc:** `.plans/designs/2026-04-01-demo-app-design-v3.md`
 **Old app reference:** `~/proj/agentauth-app/app/web/` (three-panel layout, SSE, enforcement cards)
-**SDK API:** `src/agentauth/client.py` — `get_token()`, `validate_token()`, `delegate()`, `revoke_token()`
+**SDK API:** `src/agentauth/app.py` — `get_token()`, `validate_token()`, `delegate()`, `revoke_token()`
 **Branch:** `feature/demo-app`
 
 ---
@@ -20,10 +20,10 @@
 ### SDK API Quick Reference
 
 ```python
-from agentauth import AgentAuthClient, ScopeCeilingError, AuthenticationError
+from agentauth import AgentAuthApp, ScopeCeilingError, AuthenticationError
 
 # Initialize (authenticates app immediately)
-client = AgentAuthClient(broker_url, client_id, client_secret)
+client = AgentAuthApp(broker_url, client_id, client_secret)
 
 # Get scoped token for an agent (handles challenge-response internally)
 token: str = client.get_token(agent_name="triage-agent", scope=["patient:read:intake"])
@@ -634,11 +634,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 def enforce_tool_call(
-    client: AgentAuthClient,
+    client: AgentAuthApp,
     agent_token: str,
     tool_name: str,
     tool_args: dict[str, Any],
@@ -749,7 +749,7 @@ import asyncio
 import json
 from typing import Any, AsyncGenerator
 
-from agentauth import AgentAuthClient, ScopeCeilingError
+from agentauth import AgentAuthApp, ScopeCeilingError
 
 
 class PipelineRunner:
@@ -757,7 +757,7 @@ class PipelineRunner:
 
     def __init__(
         self,
-        client: AgentAuthClient,
+        client: AgentAuthApp,
         llm_client: Any,
         llm_provider: str,
         story_name: str,
@@ -825,7 +825,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.responses import Response
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 @dataclass
@@ -833,7 +833,7 @@ class AppState:
     """Shared mutable state."""
     broker_url: str = ""
     admin_token: str = ""
-    agentauth_client: AgentAuthClient | None = None
+    agentauth_client: AgentAuthApp | None = None
     llm_client: Any = None
     llm_provider: str = ""
     active_story: str = ""
@@ -859,7 +859,7 @@ class AppState:
 
 **Story registration route (`POST /api/register/{story}`):**
 1. Register app with broker using the story's ceiling
-2. Create `AgentAuthClient` with returned client_id/client_secret
+2. Create `AgentAuthApp` with returned client_id/client_secret
 3. Store in AppState
 4. Return HTMX partial: agent cards for the selected story
 

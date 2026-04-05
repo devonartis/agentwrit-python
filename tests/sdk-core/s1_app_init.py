@@ -14,7 +14,7 @@ SDK-S1 -- Developer Initializes the Client
 
 Who: The developer.
 
-What: The developer creates an AgentAuthClient with their broker URL,
+What: The developer creates an AgentAuthApp with their broker URL,
 client_id, and client_secret. The SDK authenticates the app with the
 broker via POST /v1/app/auth behind the scenes. The developer writes
 three lines and gets a working client back.
@@ -33,7 +33,7 @@ client_id but never the client_secret.
 ======================================================================
 """)
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 from agentauth.errors import AuthenticationError
 
 BROKER_URL: str = os.environ.get("AGENTAUTH_BROKER_URL", "http://127.0.0.1:8080")
@@ -46,7 +46,7 @@ failed: int = 0
 # Test 1: Valid credentials
 print("--- Test 1: Initialize with valid credentials ---")
 try:
-    client = AgentAuthClient(
+    client = AgentAuthApp(
         broker_url=BROKER_URL,
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
@@ -63,7 +63,7 @@ except Exception as e:
 # Test 2: Wrong credentials
 print("--- Test 2: Wrong credentials raise AuthenticationError ---")
 try:
-    AgentAuthClient(
+    AgentAuthApp(
         broker_url=BROKER_URL,
         client_id="wrong-id",
         client_secret="wrong-secret",

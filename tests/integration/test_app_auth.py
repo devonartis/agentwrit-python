@@ -1,6 +1,6 @@
 """Integration tests: app authentication (SDK-S1, SDK-S12).
 
-These tests verify that AgentAuthClient authenticates against a real broker
+These tests verify that AgentAuthApp authenticates against a real broker
 and that the broker records correct audit events (SDK-S12: standard API).
 
 Requires: broker running, AGENTAUTH_CLIENT_ID, AGENTAUTH_CLIENT_SECRET,
@@ -14,7 +14,7 @@ import os
 import pytest
 import requests as requests_lib
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 from agentauth.errors import AuthenticationError
 
 
@@ -26,18 +26,18 @@ class TestAppAuth:
         self, broker_url: str, app_credentials: dict[str, str]
     ) -> None:
         """Client init calls POST /v1/app/auth and succeeds with valid credentials."""
-        client = AgentAuthClient(
+        client = AgentAuthApp(
             broker_url=broker_url,
             client_id=app_credentials["client_id"],
             client_secret=app_credentials["client_secret"],
         )
         # If we get here without exception, app auth succeeded
-        assert repr(client).startswith("AgentAuthClient(")
+        assert repr(client).startswith("AgentAuthApp(")
 
     def test_bad_credentials_raise_authentication_error(self, broker_url: str) -> None:
         """Wrong credentials raise AuthenticationError immediately (no retry)."""
         with pytest.raises(AuthenticationError) as exc_info:
-            AgentAuthClient(
+            AgentAuthApp(
                 broker_url=broker_url,
                 client_id="bad-client-id",
                 client_secret="bad-secret",
@@ -48,7 +48,7 @@ class TestAppAuth:
         """client_secret never appears in error output (SDK-S10)."""
         secret: str = "super-secret-must-not-leak"
         with pytest.raises(AuthenticationError) as exc_info:
-            AgentAuthClient(
+            AgentAuthApp(
                 broker_url=broker_url,
                 client_id="bad-id",
                 client_secret=secret,
@@ -68,7 +68,7 @@ class TestAuditTrail:
         admin_token: str,
     ) -> None:
         """POST /v1/app/auth produces an app_authenticated audit event."""
-        AgentAuthClient(
+        AgentAuthApp(
             broker_url=broker_url,
             client_id=app_credentials["client_id"],
             client_secret=app_credentials["client_secret"],

@@ -58,7 +58,7 @@ AgentAuth implements the [Ephemeral Agent Credentialing](https://github.com/devo
 graph TB
     subgraph App["🔧 Your Application"]
         direction TB
-        Client["<b>AgentAuthClient</b><br/>get_token() · delegate()<br/>revoke_token() · validate_token()"]
+        Client["<b>AgentAuthApp</b><br/>get_token() · delegate()<br/>revoke_token() · validate_token()"]
         Cache["Token Cache<br/><i>Thread-safe · Auto-renewal at 80% TTL</i>"]
         Client --- Cache
     end
@@ -206,9 +206,9 @@ token = reg_resp.json()["access_token"]
 ### With the SDK (3 lines)
 
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(broker_url, client_id, client_secret)
+client = AgentAuthApp(broker_url, client_id, client_secret)
 token = client.get_token("reader", ["read:data:*"])
 ```
 

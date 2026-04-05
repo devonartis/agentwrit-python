@@ -390,7 +390,7 @@ FastAPI entry point. On startup:
 1. Validates required env vars (AA_ADMIN_SECRET, ANTHROPIC_API_KEY)
 2. Health-checks the broker
 3. Admin-auths and registers a demo application
-4. Instantiates AgentAuthClient + Anthropic client
+4. Instantiates AgentAuthApp + Anthropic client
 """
 
 from __future__ import annotations
@@ -407,7 +407,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 from data import PipelineResult
 
@@ -416,7 +416,7 @@ from data import PipelineResult
 class AppState:
     """Shared mutable state for the demo app."""
 
-    agentauth_client: AgentAuthClient | None = None
+    agentauth_client: AgentAuthApp | None = None
     anthropic_client: anthropic.Anthropic | None = None
     admin_token: str = ""
     broker_url: str = ""
@@ -510,7 +510,7 @@ async def startup() -> None:
         sys.exit(1)
 
     # 4. Initialize AgentAuth client
-    state.agentauth_client = AgentAuthClient(
+    state.agentauth_client = AgentAuthApp(
         broker_url=broker_url,
         client_id=client_id,
         client_secret=client_secret,
@@ -992,13 +992,13 @@ from data import SAMPLE_TRANSACTIONS, PipelineResult
 if TYPE_CHECKING:
     import anthropic
 
-    from agentauth import AgentAuthClient
+    from agentauth import AgentAuthApp
 
 router = APIRouter(prefix="/pipeline")
 
 
 def run_pipeline_sync(
-    client: AgentAuthClient,
+    client: AgentAuthApp,
     anthropic_client: anthropic.Anthropic,
 ) -> PipelineResult:
     """Run the full pipeline — credential issuance, agent dispatch, cleanup."""
@@ -1455,8 +1455,8 @@ BROKER_URL = os.environ.get("AGENTAUTH_BROKER_URL", "http://127.0.0.1:8080")
 
 @pytest.fixture
 def agentauth_client():
-    from agentauth import AgentAuthClient
-    return AgentAuthClient(
+    from agentauth import AgentAuthApp
+    return AgentAuthApp(
         broker_url=BROKER_URL,
         client_id=os.environ["AGENTAUTH_CLIENT_ID"],
         client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],

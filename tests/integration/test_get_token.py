@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 import requests as requests_lib
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 def _validate(broker_url: str, token: str) -> dict[str, object]:
@@ -34,7 +34,7 @@ class TestGetToken:
     """SDK-S2: Developer gets a token in three lines."""
 
     def test_get_token_returns_valid_jwt(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """get_token returns a JWT that validates successfully against the broker."""
         token: str = client.get_token("test-agent", ["read:data:*"])
@@ -48,7 +48,7 @@ class TestGetToken:
         assert result["valid"] is True
 
     def test_token_claims_contain_correct_scope(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """Issued JWT contains the requested scope in its claims."""
         token: str = client.get_token("scope-agent", ["read:data:*"])
@@ -59,7 +59,7 @@ class TestGetToken:
         assert "read:data:*" in claims["scope"]
 
     def test_token_sub_is_spiffe_format(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """Agent JWT subject is a SPIFFE ID (spiffe://agentauth.local/agent/...)."""
         token: str = client.get_token("spiffe-agent", ["read:data:*"])
@@ -71,7 +71,7 @@ class TestGetToken:
         assert "/agent/" in sub
 
     def test_task_id_and_orch_id_appear_in_claims(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """task_id and orch_id passed to get_token appear in the JWT claims."""
         token: str = client.get_token(
@@ -91,13 +91,13 @@ class TestGetToken:
 class TestTokenCaching:
     """SDK-S3: Token caching -- second call returns cached token."""
 
-    def test_second_call_returns_same_token(self, client: AgentAuthClient) -> None:
+    def test_second_call_returns_same_token(self, client: AgentAuthApp) -> None:
         """Two get_token calls with identical args return the same JWT string."""
         token1: str = client.get_token("cache-agent", ["read:data:*"])
         token2: str = client.get_token("cache-agent", ["read:data:*"])
         assert token1 == token2, "Expected cached token on second call"
 
-    def test_different_scope_gets_different_token(self, client: AgentAuthClient) -> None:
+    def test_different_scope_gets_different_token(self, client: AgentAuthApp) -> None:
         """Different scopes produce separate cache entries (scope is part of the key).
 
         Uses two read scopes to demonstrate cache isolation by scope key.

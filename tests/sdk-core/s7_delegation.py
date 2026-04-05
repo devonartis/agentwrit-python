@@ -29,10 +29,10 @@ the delegating agent's read:data:*.
 ======================================================================
 """)
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 BROKER: str = os.environ.get("AGENTAUTH_BROKER_URL", "http://127.0.0.1:8080")
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=BROKER,
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],

@@ -15,7 +15,7 @@ Each story follows the TEST-TEMPLATE.md banner format: Who / What / Why / How to
 
 Who: The developer.
 
-What: The developer creates an `AgentAuthClient` with their broker URL, client_id,
+What: The developer creates an `AgentAuthApp` with their broker URL, client_id,
 and client_secret. The SDK authenticates the app with the broker behind the scenes
 by calling `POST /v1/app/auth`. The developer doesn't need to know about app JWTs,
 token types, or operational scopes -- they just pass three strings and get a working
@@ -32,9 +32,9 @@ Environment variables set: `AGENTAUTH_BROKER_URL`, `AGENTAUTH_CLIENT_ID`, `AGENT
 
 Code:
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
@@ -136,7 +136,7 @@ Code:
 token = client.get_token("my-agent", ["read:data:*"])
 
 # Configurable retry:
-client = AgentAuthClient(broker_url, client_id, client_secret, max_retries=5)
+client = AgentAuthApp(broker_url, client_id, client_secret, max_retries=5)
 ```
 
 Expected: On transient failures, the SDK retries up to `max_retries` times with
@@ -305,12 +305,12 @@ Verification:
 ```python
 # 1. Create client with bad secret, catch AuthenticationError, verify secret not in str(e)
 # 2. Grep the SDK source for any logging of client_secret
-# 3. Check __repr__ and __str__ of AgentAuthClient -- secret must not appear
+# 3. Check __repr__ and __str__ of AgentAuthApp -- secret must not appear
 # 4. If SDK has debug logging, verify the secret is redacted
 ```
 
 Expected: `client_secret` never appears in any string output from the SDK. The
-`AgentAuthClient.__repr__` shows `broker_url` and `client_id` but masks or omits
+`AgentAuthApp.__repr__` shows `broker_url` and `client_id` but masks or omits
 the secret. `AuthenticationError` messages reference the client_id but never the
 secret.
 
@@ -342,7 +342,7 @@ Verification:
 ```
 
 Expected: No `verify=False` in the SDK source. The `requests.Session` uses default
-TLS verification. If a `verify` parameter exists on `AgentAuthClient.__init__`, it
+TLS verification. If a `verify` parameter exists on `AgentAuthApp.__init__`, it
 defaults to `True`.
 
 ---
@@ -424,9 +424,9 @@ during backoff.
 | errors | `src/agentauth/errors.py` | Exception hierarchy + RFC 7807 parsing |
 | crypto | `src/agentauth/crypto.py` | Ed25519 keygen + nonce signing |
 | retry | `src/agentauth/retry.py` | HTTP retry with backoff + 429 handling |
-| client (auth) | `src/agentauth/client.py` | `__init__`, `_authenticate_app`, `_ensure_app_token` |
-| client (get_token) | `src/agentauth/client.py` | `get_token` with challenge-response flow |
-| client (ops) | `src/agentauth/client.py` | `delegate`, `revoke_token`, `validate_token` |
+| client (auth) | `src/agentauth/app.py` | `__init__`, `_authenticate_app`, `_ensure_app_token` |
+| client (get_token) | `src/agentauth/app.py` | `get_token` with challenge-response flow |
+| client (ops) | `src/agentauth/app.py` | `delegate`, `revoke_token`, `validate_token` |
 | token cache | `src/agentauth/token.py` | In-memory token cache with renewal tracking |
 
 ### Unit tests (one file per concern)

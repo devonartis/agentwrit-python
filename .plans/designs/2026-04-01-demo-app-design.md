@@ -44,7 +44,7 @@ Every public method and behavior is exercised:
 
 | SDK Surface | Where Demonstrated |
 |------------|-------------------|
-| `AgentAuthClient()` constructor | Pipeline Step 1 (app auth) |
+| `AgentAuthApp()` constructor | Pipeline Step 1 (app auth) |
 | `get_token()` | Pipeline Steps 2, 4 + SDK Explorer |
 | `delegate()` | Pipeline Step 3 |
 | `validate_token()` | SDK Explorer (token inspector) |
@@ -128,7 +128,7 @@ The financial data pipeline story. User clicks through 5 steps sequentially. Eac
 
 | Step | User Sees | What Happens (SDK) | Components |
 |------|----------|-------------------|------------|
-| 1. **Connect** | "App authenticated with broker" | `AgentAuthClient()` constructor authenticates | C3 |
+| 1. **Connect** | "App authenticated with broker" | `AgentAuthApp()` constructor authenticates | C3 |
 | 2. **Read Transactions** | Token issued with read scope, SPIFFE ID shown | `get_token("orchestrator", ["read:data:transactions"])` | C1, C2 |
 | 3. **Analyze Risk** | Delegation chain formed, analyst gets narrower scope | `delegate(token, analyst_id, ["read:data:transactions"])` | C6, C7 |
 | 4. **Write Assessment** | New token with write scope, assessment written | `get_token("orchestrator", ["write:data:assessments"])` | C2, C5 |

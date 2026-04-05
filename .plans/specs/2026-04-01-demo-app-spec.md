@@ -111,10 +111,10 @@ This is not a showcase booth. The agents do real LLM work (Claude analyzes trans
   3. Admin auth (`POST /v1/admin/auth`)
   4. Register app (`POST /v1/admin/apps` with scopes `["read:data:*", "write:data:*", "read:rules:*"]`)
   5. Store `client_id`/`client_secret` in app state
-  6. Instantiate `AgentAuthClient`
+  6. Instantiate `AgentAuthApp`
   7. Instantiate Anthropic client
 - Route mounting from `pipeline.py` and `dashboard.py`
-- Shared state: `AppState` dataclass holding tokens dict, audit events, pipeline results, `AgentAuthClient`, Anthropic client
+- Shared state: `AppState` dataclass holding tokens dict, audit events, pipeline results, `AgentAuthApp`, Anthropic client
 - `GET /` — renders `index.html`
 
 **Broker calls at startup:**
@@ -407,7 +407,7 @@ dependencies = [
 ### Test Strategy
 
 **Unit tests** (`tests/unit/test_demo_*.py`):
-- Pipeline orchestration logic with mocked `AgentAuthClient` and mocked Anthropic client
+- Pipeline orchestration logic with mocked `AgentAuthApp` and mocked Anthropic client
 - Agent functions with mocked Claude responses — verify prompt construction, output parsing
 - Dashboard endpoints with mocked app state — verify data formatting
 - Startup validation — verify error messages for missing env vars, unreachable broker

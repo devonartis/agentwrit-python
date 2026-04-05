@@ -58,10 +58,10 @@ class TestNoHITLContamination:
 
     def test_no_approval_token_parameter(self) -> None:
         """get_token() must not accept an approval_token parameter."""
-        from agentauth.client import AgentAuthClient
+        from agentauth.app import AgentAuthApp
 
         import inspect
-        sig: inspect.Signature = inspect.signature(AgentAuthClient.get_token)
+        sig: inspect.Signature = inspect.signature(AgentAuthApp.get_token)
         assert "approval_token" not in sig.parameters
 
     def test_no_hitl_strings_in_source(self) -> None:
@@ -271,7 +271,7 @@ EOF
 ### Task 5: Remove approval_token from client.py
 
 **Files:**
-- Modify: `src/agentauth/client.py`
+- Modify: `src/agentauth/app.py`
 
 **Step 1: Remove approval_token parameter from get_token signature (line 230)**
 
@@ -312,13 +312,13 @@ Delete lines 283-284:
 
 **Step 4: Run type check**
 
-Run: `uv run mypy --strict src/agentauth/client.py`
+Run: `uv run mypy --strict src/agentauth/app.py`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add src/agentauth/client.py
+git add src/agentauth/app.py
 git commit -m "$(cat <<'EOF'
 refactor: remove approval_token from get_token()
 
@@ -490,7 +490,7 @@ Delete: `- **Human-in-the-loop** — sensitive operations require explicit human
 
 Remove `HITLApprovalRequired` from the import on line 58:
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 ```
 
 Delete the HITL example block (lines 77-85, the try/except HITLApprovalRequired).
@@ -544,7 +544,7 @@ EOF
 ### Task 10: Fix _ChallengeResponse TypedDict
 
 **Files:**
-- Modify: `src/agentauth/client.py`
+- Modify: `src/agentauth/app.py`
 
 **Step 1: Add expires_in to _ChallengeResponse**
 
@@ -569,13 +569,13 @@ class _ChallengeResponse(TypedDict):
 
 **Step 2: Run type check**
 
-Run: `uv run mypy --strict src/agentauth/client.py`
+Run: `uv run mypy --strict src/agentauth/app.py`
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add src/agentauth/client.py
+git add src/agentauth/app.py
 git commit -m "$(cat <<'EOF'
 fix: add expires_in to _ChallengeResponse TypedDict
 

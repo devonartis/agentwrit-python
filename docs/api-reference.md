@@ -4,7 +4,7 @@ Complete reference for the AgentAuth Python SDK public API.
 
 ## Table of Contents
 
-- [AgentAuthClient](#agentauthclient)
+- [AgentAuthApp](#agentauthclient)
   - [Constructor](#constructor)
   - [get_token()](#get_token)
   - [delegate()](#delegate)
@@ -26,16 +26,16 @@ Complete reference for the AgentAuth Python SDK public API.
 
 ---
 
-## AgentAuthClient
+## AgentAuthApp
 
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 ```
 
 ### Constructor
 
 ```python
-AgentAuthClient(
+AgentAuthApp(
     broker_url: str,
     client_id: str,
     client_secret: str,
@@ -68,9 +68,9 @@ Creates and authenticates an SDK client. The constructor authenticates your appl
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],

@@ -66,7 +66,7 @@ import os
 import pytest
 import requests as requests_lib
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 @pytest.fixture(scope="session")
@@ -117,7 +117,7 @@ def admin_token(broker_url: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def app_token(client: AgentAuthClient) -> str:
+def app_token(client: AgentAuthApp) -> str:
     """App-level JWT for the sdk-integration test app.
 
     Carries scope: app:launch-tokens:*, app:agents:*, app:audit:read
@@ -132,8 +132,8 @@ def app_token(client: AgentAuthClient) -> str:
 
 
 @pytest.fixture(scope="session")
-def client(broker_url: str, app_credentials: dict[str, str]) -> AgentAuthClient:
-    """Initialized AgentAuthClient for the sdk-integration test app.
+def client(broker_url: str, app_credentials: dict[str, str]) -> AgentAuthApp:
+    """Initialized AgentAuthApp for the sdk-integration test app.
 
     Session-scoped: one client shared across all integration tests to avoid
     triggering the broker's rate limit (10 req/min per client_id, burst 3)
@@ -143,7 +143,7 @@ def client(broker_url: str, app_credentials: dict[str, str]) -> AgentAuthClient:
       - read:data:*   → issued immediately
       - write:data:*  → issued immediately
     """
-    return AgentAuthClient(
+    return AgentAuthApp(
         broker_url=broker_url,
         client_id=app_credentials["client_id"],
         client_secret=app_credentials["client_secret"],

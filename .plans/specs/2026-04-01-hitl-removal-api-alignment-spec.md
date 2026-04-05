@@ -168,7 +168,7 @@ The broker returns two error formats:
 
 **Change:** Delete this entire block (lines 164-168). The HITL error format check is removed since the core broker never sends this response.
 
-### 5. `src/agentauth/client.py:223-263` — get_token() with approval_token parameter
+### 5. `src/agentauth/app.py:223-263` — get_token() with approval_token parameter
 
 ```python
     def get_token(
@@ -200,7 +200,7 @@ The broker returns two error formats:
 - Remove `HITLApprovalRequired` from Raises docstring
 - Remove the `if approval_token is not None:` block that attaches it to launch payload (line 283-284)
 
-### 6. `src/agentauth/client.py:278-284` — approval_token in launch payload
+### 6. `src/agentauth/app.py:278-284` — approval_token in launch payload
 
 ```python
         launch_payload: dict[str, object] = {

@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 import requests as requests_lib
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 @pytest.mark.integration
@@ -23,7 +23,7 @@ class TestDelegation:
     """SDK-S7: Delegation -- agent grants attenuated scope to another agent."""
 
     def test_delegate_returns_attenuated_token(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """Delegated JWT has the requested attenuated scope.
 

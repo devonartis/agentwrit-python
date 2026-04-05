@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 import requests as requests_lib
 
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 
 @pytest.mark.integration
@@ -19,7 +19,7 @@ class TestRevocation:
     """SDK-S8: Agent self-revokes its token when done."""
 
     def test_revoked_token_is_invalid(
-        self, client: AgentAuthClient, broker_url: str
+        self, client: AgentAuthApp, broker_url: str
     ) -> None:
         """Token is invalid after revoke_token() is called."""
         token: str = client.get_token("revoke-agent", ["read:data:*"])
@@ -45,7 +45,7 @@ class TestRevocation:
 
     def test_revoke_produces_audit_event(
         self,
-        client: AgentAuthClient,
+        client: AgentAuthApp,
         broker_url: str,
         admin_token: str,
     ) -> None:

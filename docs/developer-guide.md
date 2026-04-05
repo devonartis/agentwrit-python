@@ -18,13 +18,13 @@ A comprehensive guide to building Python applications with the AgentAuth SDK. Th
 
 ### Connecting to the Broker
 
-Every application starts by creating an `AgentAuthClient`. This authenticates your application with the broker — think of it as logging in your application (not your agent).
+Every application starts by creating an `AgentAuthApp`. This authenticates your application with the broker — think of it as logging in your application (not your agent).
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
@@ -363,25 +363,25 @@ When you use this SDK, these security properties are enforced automatically:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 # Initialize once at startup
-client: AgentAuthClient | None = None
+client: AgentAuthApp | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global client
-    client = AgentAuthClient(broker_url, client_id, client_secret)
+    client = AgentAuthApp(broker_url, client_id, client_secret)
     yield
 
 app = FastAPI(lifespan=lifespan)
 
-def get_client() -> AgentAuthClient:
+def get_client() -> AgentAuthApp:
     assert client is not None
     return client
 
 @app.post("/analyze")
-def analyze(client: AgentAuthClient = Depends(get_client)):
+def analyze(client: AgentAuthApp = Depends(get_client)):
     token = client.get_token("analyzer", ["read:data:*"])
     # Use the token...
     return {"status": "complete"}
@@ -391,12 +391,12 @@ def analyze(client: AgentAuthClient = Depends(get_client)):
 
 ```python
 from flask import Flask
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 app = Flask(__name__)
 
 # Initialize once at module level
-client = AgentAuthClient(broker_url, client_id, client_secret)
+client = AgentAuthApp(broker_url, client_id, client_secret)
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -409,12 +409,12 @@ def analyze():
 
 ```python
 from celery import Celery
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 app = Celery("tasks", broker="redis://localhost:6379")
 
 # Initialize per-worker (one client per process)
-client = AgentAuthClient(broker_url, client_id, client_secret)
+client = AgentAuthApp(broker_url, client_id, client_secret)
 
 @app.task
 def process_data(task_id: str):
@@ -441,10 +441,10 @@ A data pipeline agent that reads, analyzes, writes, and cleans up:
 
 import os
 import requests as http
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
 # Connect to the broker
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],

@@ -1,6 +1,6 @@
-"""Unit tests for AgentAuthClient.__init__ and _authenticate_app.
+"""Unit tests for AgentAuthApp.__init__ and _authenticate_app.
 
-Patch point: agentauth.client.requests.Session
+Patch point: agentauth.app.requests.Session
 No broker required -- all HTTP is mocked.
 
 TDD order: these tests are written before client.py exists.
@@ -47,17 +47,17 @@ def _make_session_mock(status_code: int = 200, json_body: dict | None = None):
 # ---------------------------------------------------------------------------
 
 
-class TestAgentAuthClientInit:
+class TestAgentAuthAppInit:
     """__init__ calls _authenticate_app which POSTs to /v1/app/auth."""
 
     def test_init_calls_post_app_auth_once(self):
         """__init__ must call POST /v1/app/auth exactly once."""
         mock_session_cls, mock_session_instance, _ = _make_session_mock()
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-            AgentAuthClient(
+            AgentAuthApp(
                 broker_url="http://broker.example.com",
                 client_id="app-123",
                 client_secret="super-secret",
@@ -69,10 +69,10 @@ class TestAgentAuthClientInit:
         """The URL used in the POST must include '/v1/app/auth'."""
         mock_session_cls, mock_session_instance, _ = _make_session_mock()
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-            AgentAuthClient(
+            AgentAuthApp(
                 broker_url="http://broker.example.com",
                 client_id="app-123",
                 client_secret="super-secret",
@@ -93,11 +93,11 @@ class TestAgentAuthClientInit:
         }
         mock_session_cls, _, _ = _make_session_mock(status_code=401, json_body=body_401)
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
             with pytest.raises(AuthenticationError):
-                AgentAuthClient(
+                AgentAuthApp(
                     broker_url="http://broker.example.com",
                     client_id="app-123",
                     client_secret="wrong-secret",
@@ -107,10 +107,10 @@ class TestAgentAuthClientInit:
         """broker_url with trailing slash must not produce double-slash URLs."""
         mock_session_cls, mock_session_instance, _ = _make_session_mock()
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-            AgentAuthClient(
+            AgentAuthApp(
                 broker_url="http://broker.example.com/",  # trailing slash
                 client_id="app-123",
                 client_secret="super-secret",
@@ -128,10 +128,10 @@ class TestAgentAuthClientInit:
         mock_session_cls, _, _ = _make_session_mock()
         secret = "super-secret-do-not-leak"
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-            client = AgentAuthClient(
+            client = AgentAuthApp(
                 broker_url="http://broker.example.com",
                 client_id="app-123",
                 client_secret=secret,
@@ -144,10 +144,10 @@ class TestAgentAuthClientInit:
         mock_session_cls, _, _ = _make_session_mock()
         secret = "super-secret-do-not-leak"
 
-        with patch("agentauth.client.requests.Session", mock_session_cls):
-            from agentauth.client import AgentAuthClient  # noqa: PLC0415
+        with patch("agentauth.app.requests.Session", mock_session_cls):
+            from agentauth.app import AgentAuthApp  # noqa: PLC0415
 
-            client = AgentAuthClient(
+            client = AgentAuthApp(
                 broker_url="http://broker.example.com",
                 client_id="app-123",
                 client_secret=secret,

@@ -68,9 +68,9 @@ export AGENTAUTH_CLIENT_SECRET="your-client-secret"
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+client = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
