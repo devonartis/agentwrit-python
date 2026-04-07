@@ -679,6 +679,49 @@ class ProblemDetail:
 - Request body size limit: 1 MB on all endpoints.
 - Security headers on all responses: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, `X-Frame-Options: DENY`.
 
+### 8.1 Response-to-Model Parsing Contract
+
+The SDK must parse broker JSON responses into typed models defensively. The broker is the source of truth for which fields are present — the SDK model may define fields that the broker omits in certain contexts.
+
+**Rule:** Every field in a response model that is not guaranteed by `broker/docs/api.md` must be parsed with `.get(key, default)`, never `data[key]`. A `KeyError` from a missing field is a parser bug, not a broker bug.
+
+**`POST /v1/token/validate` → `AgentClaims` mapping:**
+
+The broker returns these fields in `claims` (verified against live broker v2.0.0):
+
+| Field | Always present | Default if absent |
+|-------|---------------|-------------------|
+| `iss` | Yes | — |
+| `sub` | Yes | — |
+| `exp` | Yes | — |
+| `nbf` | Yes | — |
+| `iat` | Yes | — |
+| `jti` | Yes | — |
+| `scope` | Yes | — |
+| `task_id` | Yes | — |
+| `orch_id` | Yes | — |
+| `aud` | **No** — not in broker response | `[]` |
+| `sid` | Only on session tokens | `None` |
+| `delegation_chain` | Only on delegated tokens | `None` |
+| `chain_hash` | Only on delegated tokens | `None` |
+
+**`POST /v1/delegate` → `DelegationRecord` mapping:**
+
+Each entry in the `delegation_chain` array:
+
+| Field | Always present | Default if absent |
+|-------|---------------|-------------------|
+| `agent` | Yes | — |
+| `scope` | Yes | — |
+| `delegated_at` | Yes | — |
+| `signature` | Only when chain signing enabled | `None` |
+
+**General parsing rules:**
+
+1. Required fields (always present per `api.md`): access with `data[key]` — a `KeyError` here means the broker contract changed and is a real error.
+2. Optional fields (may be absent): access with `data.get(key, default)` — use the defaults from the tables above.
+3. The `AgentClaims` model keeps `aud: list[str]` as a field for forward compatibility (future broker versions may return it), but the parser must not require it.
+
 ---
 
 ## 9. Error Model

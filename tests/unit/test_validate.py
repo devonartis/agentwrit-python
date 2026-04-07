@@ -140,3 +140,39 @@ class TestValidateEdgeCases:
         import json
         body = json.loads(request.read())
         assert body["token"] == "eyJ.the.token"
+
+
+class TestValidateBrokerRealShape:
+    """Bug: validate() crashed with KeyError on missing 'aud' field.
+
+    Root cause: parser used data["aud"] instead of data.get("aud", []).
+    The live broker does not return aud, sid, delegation_chain, or
+    chain_hash for standard agent tokens. See spec Section 8.1.
+    """
+
+    def test_handles_broker_response_without_aud(self, httpx_mock: HTTPXMock):
+        httpx_mock.add_response(
+            url="http://broker.test/v1/token/validate",
+            json={
+                "valid": True,
+                "claims": {
+                    "iss": "agentauth",
+                    "sub": "spiffe://agentauth.local/agent/o/t/abc",
+                    "exp": 9999999999,
+                    "nbf": 1000000000,
+                    "iat": 1000000000,
+                    "jti": "jti-abc",
+                    "scope": ["read:data:user-42"],
+                    "task_id": "t",
+                    "orch_id": "o",
+                },
+            },
+        )
+        result = validate("http://broker.test", "eyJ.token")
+        assert result.valid is True
+        assert result.claims is not None
+        assert result.claims.scope == ["read:data:user-42"]
+        assert result.claims.aud == []
+        assert result.claims.sid is None
+        assert result.claims.delegation_chain is None
+        assert result.claims.chain_hash is None

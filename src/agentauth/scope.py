@@ -111,10 +111,11 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
                 for d in claims_data["delegation_chain"]
             ]
 
+        # Spec Section 8.1: required fields use data[key], optional use .get()
         claims = AgentClaims(
             iss=claims_data["iss"],
             sub=claims_data["sub"],
-            aud=claims_data["aud"],
+            aud=claims_data.get("aud", []),
             exp=claims_data["exp"],
             nbf=claims_data["nbf"],
             iat=claims_data["iat"],
@@ -124,7 +125,7 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
             orch_id=claims_data["orch_id"],
             sid=claims_data.get("sid"),
             delegation_chain=delegation_chain,
-            chain_hash=claims_data.get("chain_hash")
+            chain_hash=claims_data.get("chain_hash"),
         )
 
         return ValidateResult(valid=True, claims=claims)
