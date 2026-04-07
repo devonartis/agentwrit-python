@@ -1,0 +1,23 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 10 — TOKEN EXPIRES NATURALLY
+-----------------------------------------------------------------
+WHO:      Agent with a 5-second TTL
+WHAT:     No release() called — token expires on its own
+WHY:      Broker must enforce TTL even if the agent disappears
+EXPECTED: Token valid immediately, invalid after expiry,
+          broker returns 'token is invalid or expired'
+=================================================================
+  agent_id:   spiffe://agentauth.local/agent/short-lived-service/quick-task-001/3602e8aa5e82ef38
+  scope:      ['read:data:temp-resource']
+  token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  expires_in: 5s (requested 5s)
+
+  validate() immediately: valid=True
+  PASS: Token is valid right after creation
+
+  Waiting 7s for token to expire...
+  validate() after 7s: valid=False, error=token is invalid or expired
+  PASS: Token expired naturally — broker rejected it
+
+═══ STORY 10: PASS ═══

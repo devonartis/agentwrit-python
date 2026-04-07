@@ -1,0 +1,33 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 5 — DELEGATE NARROW SCOPE
+-----------------------------------------------------------------
+WHO:      Agent A delegating one of its scopes to Agent B
+WHAT:     A has two scopes, delegates only one to B
+WHY:      Delegation must narrow authority, never expand it
+EXPECTED: Delegated token has ONLY the narrow scope,
+          not A's full scope. Broker validates this.
+=================================================================
+  Agent A: spiffe://agentauth.local/agent/pipeline/orchestrator-001/080468548378e992
+  Agent A scope: ['read:data:partition-7', 'read:data:partition-8']
+  Agent B: spiffe://agentauth.local/agent/pipeline/worker-partition-7/27d776c18f7c222a
+  Agent B scope: ['read:data:partition-7']
+
+  A delegates [read:data:partition-7] to B...
+  delegate() returned:
+    access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+    expires_in:   60s
+    chain_length: 1
+    chain[0]: agent=ator-001/080468548378e992 scope=['read:data:partition-7', 'read:data:partition-8'] at=2026-04-07T17:33:19.323295884Z
+
+  Validating delegated token with broker...
+  validate() returned: valid=True
+    sub:     spiffe://agentauth.local/agent/pipeline/worker-partition-7/27d776c18f7c222a
+    scope:   ['read:data:partition-7']
+    orch_id: pipeline
+    task_id: orchestrator-001
+
+  PASS: Delegated token covers partition-7
+  PASS: Delegated token does NOT cover partition-8
+
+═══ STORY 5: PASS ═══

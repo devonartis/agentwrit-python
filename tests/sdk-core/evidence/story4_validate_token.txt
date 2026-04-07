@@ -1,0 +1,29 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 4 — VALIDATE LIVE TOKEN
+-----------------------------------------------------------------
+WHO:      App checking if an agent's token is still good
+WHAT:     App calls validate() with the agent's token
+WHY:      Zero-trust — never assume a token is valid
+EXPECTED: Broker returns valid=true with claims that
+          match the agent's scope, identity, and task
+=================================================================
+  agent_id: spiffe://agentauth.local/agent/reporting-service/quarterly-report/d100ed335e95cd8a
+  scope:    ['read:data:report-q3', 'write:data:summary-q3']
+
+  validate() returned: valid=True
+    iss:     agentauth
+    sub:     spiffe://agentauth.local/agent/reporting-service/quarterly-report/d100ed335e95cd8a
+    scope:   ['read:data:report-q3', 'write:data:summary-q3']
+    orch_id: reporting-service
+    task_id: quarterly-report
+    jti:     fa81df2f42570e0eff9ad5c9b9488993
+    exp:     1775583493
+    iat:     1775583193
+
+  PASS: Claims scope matches requested ['read:data:report-q3', 'write:data:summary-q3']
+  PASS: Claims sub matches agent_id
+  PASS: Claims orch_id matches
+  PASS: Claims task_id matches
+
+═══ STORY 4: PASS ═══

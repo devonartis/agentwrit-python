@@ -1,0 +1,46 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 12 — MULTIPLE AGENTS, ISOLATED SCOPES
+-----------------------------------------------------------------
+WHO:      App creating 3 agents for 3 different tasks
+WHAT:     Each agent gets unique identity and task-specific scope
+WHY:      Compromised agent A cannot access agent B's data
+EXPECTED: 3 unique SPIFFE IDs, 3 non-overlapping scopes,
+          scope_is_subset confirms no cross-access
+=================================================================
+  Agent: spiffe://agentauth.local/agent/multi-agent-service/read-customers/0c1591e7c0c444dd
+    task_id: read-customers
+    scope:   ['read:data:customers-west']
+    token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  Agent: spiffe://agentauth.local/agent/multi-agent-service/read-inventory/1544cfa5533fbe1c
+    task_id: read-inventory
+    scope:   ['read:data:inventory-warehouse-3']
+    token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  Agent: spiffe://agentauth.local/agent/multi-agent-service/write-reports/c3f99bc97cde4bb1
+    task_id: write-reports
+    scope:   ['write:data:quarterly-report-q3']
+    token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+
+  PASS: All 3 agents have unique SPIFFE IDs
+
+  Cross-access checks:
+    agent[0] (read-customers) → agent[1] (read-inventory) scope: False
+    agent[0] (read-customers) → agent[2] (write-reports) scope: False
+    agent[1] (read-inventory) → agent[0] (read-customers) scope: False
+    agent[1] (read-inventory) → agent[2] (write-reports) scope: False
+    agent[2] (write-reports) → agent[0] (read-customers) scope: False
+    agent[2] (write-reports) → agent[1] (read-inventory) scope: False
+  PASS: No cross-access between agents
+
+  Validating each agent's token:
+    agent[0] (read-customers): valid=True
+      sub:   spiffe://agentauth.local/agent/multi-agent-service/read-customers/0c1591e7c0c444dd
+      scope: ['read:data:customers-west']
+    agent[1] (read-inventory): valid=True
+      sub:   spiffe://agentauth.local/agent/multi-agent-service/read-inventory/1544cfa5533fbe1c
+      scope: ['read:data:inventory-warehouse-3']
+    agent[2] (write-reports): valid=True
+      sub:   spiffe://agentauth.local/agent/multi-agent-service/write-reports/c3f99bc97cde4bb1
+      scope: ['write:data:quarterly-report-q3']
+
+═══ STORY 12: PASS ═══

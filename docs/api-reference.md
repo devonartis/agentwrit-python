@@ -2,27 +2,6 @@
 
 Complete reference for the AgentAuth Python SDK public API.
 
-## Table of Contents
-
-- [AgentAuthApp](#agentauthclient)
-  - [Constructor](#constructor)
-  - [get_token()](#get_token)
-  - [delegate()](#delegate)
-  - [revoke_token()](#revoke_token)
-  - [validate_token()](#validate_token)
-- [Exceptions](#exceptions)
-  - [Exception Hierarchy](#exception-hierarchy)
-  - [AgentAuthError](#agentautherror)
-  - [AuthenticationError](#authenticationerror)
-  - [ScopeCeilingError](#scopeceilingerror)
-
-  - [RateLimitError](#ratelimiterror)
-  - [BrokerUnavailableError](#brokerunavailableerror)
-- [Retry Behavior](#retry-behavior)
-- [Token Caching](#token-caching)
-- [Thread Safety](#thread-safety)
-- [Broker Endpoint Mapping](#broker-endpoint-mapping)
-
 ---
 
 ## AgentAuthApp
@@ -30,6 +9,8 @@ Complete reference for the AgentAuth Python SDK public API.
 ```python
 from agentauth import AgentAuthApp
 ```
+
+The application container. Authenticates your app with the broker and creates agents.
 
 ### Constructor
 
@@ -39,216 +20,307 @@ AgentAuthApp(
     client_id: str,
     client_secret: str,
     *,
-    max_retries: int = 3,
-    verify: bool = True,
+    timeout: float = 30.0,
 )
 ```
 
-Creates and authenticates an SDK client. The constructor authenticates your application with the broker immediately — if credentials are invalid, `AuthenticationError` is raised at construction time (fail-fast).
-
-**Parameters:**
+Creates an app instance. Authentication is lazy — the SDK does not contact the broker until the first `create_agent()` call.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `broker_url` | `str` | required | Base URL of the AgentAuth broker (e.g., `https://broker.example.com`). Trailing slash is stripped automatically. |
-| `client_id` | `str` | required | Application identifier from broker registration. |
-| `client_secret` | `str` | required | Application secret from broker registration. **Never logged, printed, or included in any SDK output.** |
-| `max_retries` | `int` | `3` | Maximum retry attempts for transient failures (5xx, 429, connection errors). |
-| `verify` | `bool` | `True` | Whether to verify TLS certificates. Defaults to `True` per NIST SP 800-207 guidance. |
+| `broker_url` | `str` | required | Base URL of the AgentAuth broker (e.g., `http://localhost:8080`) |
+| `client_id` | `str` | required | Application identifier from broker registration |
+| `client_secret` | `str` | required | Application secret. Never logged, printed, or included in any SDK output. |
+| `timeout` | `float` | `30.0` | HTTP request timeout in seconds |
 
-**Behavior:**
-
-- Authenticates with the broker immediately via `POST /v1/app/auth`
-- Caches the app JWT internally with automatic renewal (10-second buffer before expiry)
-- Raises `AuthenticationError` on invalid credentials
-- Sets up an internal `requests.Session` with TLS verification and JSON content type
-
-**Example:**
+### create_agent()
 
 ```python
-import os
-from agentauth import AgentAuthApp
-
-client = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
-)
-```
-
----
-
-### get_token
-
-```python
-client.get_token(
-    agent_name: str,
-    scope: list[str],
+app.create_agent(
+    orch_id: str,
+    task_id: str,
+    requested_scope: list[str],
     *,
-    task_id: str | None = None,
-    orch_id: str | None = None,
-) -> str
+    private_key: Ed25519PrivateKey | None = None,
+    max_ttl: int = 300,
+    label: str | None = None,
+) -> Agent
 ```
 
-Obtains a scoped agent credential. Handles the full 8-step flow internally: cache check → app auth → launch token → Ed25519 keygen → challenge → nonce signing → registration → caching.
-
-**Parameters:**
+Creates an ephemeral agent. Handles the full registration flow internally: app auth, launch token, Ed25519 keygen, challenge-response, registration.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `agent_name` | `str` | required | Logical name for the agent. Used as part of the cache key. |
-| `scope` | `list[str]` | required | Scopes to request (e.g., `["read:data:*"]`). Must be within the app's scope ceiling. |
-| `task_id` | `str \| None` | `None` | Task identifier. Appears in the JWT claims and the SPIFFE subject. Defaults to `"default"` if not provided. |
-| `orch_id` | `str \| None` | `None` | Orchestrator identifier. Appears in the JWT claims and the SPIFFE subject. Defaults to `"sdk"` if not provided. |
-**Returns:** `str` — JWT string (EdDSA-signed, three dot-separated parts).
+| `orch_id` | `str` | required | Orchestrator identifier. Appears in the SPIFFE ID and JWT claims. |
+| `task_id` | `str` | required | Task identifier. Appears in the SPIFFE ID and JWT claims. |
+| `requested_scope` | `list[str]` | required | Scopes to request. Must be within the app's scope ceiling. |
+| `private_key` | `Ed25519PrivateKey \| None` | `None` | Supply your own key. If `None`, SDK generates one. |
+| `max_ttl` | `int` | `300` | Maximum token TTL in seconds. Broker may issue a shorter TTL. |
+| `label` | `str \| None` | `None` | Custom agent name for the launch token. Defaults to `orch_id/task_id`. |
+
+**Returns:** `Agent`
 
 **Raises:**
 
-| Exception | When | What to Do |
-|-----------|------|-----------|
+| Exception | When |
+|-----------|------|
+| `AuthenticationError` | App credentials are invalid (401) |
+| `AuthorizationError` | Scope exceeds app ceiling (403) |
+| `RateLimitError` | Too many requests (429) |
+| `TransportError` | Broker unreachable |
 
-| `ScopeCeilingError` | Scope exceeds the app's ceiling | Fix the scope or contact your operator to expand the ceiling |
-| `AuthenticationError` | App JWT expired and re-authentication failed | Check credentials |
-| `BrokerUnavailableError` | All retries exhausted (5xx or connection error) | Broker is down |
-| `RateLimitError` | 429 after all retries | Back off and reduce request rate |
-
-**Caching behavior:** A second call with the same `(agent_name, frozenset(scope))` returns the cached token without any broker calls. Tokens are proactively renewed when 80% of their TTL has elapsed.
-
-**Example:**
+### health()
 
 ```python
-# Basic usage
-token = client.get_token("data-reader", ["read:data:*"])
-
-# With task metadata
-token = client.get_token(
-    "analyzer",
-    ["read:data:customers"],
-    task_id="q4-analysis",
-    orch_id="data-pipeline",
-)
+app.health() -> HealthStatus
 ```
+
+Checks broker health. No authentication required.
+
+**Returns:** `HealthStatus`
+
+### validate()
+
+```python
+app.validate(token: str) -> ValidateResult
+```
+
+Shortcut for `agentauth.validate(app.broker_url, token)`.
+
+**Returns:** `ValidateResult`
 
 ---
 
-### delegate
+## Agent
 
 ```python
-client.delegate(
-    token: str,
-    to_agent_id: str,
-    scope: list[str],
-    ttl: int = 60,
-) -> str
+from agentauth import Agent
 ```
 
-Creates a scope-attenuated delegation token for another registered agent. The delegated scope must be a subset of the delegating token's scope.
+An ephemeral agent created by `AgentAuthApp.create_agent()`. Holds the agent JWT and lifecycle methods.
 
-**Parameters:**
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `agent_id` | `str` | SPIFFE URI (e.g., `spiffe://agentauth.local/agent/orch/task/instance`) |
+| `access_token` | `str` | JWT string (EdDSA-signed) |
+| `expires_in` | `int` | Token TTL in seconds (snapshot from creation or last renewal) |
+| `scope` | `list[str]` | Granted scope list |
+| `orch_id` | `str` | Orchestrator identifier |
+| `task_id` | `str` | Task identifier |
+| `bearer_header` | `dict[str, str]` | `{"Authorization": "Bearer <token>"}` for HTTP requests |
+
+### renew()
+
+```python
+agent.renew() -> None
+```
+
+Renews the agent's token in place. The broker revokes the old token and issues a new one. The `agent_id` does not change.
+
+After calling `renew()`:
+- `agent.access_token` is a new JWT
+- `agent.expires_in` is reset
+- `agent.agent_id` is unchanged
+- The old token is revoked at the broker
+
+**Raises:** `AgentAuthError` if the agent has been released.
+
+### release()
+
+```python
+agent.release() -> None
+```
+
+Self-revokes the agent's token. After release, the token is rejected by the broker. Idempotent — second call is a no-op.
+
+**Raises:** Nothing. Second call is safe.
+
+### delegate()
+
+```python
+agent.delegate(
+    delegate_to: str,
+    scope: list[str],
+    *,
+    ttl: int | None = None,
+) -> DelegatedToken
+```
+
+Creates a scope-attenuated delegation token for another registered agent.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `token` | `str` | required | The delegating agent's JWT (used as Bearer auth). |
-| `to_agent_id` | `str` | required | SPIFFE ID of the delegate agent (e.g., `spiffe://agentauth.local/agent/orch/task/instance`). |
-| `scope` | `list[str]` | required | Scopes to delegate. **Must be a subset** of the delegating token's scope. |
-| `ttl` | `int` | `60` | Lifetime of the delegated token in seconds. |
+| `delegate_to` | `str` | required | SPIFFE ID of the target agent (must already be registered) |
+| `scope` | `list[str]` | required | Scopes to delegate. Must be a subset of this agent's scope. |
+| `ttl` | `int \| None` | `None` | Delegation TTL in seconds. Broker defaults to 60 if omitted. |
 
-**Returns:** `str` — delegated JWT string.
+**Returns:** `DelegatedToken`
 
-**Raises:** `ScopeCeilingError` if the delegated scope exceeds the delegator's scope. `AgentAuthError` on other broker errors.
+**Raises:**
 
-**Example:**
-
-```python
-# Get the target agent's SPIFFE ID
-worker_claims = client.validate_token(worker_token)
-worker_id = worker_claims["claims"]["sub"]
-
-# Delegate a subset of the orchestrator's scope
-delegated = client.delegate(
-    token=orchestrator_token,
-    to_agent_id=worker_id,
-    scope=["read:data:results"],
-    ttl=120,
-)
-```
+| Exception | When |
+|-----------|------|
+| `AgentAuthError` | Agent has been released |
+| `AuthorizationError` | Scope exceeds delegator's scope (403) |
 
 ---
 
-### revoke_token
+## Module-Level Functions
+
+### validate()
 
 ```python
-client.revoke_token(token: str) -> None
+from agentauth import validate
+
+validate(
+    broker_url: str,
+    token: str,
+    *,
+    timeout: float = 10.0,
+) -> ValidateResult
 ```
 
-Self-revokes an agent token. The broker marks the token's JTI as revoked and logs a `token_released` audit event.
+Validates a token with the broker. Any service can call this without having an `AgentAuthApp`.
 
-**Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `broker_url` | `str` | required | Base URL of the broker |
+| `token` | `str` | required | JWT string to validate |
+| `timeout` | `float` | `10.0` | HTTP timeout in seconds |
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `token` | `str` | The agent JWT to revoke (used as Bearer auth). |
+**Returns:** `ValidateResult`
 
-**Returns:** `None`
-
-**Behavior:** After revocation, the token is rejected by the broker on all subsequent requests. Downstream delegation tokens are also invalidated.
-
-**Example:**
+### scope_is_subset()
 
 ```python
-client.revoke_token(token)
-# Token is now dead — broker rejects it on all future requests
+from agentauth import scope_is_subset
+
+scope_is_subset(
+    requested: list[str],
+    allowed: list[str],
+) -> bool
 ```
+
+Client-side scope check. Returns `True` if every scope in `requested` is covered by at least one scope in `allowed`.
+
+Rules:
+- Scopes must be 3-segment format: `action:resource:identifier`
+- Action and resource must match exactly
+- Wildcard `*` only works in the identifier (3rd) position
+- Non-3-segment scopes: exact string match only
+- Empty `requested` always returns `True`
+- Empty `allowed` always returns `False` (unless `requested` is also empty)
 
 ---
 
-### validate_token
+## Data Classes
+
+All data classes are frozen (immutable) and importable from `agentauth` or `agentauth.models`.
+
+### ValidateResult
 
 ```python
-client.validate_token(token: str) -> dict
+from agentauth import ValidateResult
 ```
 
-Online validation of a token against the broker. This is a public endpoint — no authentication required.
+| Field | Type | Description |
+|-------|------|-------------|
+| `valid` | `bool` | Whether the token is valid |
+| `claims` | `AgentClaims \| None` | Token claims if valid, `None` if invalid |
+| `error` | `str \| None` | Error message if invalid, `None` if valid |
 
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `token` | `str` | JWT string to validate. |
-
-**Returns:** `dict` with one of two structures:
+### AgentClaims
 
 ```python
-# Valid token:
-{
-    "valid": True,
-    "claims": {
-        "sub": "spiffe://agentauth.local/agent/sdk/default/a1b2c3d4",
-        "scope": ["read:data:*"],
-        "exp": 1741308300,
-        "orch_id": "sdk",
-        "task_id": "default",
-        # ... other JWT claims
-    }
-}
-
-# Invalid, revoked, or expired token:
-{
-    "valid": False,
-    "error": "token revoked"  # or "token expired", "invalid signature", etc.
-}
+from agentauth import AgentClaims
 ```
 
-**Example:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `iss` | `str` | Issuer (always `"agentauth"`) |
+| `sub` | `str` | Subject — SPIFFE URI of the agent |
+| `aud` | `list[str]` | Audience (may be empty) |
+| `exp` | `int` | Expiration (Unix timestamp) |
+| `nbf` | `int` | Not before (Unix timestamp) |
+| `iat` | `int` | Issued at (Unix timestamp) |
+| `jti` | `str` | Unique token ID (32 hex chars) |
+| `scope` | `list[str]` | Granted scope |
+| `task_id` | `str` | Task identifier |
+| `orch_id` | `str` | Orchestrator identifier |
+| `sid` | `str \| None` | Session ID (optional) |
+| `delegation_chain` | `list[DelegationRecord] \| None` | Delegation chain (optional) |
+| `chain_hash` | `str \| None` | SHA-256 hash of delegation chain (optional) |
+
+### DelegatedToken
 
 ```python
-result = client.validate_token(token)
-if result["valid"]:
-    print(f"Subject: {result['claims']['sub']}")
-    print(f"Scope: {result['claims']['scope']}")
-else:
-    print(f"Invalid: {result.get('error')}")
+from agentauth import DelegatedToken
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `access_token` | `str` | JWT for the delegate agent |
+| `expires_in` | `int` | TTL in seconds |
+| `delegation_chain` | `list[DelegationRecord]` | Complete chain including new entry |
+
+### DelegationRecord
+
+```python
+from agentauth import DelegationRecord
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent` | `str` | SPIFFE ID of the delegating agent |
+| `scope` | `list[str]` | Scope held by delegator at time of delegation |
+| `delegated_at` | `str` | RFC 3339 timestamp |
+
+### HealthStatus
+
+```python
+from agentauth import HealthStatus
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `str` | Broker status (always `"ok"` when reachable) |
+| `version` | `str` | Broker version (e.g., `"2.0.0"`) |
+| `uptime` | `int` | Seconds since broker started |
+| `db_connected` | `bool` | Whether audit database is reachable |
+| `audit_events_count` | `int` | Total audit events recorded |
+
+### ProblemDetail
+
+```python
+from agentauth import ProblemDetail
+```
+
+RFC 7807 structured error from the broker.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `str` | Error type URI (e.g., `urn:agentauth:error:scope_violation`) |
+| `title` | `str` | Human-readable title (e.g., `"Forbidden"`) |
+| `detail` | `str` | Human-readable explanation |
+| `instance` | `str` | The API endpoint that returned the error |
+| `status` | `int \| None` | HTTP status code |
+| `error_code` | `str \| None` | Machine-readable error code (e.g., `"scope_violation"`) |
+| `request_id` | `str \| None` | Broker-generated trace ID |
+| `hint` | `str \| None` | Optional guidance for resolution |
+
+### RegisterResult
+
+```python
+from agentauth import RegisterResult
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | `str` | SPIFFE URI of the registered agent |
+| `access_token` | `str` | Agent JWT |
+| `expires_in` | `int` | Token TTL in seconds |
 
 ---
 
@@ -256,184 +328,65 @@ else:
 
 All exceptions are importable from `agentauth` or `agentauth.errors`.
 
-```python
-from agentauth import (
-    AgentAuthError,
-    AuthenticationError,
-    ScopeCeilingError,
+### Hierarchy
 
-    RateLimitError,
-    BrokerUnavailableError,
-)
+```
+AgentAuthError
+├── ProblemResponseError      (broker returned RFC 7807 error)
+│   ├── AuthenticationError   (401 — invalid credentials)
+│   ├── AuthorizationError    (403 — scope violation, delegation rejected)
+│   └── RateLimitError        (429 — too many requests)
+├── TransportError            (network failure — broker unreachable)
+└── CryptoError               (Ed25519 key generation or signing failure)
 ```
 
-### Exception Hierarchy
+### ProblemResponseError
 
-```mermaid
-graph TD
-    Base["<b>AgentAuthError</b><br/><i>Base exception</i>"]
-
-    Base --> Auth["<b>AuthenticationError</b><br/>HTTP 401 · Bad credentials"]
-    Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
-    Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
-    Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
-
-    style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
-    style Auth fill:#ef4444,color:#fff,stroke:#dc2626
-    style Scope fill:#ef4444,color:#fff,stroke:#dc2626
-    style Rate fill:#ef4444,color:#fff,stroke:#dc2626
-    style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
-```
-
-All exceptions carry optional `status_code` and `error_code` attributes from the broker response.
-
----
-
-### AgentAuthError
-
-Base exception for all SDK errors.
+Base class for all broker error responses. Has:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `status_code` | `int \| None` | HTTP status code from the broker response |
-| `error_code` | `str \| None` | Broker error code string (e.g., `"scope_violation"`, `"forbidden"`) |
-
-**Usage:** Catch this to handle any SDK error generically.
-
-```python
-try:
-    token = client.get_token("agent", scope)
-except AgentAuthError as e:
-    print(f"SDK error: {e} (HTTP {e.status_code})")
-```
-
----
+| `problem` | `ProblemDetail` | Structured error info |
+| `status_code` | `int` | HTTP status code |
 
 ### AuthenticationError
 
-Raised when the broker rejects app credentials (HTTP 401).
+Raised on HTTP 401. App credentials are invalid.
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `client_id` | `str \| None` | The `client_id` used (for debugging — `client_secret` is **never** included) |
-| `status_code` | `int \| None` | HTTP status code |
-| `error_code` | `str \| None` | Broker error code |
+### AuthorizationError
 
-**Common causes:** Invalid `client_id` or `client_secret`, inactive or deleted app registration.
-
----
-
-### ScopeCeilingError
-
-Raised when the requested scope exceeds the app's allowed ceiling (HTTP 403, `scope_violation` or `forbidden`).
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `requested_scope` | `list[str] \| None` | The scope that was requested |
-| `status_code` | `int \| None` | HTTP status code |
-| `error_code` | `str \| None` | Broker error code |
-
-**Resolution:** Request a narrower scope, or ask your operator to expand the app's scope ceiling.
-
----
+Raised on HTTP 403. Scope violation — either:
+- Requested scope exceeds app ceiling (during `create_agent()`)
+- Delegated scope exceeds delegator's scope (during `delegate()`)
 
 ### RateLimitError
 
-Raised when the broker returns HTTP 429 after all retries are exhausted.
+Raised on HTTP 429. Broker rate limit exceeded.
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `retry_after` | `int \| None` | Seconds to wait before retrying (from the `Retry-After` header) |
-| `status_code` | `int \| None` | HTTP status code (always 429) |
-| `error_code` | `str \| None` | Broker error code |
+### TransportError
 
-**Note:** The SDK already respects `Retry-After` headers and retries automatically. You only see this exception if all retries were exhausted.
+Network failure — DNS resolution, connection refused, timeout.
 
----
+### CryptoError
 
-### BrokerUnavailableError
+Ed25519 key generation or nonce signing failure. Client-side error.
 
-Raised when the broker is unreachable after all retry attempts. This includes persistent HTTP 5xx responses and connection errors (`requests.ConnectionError`).
+### AgentAuthError
 
----
-
-## Retry Behavior
-
-The SDK retries transient failures automatically before raising exceptions:
-
-| Condition | Behavior | Max Attempts |
-|-----------|----------|-------------|
-| HTTP 2xx/3xx/4xx (except 429) | Return immediately, no retry | 1 |
-| HTTP 429 (Rate Limit) | Sleep per `Retry-After` header (or exponential backoff) | `max_retries` |
-| HTTP 5xx (Server Error) | Exponential backoff: 1s, 2s, 4s, ... | `max_retries` |
-| Connection Error | Exponential backoff: 1s, 2s, 4s, ... | `max_retries` |
-
-After all retries are exhausted: `BrokerUnavailableError` (5xx / connection) or `RateLimitError` (429).
-
-**Note:** App authentication (`POST /v1/app/auth`) is **not** retried on failure — this is intentional to fail fast on invalid credentials at construction time.
-
----
-
-## Token Caching
-
-Agent tokens are cached in memory by `(agent_name, frozenset(scope))`:
-
-| Behavior | Details |
-|----------|---------|
-| **Cache key** | `(agent_name, frozenset(scope))` — scope order does not matter |
-| **Cache hit** | Returns cached token instantly (0 network calls) |
-| **Auto-renewal** | Tokens are renewed when 80% of their TTL has elapsed |
-| **Expiry eviction** | Expired tokens are removed on next access |
-| **Thread safety** | Cache operations are protected by `threading.Lock` |
-| **Persistence** | In-memory only — cache does not survive process restart |
-
-```python
-# These all produce cache hits (same key):
-client.get_token("agent", ["read:data:*", "write:data:*"])
-client.get_token("agent", ["write:data:*", "read:data:*"])  # Order doesn't matter
-
-# This is a different cache entry (different scope):
-client.get_token("agent", ["read:data:*"])
-```
-
----
-
-## Thread Safety
-
-The SDK is safe for use in multi-threaded applications:
-
-| Component | Protection |
-|-----------|------------|
-| App token state | `threading.Lock` — reads and writes to app JWT and expiry are synchronized |
-| Token cache | `threading.Lock` — all cache operations (get, put, remove, renewal check) are synchronized |
-| HTTP session | `requests.Session` — connection pooling is thread-safe |
-
-Multiple threads can call `get_token()`, `delegate()`, `revoke_token()`, and `validate_token()` concurrently without external synchronization.
+Base exception. Catch this to handle any SDK error. Also raised directly when calling `renew()` or `delegate()` on a released agent.
 
 ---
 
 ## Broker Endpoint Mapping
 
-The SDK maps its public methods to these broker API endpoints:
-
-| SDK Method | HTTP Method | Broker Endpoint | Auth |
-|-----------|-------------|-----------------|------|
-| Constructor | `POST` | `/v1/app/auth` | `client_id` + `client_secret` in body |
-| `get_token()` | `POST` | `/v1/app/launch-tokens` | `Bearer {app_token}` |
-| `get_token()` | `GET` | `/v1/challenge` | None |
-| `get_token()` | `POST` | `/v1/register` | `launch_token` in body (no Bearer) |
-| `delegate()` | `POST` | `/v1/delegate` | `Bearer {agent_token}` |
-| `revoke_token()` | `POST` | `/v1/token/release` | `Bearer {agent_token}` |
-| `validate_token()` | `POST` | `/v1/token/validate` | None (public endpoint) |
-
-The SDK uses the same broker API as any other client — no special endpoints, no backdoors. The broker does not know it is talking to an SDK.
-
----
-
-## Next Steps
-
-| Guide | What You'll Learn |
-|-------|-------------------|
-| [Concepts](concepts.md) | Architecture, security model, and standards alignment |
-| [Getting Started](getting-started.md) | Install the SDK and issue your first credential |
-| [Developer Guide](developer-guide.md) | Delegation, error handling, and complete examples |
+| SDK Method | HTTP | Endpoint | Auth |
+|-----------|------|----------|------|
+| `AgentAuthApp()` (lazy) | `POST` | `/v1/app/auth` | `client_id` + `client_secret` in body |
+| `create_agent()` | `POST` | `/v1/app/launch-tokens` | `Bearer {app_token}` |
+| `create_agent()` | `GET` | `/v1/challenge` | None |
+| `create_agent()` | `POST` | `/v1/register` | `launch_token` in body |
+| `agent.renew()` | `POST` | `/v1/token/renew` | `Bearer {agent_token}` |
+| `agent.release()` | `POST` | `/v1/token/release` | `Bearer {agent_token}` |
+| `agent.delegate()` | `POST` | `/v1/delegate` | `Bearer {agent_token}` |
+| `validate()` | `POST` | `/v1/token/validate` | None (public) |
+| `health()` | `GET` | `/v1/health` | None (public) |

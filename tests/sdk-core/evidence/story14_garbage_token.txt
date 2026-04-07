@@ -1,0 +1,26 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 14 — VALIDATE A GARBAGE TOKEN
+-----------------------------------------------------------------
+WHO:      App receiving a fake token from an unknown source
+WHAT:     App calls validate() with a token that was never real
+WHY:      Apps must handle bad tokens without crashing
+EXPECTED: Broker returns valid=false, SDK returns ValidateResult
+          with error message, no exception thrown
+=================================================================
+  Testing: random string
+  Token:   'completely-fake-not-a-jwt'
+  validate() returned: valid=False, error=token is invalid or expired
+  PASS: Broker rejected — token is invalid or expired
+
+  Testing: fake JWT structure
+  Token:   'eyJ.fake.token'
+  validate() returned: valid=False, error=token is invalid or expired
+  PASS: Broker rejected — token is invalid or expired
+
+  Testing: too many segments
+  Token:   'aaa.bbb.ccc.ddd.eee'
+  validate() returned: valid=False, error=token is invalid or expired
+  PASS: Broker rejected — token is invalid or expired
+
+═══ STORY 14: PASS ═══

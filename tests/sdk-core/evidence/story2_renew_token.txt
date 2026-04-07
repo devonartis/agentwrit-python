@@ -1,0 +1,23 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 2 — RENEW TOKEN
+-----------------------------------------------------------------
+WHO:      Agent in the middle of a long-running task
+WHAT:     Agent calls renew() to get a fresh token
+WHY:      Tokens expire — renewal keeps the agent alive
+EXPECTED: New token issued, old token revoked,
+          agent identity (SPIFFE ID) unchanged
+=================================================================
+  agent_id:      spiffe://agentauth.local/agent/export-service/export-job-001/afe74b0eb9deb34d
+  old token:     eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  old expires_in: 300s
+
+  new token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  new expires_in: 300s
+
+  PASS: Token changed after renew()
+  PASS: SPIFFE ID unchanged after renew()
+  validate(old_token): valid=False, error=token is invalid or expired
+  PASS: Old token revoked by broker
+
+═══ STORY 2: PASS ═══
