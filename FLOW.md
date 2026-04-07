@@ -169,9 +169,35 @@ Key decisions:
 - Commit `5107205` — full analysis in commit message
 
 **What's next (immediate):**
-- Fix acceptance test runner (use pytest session-scoped fixture to avoid 429 rate limit)
-- Re-run all 8 acceptance stories, capture evidence
-- Demo app rebuild (unblocked once acceptance tests pass)
+- ~~Fix acceptance test runner~~ — DONE (2026-04-07)
+- ~~Re-run all acceptance stories~~ — DONE (15 stories, all green)
+- Demo app rebuild — spec ready, build on branch `feature/demo-app-v0.3.0`
+
+### 2026-04-07 — Acceptance tests rewritten + SDK docs rewritten
+
+**Decision:** Delete old 22-story test suite. It had broken delegation tests (never validated DelegatedToken), wrong scope formats (S18), and redundant stories. Replace with 15 clean stories, each testing one SDK behavior.
+
+**How:** Used 5 independent sub-agents to review the old suite. Cross-referenced findings — only flagged issues that 3+ agents agreed on. Then brainstormed new stories with the user, debated what each should test and why, and built them one at a time against the live broker.
+
+**Key discoveries from testing:**
+- `agent.delegate()` uses the agent's registration token, not a delegated token. Multi-hop chains require raw HTTP for hop 2. (Story 7)
+- Broker accepts same-scope delegation — equal is a valid subset. `broker_accepts_full_delegation = True`. (Story 8)
+- Broker returns 400 (not 200) for empty-string token in validate(). SDK raises HTTPStatusError instead of returning ValidateResult. (Story 14 — removed empty string case)
+
+**Artifacts (3 commits):**
+- `b450f7f` — 15 new acceptance tests + all 5 docs rewritten
+- `469fded` — Old tests deleted, run script updated, testing guide added
+- `afcf5a4` — Demo app spec
+
+**SDK docs rewritten (all were referencing v0.2.0 API that no longer exists):**
+- README.md — updated quick start, diagrams, no fake features
+- docs/getting-started.md — beginner walkthrough with create_agent() → Agent
+- docs/concepts.md — roles, scopes (with real mistakes from testing), delegation, error model
+- docs/developer-guide.md — lifecycle, delegation (single + multi-hop), scope gating, errors
+- docs/api-reference.md — every class, method, dataclass, exception
+- docs/testing-guide.md — how to run tests, what each story covers, how to add new ones
+
+**Demo app spec:** `.plans/specs/2026-04-07-demo-app-spec.md` — FastAPI dashboard with 3 tabs (operator, developer, security), LLM pipeline, 22 tools, delegation demo, 6 scenario presets. References old demo at `showcase-authagent/apps/dashboard/`. To be built on branch `feature/demo-app-v0.3.0`.
 
 ---
 

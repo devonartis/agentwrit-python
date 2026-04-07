@@ -39,17 +39,28 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - `token.py` (TokenCache) → removed; agents are objects, not cached strings
 - `retry.py` → removed; SDK does not retry by default (spec Section 9.2)
 
-**What's next:** Fix acceptance test runner (use pytest session-scoped fixture to avoid 429 rate limit), re-run all 8 stories, capture evidence.
+**What's done (2026-04-07):**
+- v0.3.0 SDK rewrite complete — 99 unit tests passing
+- **15 acceptance tests passing** (`tests/integration/test_acceptance_1_8.py`) against live broker
+- **All SDK docs rewritten** for v0.3.0 (README, getting-started, concepts, developer-guide, api-reference, testing-guide)
+- Demo app spec written (`.plans/specs/2026-04-07-demo-app-spec.md`)
 
-**Unit tests:** 99 passing, all gates green (ruff, mypy --strict, pytest).
+**Acceptance test suite (15 stories, all green):**
+- Stories 1-4: core lifecycle (create, renew, release, validate)
+- Stories 5-8: delegation (narrow, rejected, multi-hop chain A→B→C, full-scope no-narrowing)
+- Story 9: scope gating via scope_is_subset()
+- Story 10: natural token expiry (5s TTL, no release)
+- Story 11: RFC 7807 ProblemDetail error structure
+- Story 12: multiple agents with isolated scopes
+- Stories 13-15: released agent guard, garbage token handling, health check
 
-**Acceptance tests: FAILED (2026-04-07).** 3 of 8 stories passed (S1, S2, S3). Remaining stories blocked by two bugs:
-1. **validate() KeyError on missing `aud`** — FIXED (commit `1f29008`). Parser used `data["aud"]` but broker doesn't return `aud`. Added spec Section 8.1 (Response-to-Model Parsing Contract) to prevent recurrence.
-2. **Rate limit (429) on app auth** — each acceptance script creates its own `AgentAuthApp`, causing 8 separate `POST /v1/app/auth` calls. The old v0.2.0 tests used a session-scoped pytest fixture (`conftest.py`) that authenticated once. The new standalone acceptance scripts don't use it. **Fix needed:** acceptance scripts must use pytest with the session-scoped `client` fixture, not standalone scripts with separate app instances.
+**Key findings from acceptance testing:**
+- Story 7: SDK `agent.delegate()` uses agent's registration token, not a received delegated token. Multi-hop chains (A→B→C) require raw HTTP for hop 2.
+- Story 8: Broker ACCEPTS same-scope delegation (equal is a valid subset — `broker_accepts_full_delegation = True`)
+- Old test suite (22 stories) was deleted — delegation tests never validated the DelegatedToken, scope formats were wrong, tests passed for wrong reasons
 
 **What's NOT done (see FLOW.md roadmap):**
-- Acceptance tests passing (blocked by runner design — need pytest + session-scoped fixture)
-- Demo application rebuild (blocked on v0.3.0)
+- Demo application rebuild (spec ready at `.plans/specs/2026-04-07-demo-app-spec.md`, build on branch `feature/demo-app-v0.3.0`)
 - No CI (GitHub Actions)
 - Not on PyPI yet
 - Not pushed to GitHub as `divineartis/agentauth-python` yet
@@ -59,6 +70,26 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 **Old 25-item phase list is superseded.** The new spec covers all material issues. Remaining tech debt will be tracked post-v0.3.0.
 
 ## Recent Lessons (last 3 sessions)
+
+### Acceptance Test Rewrite (2026-04-07)
+
+**What happened:**
+- Reviewed old 22-story test suite with 5 independent sub-agents. Cross-referenced findings.
+- 7 stories were broken: delegation tests (S7, S19, S22) never validated the DelegatedToken, S18 had scope format mismatch causing silent skips, S21 had ambiguous assertions, S17 passed for wrong reason (resource mismatch, not action mismatch).
+- Rewrote from scratch: 15 stories, each testing ONE distinct SDK behavior, no redundancy.
+- All 15 pass against live broker. Every SDK response captured in evidence files.
+- Rewrote all 5 SDK docs — old docs referenced v0.2.0 API (`get_token()`, `ScopeCeilingError`, `requests`, token caching) that no longer exists.
+- Added `docs/testing-guide.md` with instructions for running tests and adding new stories.
+- Demo app spec written for next session.
+
+**Lessons:**
+1. Delegation tests MUST validate the `DelegatedToken.access_token` via `validate()`, not check `worker.scope` (registration scope ≠ delegation scope)
+2. Scope format is `action:resource:identifier` — all three must match. `read:analytics:project-x` ≠ `read:data:analytics-project-x`
+3. Every `if` check needs an `else: passed = False` — no silent skips
+4. No wildcard `*` scopes on agents unless testing wildcard behavior specifically
+5. `agent.delegate()` uses the agent's own registration token — multi-hop chains require raw HTTP for hop 2
+6. Broker accepts same-scope delegation (equal is a valid subset)
+7. Banner prints before test runs (4-second pause) so output is readable in real-time
 
 ### FIX_NOW.md Rejected (2026-04-07)
 
