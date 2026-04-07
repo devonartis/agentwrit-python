@@ -1,26 +1,36 @@
+"""Agent — an ephemeral per-task principal created by AgentAuthApp.
+
+Maps to the broker's agent identity model: each Agent holds a SPIFFE ID
+(from POST /v1/register), a JWT access token, and lifecycle methods that
+call the broker directly.
+
+Broker endpoints used:
+- POST /v1/token/renew  (Agent.renew)   — no body, Bearer auth
+- POST /v1/token/release (Agent.release) — no body, Bearer auth, 204
+- POST /v1/delegate      (Agent.delegate) — body + Bearer auth
+
+ADR SDK-006: Agent has NO validate() method. Validation is the app's
+responsibility — a compromised agent cannot be trusted to validate itself.
+
+ADR SDK-008: renew() mutates in-place. Same agent, fresh token.
+"""
+
 from __future__ import annotations
 
-from agentauth.app import AgentAuthApp
+from typing import TYPE_CHECKING
+
 from agentauth.errors import AgentAuthError
-from agentauth.models import DelegatedToken
+from agentauth.models import DelegatedToken, DelegationRecord
+
+if TYPE_CHECKING:
+    from agentauth.app import AgentAuthApp
 
 
 class Agent:
     """An ephemeral agent registered under an AgentAuthApp.
 
-    Business Logic:
-    The Agent is a first-class principal in the AgentAuth trust model.
-    Unlike a simple token string, the Agent object maintains its own
-    identity (SPIFFE ID), scope, and lifecycle methods.
-
-    An agent is ephemeral and task-scoped. It is created by an App to
-    perform a specific unit of work. Once the work is complete, the
-    agent should be 'released' to revoke its credentials and minimize
-    the security footprint.
-
-    The Agent holds a back-reference to its parent `AgentAuthApp` to
-    facilitate lifecycle operations like renewal and delegation
-    without requiring the user to manage multiple objects.
+    Created by AgentAuthApp.create_agent(). Holds the agent JWT and
+    a back-reference to its parent app for transport reuse.
     """
 
     def __init__(
@@ -44,51 +54,44 @@ class Agent:
 
     @property
     def bearer_header(self) -> dict[str, str]:
-        """Returns the Authorization header for HTTP requests.
-
-        Usage:
-            resp = httpx.get(url, headers=agent.bearer_header)
-        """
+        """Returns {"Authorization": "Bearer <token>"} for HTTP requests."""
         return {"Authorization": f"Bearer {self.access_token}"}
 
     def renew(self) -> None:
-        """POST /v1/token/renew -- renew this agent's token in place.
+        """POST /v1/token/renew — renew this agent's token in place.
 
-        Business Logic:
-        As an agent performs long-running tasks, its token may expire.
-        `renew()` performs a renewal ceremony with the broker.
-        The broker issues a new token with the same identity and scope,
-        and automatically revokes the previous one.
-
-        This method mutates the `Agent` instance in-place, ensuring that
-        the developer does not need to update their local object references.
-
-        Raises:
-            AuthorizationError: If the agent has already been released.
+        The broker revokes the current JTI and issues a replacement with
+        the same scope, TTL, and subject. Updates access_token and
+        expires_in on this Agent instance. The agent_id does not change.
         """
         if self._released:
             raise AgentAuthError("agent has been released and cannot be renewed")
 
-        # Implementation deferred to Phase 3 orchestration
-        raise NotImplementedError("Phase 3: Agent.renew() not yet implemented")
+        response = self._app._transport.request(
+            "POST",
+            "/v1/token/renew",
+            headers={"Authorization": f"Bearer {self.access_token}"},
+        )
+        data = response.json()
+        self.access_token = data["access_token"]
+        self.expires_in = data["expires_in"]
 
     def release(self) -> None:
-        """POST /v1/token/release -- self-revoke on task completion.
+        """POST /v1/token/release — self-revoke on task completion.
 
-        Business Logic:
-        This is a critical security practice. Once an agent has finished
-        its task, it should explicitly signal the broker to revoke its
-        credentials. This reduces the window of opportunity for an
-        attacker to use a hijacked token.
-
-        After calling `release()`, the agent instance is marked as released
-        and cannot be used for further operations.
+        Returns None on success (broker returns 204 No Content).
+        After calling release(), this agent is no longer usable.
+        Idempotent: second call is a no-op.
         """
         if self._released:
             return
 
-        # Implementation deferred to Phase 3 orchestration
-        raise NotImplementedError("Phase 3: Agent.release() not yet implemented")
+        self._app._transport.request(
+            "POST",
+            "/v1/token/release",
+            headers={"Authorization": f"Bearer {self.access_token}"},
+        )
+        self._released = True
 
     def delegate(
         self,
@@ -97,30 +100,45 @@ class Agent:
         *,
         ttl: int | None = None,
     ) -> DelegatedToken:
-        """POST /v1/delegate -- create a scope-attenuated delegation token.
+        """POST /v1/delegate — create a scope-attenuated delegation token.
 
-        Business Logic:
-        Supports the 'Principle of Least Privilege' by allowing an agent
-        to spawn a secondary agent with a narrower set of permissions.
-
-        Example:
-            A 'Researcher' agent delegates only 'read:files' to a
-            'Summarizer' agent.
-
-        Constraints:
-        1. The new scope must be a subset of the current agent's scope.
-        2. The maximum delegation depth is 5 (enforced by the broker).
-        3. The `delegate_to` must be the SPIFFE ID of an existing agent.
-
-        Returns:
-            A `DelegatedToken` containing the new credentials and the
-            updated delegation chain.
-
-        Raises:
-            AuthorizationError: If the requested scope exceeds current authority.
+        delegate_to: SPIFFE ID of the target agent (must already be registered).
+        scope: must be a subset of this agent's scope.
+        ttl: delegation lifetime in seconds (broker defaults to 60 if omitted).
+        Max delegation depth: 5.
         """
-        # Implementation deferred to Phase 3 orchestration
-        raise NotImplementedError("Phase 3: Agent.delegate() not yet implemented")
+        if self._released:
+            raise AgentAuthError("agent has been released and cannot delegate")
+
+        payload: dict[str, object] = {
+            "delegate_to": delegate_to,
+            "scope": scope,
+        }
+        if ttl is not None:
+            payload["ttl"] = ttl
+
+        response = self._app._transport.request(
+            "POST",
+            "/v1/delegate",
+            json=payload,
+            headers={"Authorization": f"Bearer {self.access_token}"},
+        )
+        data = response.json()
+
+        chain = [
+            DelegationRecord(
+                agent=d["agent"],
+                scope=d["scope"],
+                delegated_at=d["delegated_at"],
+            )
+            for d in data.get("delegation_chain", [])
+        ]
+
+        return DelegatedToken(
+            access_token=data["access_token"],
+            expires_in=data["expires_in"],
+            delegation_chain=chain,
+        )
 
     def __repr__(self) -> str:
         return (
