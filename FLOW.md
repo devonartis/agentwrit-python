@@ -105,11 +105,42 @@ Key decisions:
 
 **Decision:** In-repo broker (replacing `~/proj/agentauth-core` coupling) confirmed as Option A — vendor Go source + aactl + docs into `broker/`. Design doc NOT yet saved (interrupted).
 
-**Next:** Finish in-repo broker design doc (include docs copy), get approval, then plan + execute broker setup. Phase 2 code execution runs against that in-repo broker.
+### 2026-04-05 — In-repo broker vendored + tracker reset
+
+**Decision:** Skipped the in-repo broker design doc. Upstream (`agentauth-core`) is at code freeze, so there's nothing to discover — plain one-time `cp` vendor, no git subtree, no resync plan. Do-not-modify policy enforced via `broker/VENDOR.md`.
+
+**Decision:** Vendor pinned at upstream commit `9b89f063deb3d885235ca02dfea42cf24bb52d56` (v2.0.0-259-g9b89f06). 107 files, 1.4M. Includes `cmd/`, `internal/`, `docs/`, Dockerfile, `docker-compose*.yml`, `go.mod/go.sum`, `scripts/stack_{up,down}.sh`. Scripts resolve paths relative to their own location — work correctly from `broker/` with no edits.
+
+**Decision:** All active config/rules/skills/specs stripped of `~/proj/agentauth-core` path references. Repo is now self-contained: integration tests run via `./broker/scripts/stack_up.sh`, API contract is `broker/docs/api.md`. Historical references preserved in FLOW.md decision log, `broker/VENDOR.md` provenance, and ARCHIVE only.
+
+**Decision:** Tracker reset. 17 stale entries (12 DEMO-* stories + 5 demo STEPs) moved to `.plans/ARCHIVE/tracker-demo-app.jsonl`. New tracker reflects v0.3.0 reality: Phase 1 DONE, Phase 2 Steps 1–5 DONE, Step 6 (Code) NOT_STARTED, SDK-P2-S1..S4 registered as ACCEPTANCE stories.
+
+**Next:** ~~Execute Phase 2 code~~ — superseded by spec-driven rewrite (2026-04-06).
+
+### 2026-04-06 — Spec-driven SDK rewrite replaces 7-phase incremental approach
+
+**Decision:** Abandon the 7-phase v0.3.0 closure (25 findings, 6 phase specs, incremental patches). Replace with a clean rewrite driven by a comprehensive PRD (`NEW_SPECS_TO_USED.md`) + 12 ADRs (`SPEC_ADR.md`) written from the broker's Go source.
+
+**Why:** The old approach patched a structurally wrong design. The v0.2.0 SDK modeled agents as opaque JWT strings (`get_token()` → `str`). The broker models agents as SPIFFE principals with identity, scope, lifecycle, and delegation chains. Incremental patches couldn't fix that mismatch — the SDK needed to be redesigned around the broker's actual trust hierarchy: app as container, agents as ephemeral per-task principals created by the app.
+
+**Branch:** `feature/v0.3.0-sdk-spec-rewrite` (branched from `feature/v0.3.0-sdk-closure` to preserve spec files).
+
+**What changes:**
+- `requests` → `httpx` (ADR SDK-011)
+- `get_token()` → `create_agent()` returning `Agent` with `renew()`, `release()`, `delegate()` (ADR SDK-002, SDK-004)
+- Module-level `validate()` + `scope_is_subset()` (ADR SDK-007)
+- `ProblemDetail` + typed exception hierarchy (spec Section 9)
+- `AgentClaims`, `ValidateResult`, `DelegatedToken`, `RegisterResult`, `HealthStatus` models (spec Section 7)
+- TokenCache + retry module removed
+- Strict type safety (`mypy --strict`), module-level docstrings explaining broker alignment
+
+**Old phase specs:** `.plans/specs/2026-04-05-v0.3.0-phase{2..7}-*-spec.md` — superseded, not deleted (git history).
+
+**Next:** Write implementation plan against the new spec, then execute.
 
 ---
 
-**Roadmap (after v0.3.0 closure):**
+**Roadmap (after v0.3.0):**
 - Demo app rebuild (unblocked by v0.3.0)
 1. Push to GitHub as `divineartis/agentauth-python`
 2. CI setup — GitHub Actions for lint, type check, unit tests on every PR

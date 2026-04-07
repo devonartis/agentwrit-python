@@ -3,15 +3,15 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from agentauth.app_types import _AppSession
-from agentauth.errors import AuthenticationError, TransportError
-from agentauth.models import HealthStatus, ValidateResult
-from agentauth import validate as module_validate
 from agentauth._transport import AgentAuthTransport
+from agentauth.app_types import _AppSession
+from agentauth.models import HealthStatus, ValidateResult
+from agentauth.scope import validate as module_validate
 
 if TYPE_CHECKING:
-    from agentauth.agent import Agent
     from cryptography.hazmat.primitives.asymmetric import ed25519
+
+    from agentauth.agent import Agent
 
 
 class AgentAuthApp:
@@ -44,7 +44,7 @@ class AgentAuthApp:
         self.client_secret = client_secret
         self.timeout = timeout
         self.user_agent = user_agent
-        
+
         self._transport = AgentAuthTransport(
             broker_url=self.broker_url,
             timeout=self.timeout,
@@ -56,21 +56,21 @@ class AgentAuthApp:
         """Internal method to ensure the app has a valid JWT.
 
         Business Logic:
-        Implements "Lazy Authentication". The app doesn't authenticate during 
-        `__init__`. Instead, it waits until the first operation that requires 
-        authorization (like `create_agent` or `health`). 
-        
-        If no session exists, or the current session JWT is expired (or close 
+        Implements "Lazy Authentication". The app doesn't authenticate during
+        `__init__`. Instead, it waits until the first operation that requires
+        authorization (like `create_agent` or `health`).
+
+        If no session exists, or the current session JWT is expired (or close
         to expiry), it performs a `POST /v1/app/auth` to obtain a new one.
         """
         now = time.time()
-        
-        # Re-authenticate if no session exists, or if the token is within 
+
+        # Re-authenticate if no session exists, or if the token is within
         # a 60-second buffer of expiring.
         if (
-            self._session is None or 
-            self._session.expires_at is None or 
-            (self._session.expires_at - now) <<  60
+            self._session is None or
+            self._session.expires_at is None or
+            (self._session.expires_at - now) < 60
         ):
             self._authenticate()
 
@@ -93,13 +93,14 @@ class AgentAuthApp:
                 "client_secret": self.client_secret,
             }
         )
-        
+
         data = response.json()
-        
-        # The broker returns expires_at as a timestamp (int)
+
+        # Broker returns expires_in (seconds), not expires_at.
+        # Compute absolute expiry from wall clock + TTL.
         self._session = _AppSession(
             access_token=data["access_token"],
-            expires_at=float(data["expires_at"]),
+            expires_at=time.time() + float(data["expires_in"]),
             scopes=data.get("scopes", []),
         )
 
@@ -114,7 +115,7 @@ class AgentAuthApp:
         label: str | None = None,
     ) -> Agent:
         """Create an ephemeral agent under this app.
-        
+
         Implementation:
         Uses the `AgentCreationOrchestrator` to perform the multi-step
         challenge-response registration ceremony.
@@ -140,14 +141,12 @@ class AgentAuthApp:
     def health(self) -> HealthStatus:
         """GET /v1/health -- broker health check.
 
-        Ensures the app can communicate with the broker and that the 
-        broker's internal services (like the DB) are operational.
+        No auth required. Tests broker reachability and internal service
+        status (DB connectivity, audit event count).
         """
-        self._ensure_app_authenticated()
-        
         response = self._transport.request("GET", "/v1/health")
         data = response.json()
-        
+
         return HealthStatus(
             status=data["status"],
             version=data["version"],

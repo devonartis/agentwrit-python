@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import httpx
+
 from agentauth.models import ValidateResult
+
 
 def scope_is_subset(requested: list[str], allowed: list[str]) -> bool:
     """Client-side mirror of the broker's ScopeIsSubset check.
 
     Business Logic:
     Enforces the rule that authority can only narrow, never expand.
-    A requested scope is covered if every scope in `requested` is covered 
+    A requested scope is covered if every scope in `requested` is covered
     by at least one scope in `allowed`.
 
     Coverage Rules:
@@ -54,12 +56,12 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
     """POST /v1/token/validate -- verify any token via the broker.
 
     Business Logic:
-    This is the authoritative way for a resource server or the App to verify 
-    if an agent is still trusted. Because validation is performed by the 
-    broker, it catches not just malformed tokens, but also tokens that 
+    This is the authoritative way for a resource server or the App to verify
+    if an agent is still trusted. Because validation is performed by the
+    broker, it catches not just malformed tokens, but also tokens that
     have been revoked by an operator or via `release()`.
 
-    Note: The broker returns HTTP 200 even for invalid tokens. The 
+    Note: The broker returns HTTP 200 even for invalid tokens. The
     `valid` boolean in the response body discriminates success from failure.
 
     Args:
@@ -75,24 +77,24 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
             f"{broker_url.rstrip('/')}/v1/token/validate",
             json={"token": token}
         )
-        
+
         # The spec says this endpoint always returns 200.
         # We should handle unexpected non-200s as TransportErrors or similar,
         # but for now we follow the happy path of the contract.
         response.raise_for_status()
-        
+
         data = response.json()
-        
+
         if not data.get("valid"):
             return ValidateResult(
-                valid=False, 
+                valid=False,
                 error=data.get("error")
             )
 
         # If valid, we need to parse the claims into the AgentClaims model.
         # This is a simplified implementation for the MVP.
         from agentauth.models import AgentClaims, DelegationRecord
-        
+
         claims_data = data.get("claims")
         if not claims_data:
             return ValidateResult(valid=False, error="Missing claims in valid response")

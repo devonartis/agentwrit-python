@@ -1,20 +1,30 @@
+"""AgentAuth Python SDK — ephemeral, task-scoped credentials for AI agents.
+
+Implements the App-as-Container model: AgentAuthApp is the developer's
+entry point, Agent is an ephemeral per-task principal created by the app.
+All agent authority flows from the app's scope ceiling set by the operator.
+
+Spec: .plans/specs/NEW_SPECS_TO_USED.md
+ADRs: .plans/specs/SPEC_ADR.md (SDK-001 through SDK-012)
+"""
+
 from __future__ import annotations
 
-from agentauth.app import AgentAuthApp
 from agentauth.agent import Agent
+from agentauth.app import AgentAuthApp
 from agentauth.errors import (
     AgentAuthError,
     AuthenticationError,
     AuthorizationError,
-    RateLimitError,
-    ProblemResponseError,
-    TransportError,
     CryptoError,
+    ProblemResponseError,
+    RateLimitError,
+    TransportError,
 )
 from agentauth.models import (
     AgentClaims,
-    DelegationRecord,
     DelegatedToken,
+    DelegationRecord,
     HealthStatus,
     ProblemDetail,
     RegisterResult,
@@ -25,23 +35,23 @@ from agentauth.scope import scope_is_subset, validate
 __version__ = "0.3.0"
 
 __all__ = [
-    "AgentAuthApp",
     "Agent",
+    "AgentAuthApp",
     "AgentAuthError",
+    "AgentClaims",
     "AuthenticationError",
     "AuthorizationError",
-    "RateLimitError",
-    "ProblemResponseError",
-    "TransportError",
     "CryptoError",
-    "AgentClaims",
-    "DelegationRecord",
     "DelegatedToken",
+    "DelegationRecord",
     "HealthStatus",
     "ProblemDetail",
+    "ProblemResponseError",
+    "RateLimitError",
     "RegisterResult",
+    "TransportError",
     "ValidateResult",
+    "__version__",
     "scope_is_subset",
     "validate",
-    "__version__",
 ]
