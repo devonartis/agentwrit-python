@@ -1,0 +1,17 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  Scope Ceiling Blocks Out-of-Bounds Agent Scope (STORY-P3-S4)  ║
+║                                                                  ║
+║  A developer's app has ceiling [read:data:*, write:data:*].     ║
+║  They try to create an agent with read:logs:system — a scope    ║
+║  the operator never granted. The broker rejects it with 403.    ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: Setup
+  App ceiling     = [read:data:*, write:data:*]
+  Requested scope = [read:logs:system]  (outside ceiling)
+
+Step 2: Calling app.create_agent() with out-of-bounds scope
+  FAIL: wrong exception type: RateLimitError: Too Many Requests: rate limit exceeded, try again later
+
+═══ STORY-P3-S4: FAIL ═══

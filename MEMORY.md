@@ -39,10 +39,16 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - `token.py` (TokenCache) → removed; agents are objects, not cached strings
 - `retry.py` → removed; SDK does not retry by default (spec Section 9.2)
 
-**What's next:** Write implementation plan against the new spec, then execute.
+**What's next:** Fix acceptance test failures, then re-run.
+
+**Unit tests:** 99 passing, all gates green (ruff, mypy --strict, pytest).
+
+**Acceptance tests: FAILED (2026-04-07).** 3 of 8 stories passed (S1, S2, S3). Remaining stories blocked by two bugs:
+1. **validate() KeyError on missing `aud`** — FIXED (commit `1f29008`). Parser used `data["aud"]` but broker doesn't return `aud`. Added spec Section 8.1 (Response-to-Model Parsing Contract) to prevent recurrence.
+2. **Rate limit (429) on app auth** — each acceptance script creates its own `AgentAuthApp`, causing 8 separate `POST /v1/app/auth` calls. The old v0.2.0 tests used a session-scoped pytest fixture (`conftest.py`) that authenticated once. The new standalone acceptance scripts don't use it. **Fix needed:** acceptance scripts must use pytest with the session-scoped `client` fixture, not standalone scripts with separate app instances.
 
 **What's NOT done (see FLOW.md roadmap):**
-- v0.3.0 SDK rewrite (coding)
+- Acceptance tests passing (blocked by runner design — need pytest + session-scoped fixture)
 - Demo application rebuild (blocked on v0.3.0)
 - No CI (GitHub Actions)
 - Not on PyPI yet

@@ -1,0 +1,22 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  App Authenticates on First Agent Request (STORY-P3-S1)         ║
+║                                                                  ║
+║  The app starts up. A task arrives. The SDK handles broker       ║
+║  authentication transparently on the first create_agent() call.  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: App starts up
+  App initialized (no broker call yet)
+
+Step 2: First task arrives — create an agent for user-42
+  agent_id   = spiffe://agentauth.local/agent/data-pipeline/analyze-user-42/b5c8f4fdbdd21d3b
+  scope      = ['read:data:user-42']
+  expires_in = 300s
+
+Step 3: Verifying
+  PASS: agent has a SPIFFE identity
+  PASS: agent is scoped to user-42 only
+  Agent released
+
+═══ STORY-P3-S1: PASS ═══

@@ -1,0 +1,32 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  Agent Gets a Verifiable SPIFFE Identity (STORY-P3-S3)         ║
+║                                                                  ║
+║  A task arrives to analyze user-42's data. The app creates an   ║
+║  agent scoped to read:data:user-42. The broker issues a SPIFFE  ║
+║  identity and a JWT. The app validates the token to confirm     ║
+║  the agent is real before letting it work.                      ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: Task arrives — create agent for user-42 analysis
+  agent_id   = spiffe://agentauth.local/agent/data-pipeline/analyze-user-42/fcc87c31bc1a0afb
+  scope      = ['read:data:user-42']
+  expires_in = 300s
+
+Step 2: App validates the agent's token with the broker
+  valid          = True
+  claims.sub     = spiffe://agentauth.local/agent/data-pipeline/analyze-user-42/fcc87c31bc1a0afb
+  claims.scope   = ['read:data:user-42']
+  claims.task_id = analyze-user-42
+  claims.orch_id = data-pipeline
+
+Step 3: Verifying
+  PASS: agent_id is a SPIFFE URI
+  PASS: orch_id and task_id appear in SPIFFE ID
+  PASS: broker confirms token is valid
+  PASS: broker claims.sub matches agent_id
+  PASS: broker confirms scope is exactly read:data:user-42
+
+Step 4: Agent released
+
+═══ STORY-P3-S3: PASS ═══

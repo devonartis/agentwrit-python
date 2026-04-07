@@ -136,7 +136,17 @@ Key decisions:
 
 **Old phase specs:** `.plans/specs/2026-04-05-v0.3.0-phase{2..7}-*-spec.md` — superseded, not deleted (git history).
 
-**Next:** Write implementation plan against the new spec, then execute.
+### 2026-04-07 — Acceptance tests failed
+
+**What happened:** Ran 8 acceptance stories against live broker. 3 passed (S1, S2, S3). 5 failed.
+
+**Bug 1 (fixed): `validate()` parser KeyError on missing `aud`.** The spec model (`AgentClaims`) defines `aud: list[str]` but the broker's `/v1/token/validate` response doesn't return `aud`. The parser used `data["aud"]` instead of `data.get("aud", [])`. Root cause: wrote the parser without checking `broker/docs/api.md` for the actual response shape — trusted the model blindly. Fixed in commit `1f29008`. Added spec Section 8.1 (Response-to-Model Parsing Contract) defining required vs optional fields for all response parsers.
+
+**Bug 2 (not fixed): rate limit from acceptance runner design.** Each acceptance script creates its own `AgentAuthApp` instance = separate `POST /v1/app/auth` call. 8 scripts = 8 auth calls in rapid succession = 429 from broker (10 req/min limit). The old v0.2.0 tests avoided this with a session-scoped pytest fixture in `conftest.py` that authenticated once. The new standalone scripts don't use pytest fixtures. Fix: rewrite acceptance scripts as pytest integration tests using the existing session-scoped `client` fixture from `conftest.py`, while keeping the banner + evidence output format.
+
+**Lesson:** Don't write acceptance scripts as standalone processes when the broker has rate limits on auth. Use pytest session-scoped fixtures to share one authenticated app across all stories — same pattern as v0.2.0.
+
+**Next:** Rewrite acceptance scripts as pytest tests using `conftest.py` session-scoped `client` fixture. Re-run all 8 stories. Capture evidence.
 
 ---
 

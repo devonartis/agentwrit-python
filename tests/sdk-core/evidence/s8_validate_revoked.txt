@@ -1,0 +1,44 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  App Catches Revoked Agent at Runtime (STORY-P3-S8)            ║
+║                                                                  ║
+║  An agent's token is released (simulating operator revocation). ║
+║  The app validates the token before the next tool call and      ║
+║  discovers it's invalid. The agent is blocked.                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: Agent starts working on user-42
+Traceback (most recent call last):
+  File "/Users/divineartis/proj/agentauth-python/tests/sdk-core/s8_validate_revoked.py", line 32, in <module>
+    agent = app.create_agent(
+        orch_id="data-pipeline", task_id="work-user-42",
+        requested_scope=["read:data:user-42"],
+    )
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/app.py", line 125, in create_agent
+    return orchestrator.orchestrate(
+           ~~~~~~~~~~~~~~~~~~~~~~~~^
+        orch_id=orch_id,
+        ^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        label=label
+        ^^^^^^^^^^^
+    )
+    ^
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/orchestrator.py", line 76, in orchestrate
+    self._app._ensure_app_authenticated()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/app.py", line 75, in _ensure_app_authenticated
+    self._authenticate()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/app.py", line 88, in _authenticate
+    response = self._transport.request(
+        "POST",
+    ...<4 lines>...
+        }
+    )
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/_transport.py", line 113, in request
+    self._raise_for_status(response)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/divineartis/proj/agentauth-python/src/agentauth/_transport.py", line 84, in _raise_for_status
+    raise RateLimitError(problem, status)
+agentauth.errors.RateLimitError: Too Many Requests: rate limit exceeded, try again later

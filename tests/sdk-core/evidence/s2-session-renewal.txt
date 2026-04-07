@@ -1,0 +1,21 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  Multiple Agents From One Running App (STORY-P3-S2)            ║
+║                                                                  ║
+║  The app processes a batch of tasks. Each agent gets only the   ║
+║  specific user data it needs. The SDK handles session reuse.    ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: Task batch arrives — two users to analyze
+  Agent 1: spiffe://agentauth.local/agent/data-pipeline/analyze-user-42/e2d2da442831ce4e
+           scope = ['read:data:user-42']
+  Agent 2: spiffe://agentauth.local/agent/data-pipeline/analyze-user-99/ef11221a2039afcb
+           scope = ['read:data:user-99']
+
+Step 2: Verifying isolation
+  PASS: each agent has its own SPIFFE identity
+  PASS: agent 1 scoped to user-42 only
+  PASS: agent 2 scoped to user-99 only
+  Both agents released
+
+═══ STORY-P3-S2: PASS ═══
