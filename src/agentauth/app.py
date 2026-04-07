@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING
+
 from agentauth.app_types import _AppSession
 from agentauth.errors import AuthenticationError, TransportError
 from agentauth.models import HealthStatus, ValidateResult
 from agentauth import validate as module_validate
 from agentauth._transport import AgentAuthTransport
+
+if TYPE_CHECKING:
+    from agentauth.agent import Agent
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
 
 class AgentAuthApp:
     """The developer's app container. Manages authentication internally,
@@ -103,7 +109,7 @@ class AgentAuthApp:
         task_id: str,
         requested_scope: list[str],
         *,
-        private_key: Any | None = None,
+        private_key: ed25519.Ed25519PrivateKey | None = None,
         max_ttl: int = 300,
         label: str | None = None,
     ) -> Agent:
