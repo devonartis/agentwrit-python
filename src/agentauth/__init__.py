@@ -1,44 +1,47 @@
-"""AgentAuth Python SDK — ephemeral, task-scoped credentials for AI agents.
-
-This package provides a Python client for the AgentAuth credential broker.
-It wraps the broker's 8-step Ed25519 challenge-response flow into simple
-function calls, handling key generation, token caching, renewal, and retry.
-
-Quick start::
-
-    from agentauth import AgentAuthApp
-
-    client = AgentAuthApp(broker_url, client_id, client_secret)
-    token = client.get_token("my-agent", ["read:data:*"])
-
-For full documentation, see: https://github.com/devonartis/agentauth-python-sdk
-
-Exports:
-    AgentAuthApp         — Main client class (the primary entry point)
-    AgentAuthError          — Base exception for all SDK errors
-    AuthenticationError     — 401: bad credentials
-    ScopeCeilingError       — 403: scope exceeds app ceiling
-    RateLimitError          — 429: rate limited after all retries
-    BrokerUnavailableError  — 5xx / connection failure after all retries
-"""
-
-__version__ = "0.2.0"
+from __future__ import annotations
 
 from agentauth.app import AgentAuthApp
+from agentauth.agent import Agent
 from agentauth.errors import (
     AgentAuthError,
     AuthenticationError,
-    BrokerUnavailableError,
+    AuthorizationError,
     RateLimitError,
-    ScopeCeilingError,
+    ProblemResponseError,
+    TransportError,
+    CryptoError,
 )
+from agentauth.models import (
+    AgentClaims,
+    DelegationRecord,
+    DelegatedToken,
+    HealthStatus,
+    ProblemDetail,
+    RegisterResult,
+    ValidateResult,
+)
+from agentauth.scope import scope_is_subset, validate
+
+__version__ = "0.3.0"
 
 __all__ = [
     "AgentAuthApp",
-    "__version__",
+    "Agent",
     "AgentAuthError",
     "AuthenticationError",
-    "BrokerUnavailableError",
+    "AuthorizationError",
     "RateLimitError",
-    "ScopeCeilingError",
+    "ProblemResponseError",
+    "TransportError",
+    "CryptoError",
+    "AgentClaims",
+    "DelegationRecord",
+    "DelegatedToken",
+    "HealthStatus",
+    "ProblemDetail",
+    "RegisterResult",
+    "ValidateResult",
+    "scope_is_subset",
+    "validate",
+    "__version__",
 ]
