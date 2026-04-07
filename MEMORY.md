@@ -39,7 +39,7 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - `token.py` (TokenCache) → removed; agents are objects, not cached strings
 - `retry.py` → removed; SDK does not retry by default (spec Section 9.2)
 
-**What's next:** Fix acceptance test failures, then re-run.
+**What's next:** Fix acceptance test runner (use pytest session-scoped fixture to avoid 429 rate limit), re-run all 8 stories, capture evidence.
 
 **Unit tests:** 99 passing, all gates green (ruff, mypy --strict, pytest).
 
@@ -59,6 +59,24 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 **Old 25-item phase list is superseded.** The new spec covers all material issues. Remaining tech debt will be tracked post-v0.3.0.
 
 ## Recent Lessons (last 3 sessions)
+
+### FIX_NOW.md Rejected (2026-04-07)
+
+**Finding:** `FIX_NOW.md` claimed a critical design flaw where SDK uses `requested_scope` instead of Broker-granted scope, causing silent failures.
+
+**Investigation:** Reviewed Broker's `id_svc.go:111` — implements ALL-OR-NOTHING scope enforcement:
+- Request exceeds ceiling → `403 scope_violation` (registration FAILS)
+- Request within ceiling → `200 OK` (scope equals request exactly)
+
+**Verdict:** Finding INVALID. When registration succeeds, `requested_scope` IS the truth. No divergence possible. Broker is frozen, so attenuation behavior won't change.
+
+**Action:**
+- Renamed `FIX_NOW.md` → `REJECT-FIX_NOW.md` (preserved for history)
+- Added `broker/BACKLOG.md` with deferred enhancement (explicit token validation methods for defense-in-depth)
+- No code changes required — `orchestrator.py` remains correct
+
+**Commit:** `5107205` — "docs: Reject FIX_NOW.md finding and add SDK validation backlog"
+
 
 ### Spec-Driven Rewrite Decision (2026-04-06)
 

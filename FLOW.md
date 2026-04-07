@@ -148,10 +148,34 @@ Key decisions:
 
 **Next:** Rewrite acceptance scripts as pytest tests using `conftest.py` session-scoped `client` fixture. Re-run all 8 stories. Capture evidence.
 
+### 2026-04-07 — FIX_NOW.md rejected after investigation
+
+**Decision:** `FIX_NOW.md` "critical design flaw" finding is INVALID after code review.
+
+**Investigation:**
+- Broker's `id_svc.go:111` implements ALL-OR-NOTHING scope enforcement
+- If `requested_scope` exceeds launch token ceiling → registration fails with `403 scope_violation`
+- If registration succeeds → `requested_scope` equals JWT scope exactly
+- Current SDK code `scope=requested_scope` is CORRECT
+
+**Why the finding was wrong:**
+- Assumed Broker "attenuates" scope (grants subset on success)
+- Reality: Broker "rejects" scope violations entirely
+- Silent divergence between SDK state and JWT claims is IMPOSSIBLE
+
+**Artifacts:**
+- `REJECT-FIX_NOW.md` — original finding preserved for history
+- `broker/BACKLOG.md` — deferred enhancement for explicit token validation (defense-in-depth, not bug fix)
+- Commit `5107205` — full analysis in commit message
+
+**What's next (immediate):**
+- Fix acceptance test runner (use pytest session-scoped fixture to avoid 429 rate limit)
+- Re-run all 8 acceptance stories, capture evidence
+- Demo app rebuild (unblocked once acceptance tests pass)
+
 ---
 
 **Roadmap (after v0.3.0):**
-- Demo app rebuild (unblocked by v0.3.0)
 1. Push to GitHub as `divineartis/agentauth-python`
 2. CI setup — GitHub Actions for lint, type check, unit tests on every PR
 3. PyPI publishing — `agentauth` package on PyPI
