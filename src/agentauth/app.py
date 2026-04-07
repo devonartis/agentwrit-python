@@ -106,12 +106,23 @@ class AgentAuthApp:
         private_key: Any | None = None,
         max_ttl: int = 300,
         label: str | None = None,
-    ) -> Any: # type: ignore[return-any]
+    ) -> Agent:
         """Create an ephemeral agent under this app.
-        (Implementation deferred to Phase 3)
+        
+        Implementation:
+        Uses the `AgentCreationOrchestrator` to perform the multi-step
+        challenge-response registration ceremony.
         """
-        # Placeholder to satisfy type checking for now
-        raise NotImplementedError("Phase 3: Agent creation not yet implemented")
+        from agentauth.orchestrator import AgentCreationOrchestrator
+        orchestrator = AgentCreationOrchestrator(self)
+        return orchestrator.orchestrate(
+            orch_id=orch_id,
+            task_id=task_id,
+            requested_scope=requested_scope,
+            private_key=private_key,
+            max_ttl=max_ttl,
+            label=label
+        )
 
     def validate(self, token: str) -> ValidateResult:
         """POST /v1/token/validate -- verify any token via the broker.
