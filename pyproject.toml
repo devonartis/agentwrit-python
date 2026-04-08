@@ -3,7 +3,7 @@ name = "agentauth"
 version = "0.3.0"
 description = "Python SDK for the AgentAuth broker -- ephemeral scoped credentials for AI agents via Ed25519 challenge-response"
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.27",

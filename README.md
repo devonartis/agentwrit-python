@@ -5,14 +5,14 @@
 <h1 align="center">AgentAuth Python SDK</h1>
 
 <p align="center">
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://mypy-lang.org/"><img src="https://img.shields.io/badge/type%20checked-mypy%20strict-blue.svg" alt="Type checked: mypy strict"></a>
 </p>
 
 <p align="center">
   Ephemeral, task-scoped credentials for AI agents.<br>
-  Built on Ed25519 challenge-response and the <a href="https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md">Ephemeral Agent Credentialing</a> pattern.
+  Built on Ed25519 challenge-response and the <a href="https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.3.md">Ephemeral Agent Credentialing v1.3</a> pattern.
 </p>
 
 ---
@@ -26,6 +26,8 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 - **Short-lived by default** — tokens expire in minutes, not hours or days
 - **Delegation chains** — agents can delegate narrower permissions to other agents, enforced at every hop
 
+This SDK is the Python client for the [AgentAuth broker](https://github.com/devonartis/agentauth). The broker is the credential authority; this SDK makes it easy to integrate from Python.
+
 ## Installation
 
 ```bash
@@ -38,7 +40,7 @@ Or with pip:
 pip install agentauth
 ```
 
-**Requirements:** Python 3.10+ and a running [AgentAuth broker](https://github.com/devonartis/agentAuth) instance.
+**Requirements:** Python 3.10+ and a running [AgentAuth broker](https://github.com/devonartis/agentauth) instance.
 
 ## Quick Start
 
@@ -95,6 +97,45 @@ delegated = agent.delegate(delegate_to=other.agent_id, scope=["read:data:x"])
 # Release — self-revoke, idempotent
 agent.release()
 ```
+
+## MedAssist AI Demo
+
+The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive healthcare demo that showcases every AgentAuth capability against a live broker.
+
+**What it does:** A FastAPI web app where you enter a patient ID and a plain-language request. A local LLM (OpenAI-compatible) chooses which tools to call. The app dynamically creates broker agents with only the scopes those tools need, for that specific patient. You see scope enforcement, cross-patient denial, delegation, token renewal, and release — all in a real-time execution trace.
+
+**What it demonstrates:**
+
+| Capability | How the demo shows it |
+|------------|----------------------|
+| **Dynamic agent creation** | Agents spawn on demand as the LLM selects tools — clinical, billing, prescription |
+| **Per-patient scope isolation** | Each agent's scopes are parameterized to one patient ID |
+| **Cross-patient denial** | LLM asks for another patient's records → `scope_denied` in the trace |
+| **Delegation** | Clinical agent delegates `write:prescriptions:{patient}` to the prescription agent |
+| **Token lifecycle** | Renewal and release shown at end of each encounter |
+| **Audit trail** | Dedicated audit tab showing hash-chained broker events |
+
+### Running the demo
+
+```bash
+# 1. Start the AgentAuth broker
+cd broker && ./scripts/stack_up.sh && cd ..
+
+# 2. Register the demo app with the broker (one-time setup)
+export AGENTAUTH_ADMIN_SECRET="your-admin-secret"
+uv run python demo/setup.py
+# → Prints client_id and client_secret
+
+# 3. Configure demo/.env (copy from demo/.env.example)
+cp demo/.env.example demo/.env
+# Fill in: broker URL, client_id, client_secret, LLM endpoint
+
+# 4. Run it
+uv run uvicorn demo.app:app --reload --port 5000
+# Open http://127.0.0.1:5000
+```
+
+For architecture diagrams, step-by-step traces, and a live presentation script, see [`demo/BEGINNERS_GUIDE.md`](demo/BEGINNERS_GUIDE.md) and [`demo/PRESENTERS_GUIDE.md`](demo/PRESENTERS_GUIDE.md).
 
 ## Scope Format
 
@@ -205,8 +246,9 @@ Delegated Agent (sub-agent, max 5 hops)
 | [Getting Started](docs/getting-started.md) | Install, connect, and create your first agent |
 | [Developer Guide](docs/developer-guide.md) | Delegation patterns, scope gating, error handling |
 | [API Reference](docs/api-reference.md) | Every class, method, parameter, and exception |
+| [Testing Guide](docs/testing-guide.md) | Unit tests, integration tests, running the test suite |
 
-For broker setup and administration, see the [AgentAuth broker documentation](https://github.com/devonartis/agentAuth/tree/develop/docs).
+For broker setup and administration, see the [AgentAuth broker documentation](https://github.com/devonartis/agentauth/tree/main/docs).
 
 ## Standards Alignment
 
@@ -221,8 +263,8 @@ For broker setup and administration, see the [AgentAuth broker documentation](ht
 ## Contributing
 
 ```bash
-git clone https://github.com/devonartis/agentauth-python-sdk
-cd agentauth-python-sdk
+git clone https://github.com/devonartis/agentauth-python.git
+cd agentauth-python
 uv sync
 
 # Run checks
@@ -233,4 +275,6 @@ uv run pytest tests/unit/              # unit tests (no broker)
 
 ## License
 
-[MIT](LICENSE)
+This SDK is licensed under the [MIT License](LICENSE).
+
+The [AgentAuth broker](https://github.com/devonartis/agentauth) is licensed separately under AGPL-3.0. See the broker repo for details.
