@@ -60,10 +60,12 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - Old test suite (22 stories) was deleted — delegation tests never validated the DelegatedToken, scope formats were wrong, tests passed for wrong reasons
 
 **What's NOT done (see FLOW.md roadmap):**
-- Demo application rebuild (spec ready at `.plans/specs/2026-04-07-demo-app-spec.md`, build on branch `feature/demo-app-v0.3.0`)
+- README/license cleanup on branch `docs/readme-license-cleanup` — awaiting user review before merge
+- `demo/.env.example` has hardcoded vLLM URL — needs generic placeholder
+- Core repo (`agentauth`) README needs demo section pointing to this SDK
 - No CI (GitHub Actions)
 - Not on PyPI yet
-- Not pushed to GitHub as `divineartis/agentauth-python` yet
+- Not pushed to GitHub as `devonartis/agentauth-python` yet
 
 ## Tech Debt
 

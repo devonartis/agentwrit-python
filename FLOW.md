@@ -199,6 +199,29 @@ Key decisions:
 
 **Demo app spec:** `.plans/specs/2026-04-07-demo-app-spec.md` — FastAPI dashboard with 3 tabs (operator, developer, security), LLM pipeline, 22 tools, delegation demo, 6 scenario presets. References old demo at `showcase-authagent/apps/dashboard/`. To be built on branch `feature/demo-app-v0.3.0`.
 
+### 2026-04-08 — License + README cleanup (pending review)
+
+**Branch:** `docs/readme-license-cleanup` off `develop` — NOT merged, awaiting user review.
+
+**What's on the branch:**
+- `LICENSE` created — MIT (T. Devon Artis 2024-2026). Was completely missing from repo.
+- `pyproject.toml` license field: `Apache-2.0` → `MIT` (matches README badge + intent)
+- `README.md` rewrite:
+  - Security pattern link: v1.2 → v1.3
+  - Repo links fixed: `agentauth-python-sdk` → `agentauth-python`, `agentAuth` → `agentauth`
+  - MedAssist AI demo section added: capabilities table, run instructions, links to BEGINNERS_GUIDE + PRESENTERS_GUIDE
+  - Explicit cross-link to broker repo (AGPL-3.0)
+  - License section: SDK is MIT, broker is AGPL-3.0 (separate licenses, intentional)
+  - Testing Guide added to documentation table
+
+**Decision: SDK stays MIT, broker is AGPL-3.0.** SDK is a client library — restrictive license would kill adoption. Every open-core project (Grafana, MongoDB, Redis, HashiCorp) keeps client libs permissive. The broker is where the IP and SaaS protection live.
+
+**What still needs doing after merge:**
+- Core repo (`agentauth`) README needs a demo section pointing to this SDK + MedAssist demo
+- Core repo `docs/getting-started-developer.md` should link to SDK
+- SDK README documentation table links need verification against actual doc content
+- `demo/.env.example` has a hardcoded vLLM URL (`spark-3171`) — should be a generic placeholder
+
 ---
 
 **Roadmap (after v0.3.0):**
