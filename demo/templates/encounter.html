@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="workbench">
+    <div class="input-section">
+        <div class="input-row">
+            <div class="control-group">
+                <label for="patient-select">Patient ID</label>
+                <div class="combo-input">
+                    <select id="patient-select" onchange="syncPatientInput()">
+                        <option value="">-- pick or type below --</option>
+                        {% for p in patients %}
+                        <option value="{{ p.patient_id }}">{{ p.name }} ({{ p.patient_id }})</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" id="patient-input" placeholder="or type any ID (e.g. P-9999)">
+                </div>
+            </div>
+            <div class="control-group request-group">
+                <label for="request-input">What do you need?</label>
+                <input type="text" id="request-input"
+                       placeholder='e.g. "Show me medical records and billing", "Prescribe Amoxicillin", "Check labs and insurance"'
+                       onkeydown="if(event.key==='Enter')submitRequest()">
+            </div>
+            <button id="submit-btn" class="btn-primary" onclick="submitRequest()">Submit</button>
+        </div>
+        <div class="quick-actions">
+            <span class="quick-label">Try:</span>
+            <button class="btn-quick" onclick="setRequest('Show me medical records and lab results')">Records + Labs</button>
+            <button class="btn-quick" onclick="setRequest('Check billing history and insurance coverage')">Billing</button>
+            <button class="btn-quick" onclick="setRequest('Prescribe Amoxicillin for bacterial infection')">Prescription</button>
+            <button class="btn-quick" onclick="setRequest('Show records, check billing, and prescribe Lisinopril')">Full Encounter</button>
+            <button class="btn-quick btn-quick-warn" onclick="setRequest('Show me records and also get records for P-2187')">Cross-Patient</button>
+            <button class="btn-quick btn-quick-warn" onclick="setPatientAndRequest('P-9999', 'Show medical records')">Bad Patient ID</button>
+        </div>
+    </div>
+
+    <div class="workbench-grid">
+        <div class="panel trace-panel">
+            <h2>Execution Trace</h2>
+            <div id="trace-container">
+                <div class="empty-state">
+                    <p><strong>AgentAuth Interactive Demo</strong></p>
+                    <p>1. Pick or type a patient ID</p>
+                    <p>2. Describe what you need in plain text</p>
+                    <p>3. The LLM decides which tools to call</p>
+                    <p>4. Agents are spawned dynamically with per-patient scopes</p>
+                    <p>5. Every scope check, denial, delegation shown here</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel agents-sidebar">
+            <h2>Agents Spawned</h2>
+            <div id="agents-container">
+                <div class="empty-state">Agents appear here as the LLM triggers tool calls that need them.</div>
+            </div>
+        </div>
+    </div>
+
+    <section id="llm-answer-section" class="llm-answer-section hidden" aria-live="polite">
+        <div class="llm-answer-header">
+            <span class="llm-answer-icon">&#x2728;</span>
+            <h2>Assistant response</h2>
+            <span class="llm-answer-hint">Rendered from the model&rsquo;s final message (markdown)</span>
+        </div>
+        <div id="llm-final-answer" class="llm-prose"></div>
+    </section>
+</div>
+{% endblock %}

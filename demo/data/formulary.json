@@ -1,0 +1,93 @@
+{
+  "drugs": [
+    {
+      "name": "Lisinopril",
+      "class": "ACE Inhibitor",
+      "common_doses": ["5mg", "10mg", "20mg", "40mg"],
+      "interactions": [
+        {"drug": "Potassium supplements", "severity": "moderate", "note": "Risk of hyperkalemia"},
+        {"drug": "NSAIDs", "severity": "moderate", "note": "May reduce antihypertensive effect and increase renal risk"},
+        {"drug": "Lithium", "severity": "major", "note": "Increased lithium levels"}
+      ],
+      "contraindications": ["Pregnancy", "History of angioedema", "Bilateral renal artery stenosis"],
+      "tier": 1,
+      "requires_prior_auth": false
+    },
+    {
+      "name": "Metformin",
+      "class": "Biguanide",
+      "common_doses": ["500mg", "850mg", "1000mg"],
+      "interactions": [
+        {"drug": "Contrast dye", "severity": "major", "note": "Risk of lactic acidosis — hold 48h before/after"},
+        {"drug": "Alcohol", "severity": "moderate", "note": "Increased risk of lactic acidosis"}
+      ],
+      "contraindications": ["eGFR <30", "Metabolic acidosis", "Severe hepatic impairment"],
+      "tier": 1,
+      "requires_prior_auth": false
+    },
+    {
+      "name": "Glipizide",
+      "class": "Sulfonylurea",
+      "common_doses": ["5mg", "10mg"],
+      "interactions": [
+        {"drug": "Beta-blockers", "severity": "moderate", "note": "May mask hypoglycemia symptoms"},
+        {"drug": "Fluconazole", "severity": "major", "note": "Increased hypoglycemia risk"},
+        {"drug": "Alcohol", "severity": "moderate", "note": "Increased hypoglycemia risk"}
+      ],
+      "contraindications": ["Type 1 diabetes", "Diabetic ketoacidosis", "Severe renal impairment"],
+      "tier": 1,
+      "requires_prior_auth": false
+    },
+    {
+      "name": "Albuterol Inhaler",
+      "class": "Short-acting beta-2 agonist",
+      "common_doses": ["90mcg/actuation, 2 puffs PRN"],
+      "interactions": [
+        {"drug": "Beta-blockers", "severity": "major", "note": "Beta-blockers antagonize bronchodilator effect"},
+        {"drug": "Diuretics", "severity": "moderate", "note": "Additive hypokalemia risk"}
+      ],
+      "contraindications": [],
+      "tier": 1,
+      "requires_prior_auth": false
+    },
+    {
+      "name": "Montelukast",
+      "class": "Leukotriene receptor antagonist",
+      "common_doses": ["10mg"],
+      "interactions": [
+        {"drug": "Phenobarbital", "severity": "moderate", "note": "Reduced montelukast levels"}
+      ],
+      "contraindications": [],
+      "tier": 2,
+      "requires_prior_auth": false,
+      "fda_warning": "Boxed warning: neuropsychiatric events (mood changes, suicidality). Discuss risks vs benefits."
+    },
+    {
+      "name": "Naproxen",
+      "class": "NSAID",
+      "common_doses": ["250mg", "500mg"],
+      "interactions": [
+        {"drug": "Lisinopril", "severity": "moderate", "note": "May reduce antihypertensive effect and increase renal risk"},
+        {"drug": "Warfarin", "severity": "major", "note": "Increased bleeding risk"},
+        {"drug": "Aspirin", "severity": "moderate", "note": "Increased GI bleeding risk"},
+        {"drug": "Metformin", "severity": "low", "note": "Rare: may increase metformin levels"}
+      ],
+      "contraindications": ["Active GI bleeding", "Severe renal impairment", "Post-CABG surgery"],
+      "tier": 1,
+      "requires_prior_auth": false
+    },
+    {
+      "name": "Atorvastatin",
+      "class": "HMG-CoA reductase inhibitor (Statin)",
+      "common_doses": ["10mg", "20mg", "40mg", "80mg"],
+      "interactions": [
+        {"drug": "Clarithromycin", "severity": "major", "note": "Increased statin levels, rhabdomyolysis risk"},
+        {"drug": "Grapefruit juice", "severity": "moderate", "note": "Increased statin levels"},
+        {"drug": "Gemfibrozil", "severity": "major", "note": "Increased myopathy/rhabdomyolysis risk"}
+      ],
+      "contraindications": ["Active liver disease", "Pregnancy", "Breastfeeding"],
+      "tier": 1,
+      "requires_prior_auth": false
+    }
+  ]
+}

@@ -1,0 +1,361 @@
+[
+  {
+    "patient_id": "P-1042",
+    "name": "Maria Santos",
+    "dob": "1985-03-14",
+    "demographics": {
+      "address": "742 Elm Street, Austin, TX 78701",
+      "phone": "(512) 555-0148",
+      "emergency_contact": "Carlos Santos — (512) 555-0199"
+    },
+    "insurance": {
+      "provider": "BlueCross BlueShield",
+      "plan": "PPO-Gold",
+      "member_id": "BC-9981042",
+      "group_number": "GRP-4420",
+      "copay": 30,
+      "deductible_remaining": 450.00
+    },
+    "medical_records": [
+      {
+        "date": "2026-03-15",
+        "type": "office_visit",
+        "provider": "Dr. Ananya Patel",
+        "chief_complaint": "Persistent headaches and elevated blood pressure",
+        "notes": "Patient presents with 3-week history of tension headaches, averaging 4/10 severity. BP reading 148/92. Previous visit BP was 142/88. Started lisinopril 10mg daily 6 months ago. Reports occasional dizziness upon standing. No visual changes. Neurological exam normal. Assessment: Stage 1 hypertension, suboptimally controlled. Plan: increase lisinopril to 20mg, recheck BP in 2 weeks, order basic metabolic panel.",
+        "vitals": {
+          "bp_systolic": 148,
+          "bp_diastolic": 92,
+          "heart_rate": 78,
+          "temp_f": 98.4,
+          "weight_lbs": 162,
+          "height_in": 64,
+          "bmi": 27.8
+        },
+        "diagnoses": ["I10 — Essential hypertension", "R51.9 — Headache, unspecified"]
+      },
+      {
+        "date": "2025-09-22",
+        "type": "office_visit",
+        "provider": "Dr. Ananya Patel",
+        "chief_complaint": "Annual wellness exam",
+        "notes": "Routine annual exam. BP 142/88, slightly elevated. BMI 27.2 — overweight. Initiated lisinopril 10mg daily for hypertension. Recommended dietary changes and 30 min daily exercise. All labs within normal limits.",
+        "vitals": {
+          "bp_systolic": 142,
+          "bp_diastolic": 88,
+          "heart_rate": 72,
+          "temp_f": 98.6,
+          "weight_lbs": 158,
+          "height_in": 64,
+          "bmi": 27.2
+        },
+        "diagnoses": ["I10 — Essential hypertension", "Z00.00 — Encounter for general adult medical examination"]
+      }
+    ],
+    "prescriptions": [
+      {
+        "drug": "Lisinopril",
+        "dose": "10mg",
+        "frequency": "once daily",
+        "prescriber": "Dr. Ananya Patel",
+        "date": "2025-09-22",
+        "status": "active",
+        "refills_remaining": 2
+      }
+    ],
+    "labs": [
+      {
+        "test": "Basic Metabolic Panel (BMP)",
+        "date": "2025-09-20",
+        "ordered_by": "Dr. Ananya Patel",
+        "status": "completed",
+        "results": {
+          "glucose": {"value": 95, "unit": "mg/dL", "range": "70-100", "flag": "normal"},
+          "bun": {"value": 14, "unit": "mg/dL", "range": "7-20", "flag": "normal"},
+          "creatinine": {"value": 0.9, "unit": "mg/dL", "range": "0.6-1.2", "flag": "normal"},
+          "sodium": {"value": 140, "unit": "mEq/L", "range": "136-145", "flag": "normal"},
+          "potassium": {"value": 4.2, "unit": "mEq/L", "range": "3.5-5.0", "flag": "normal"}
+        }
+      }
+    ],
+    "billing": [
+      {
+        "date": "2026-03-15",
+        "encounter_type": "office_visit",
+        "codes": [
+          {"type": "CPT", "code": "99214", "description": "Office visit, established patient, moderate complexity"},
+          {"type": "ICD-10", "code": "I10", "description": "Essential hypertension"}
+        ],
+        "charges": 245.00,
+        "insurance_paid": 195.00,
+        "patient_responsibility": 50.00,
+        "status": "claim_filed"
+      },
+      {
+        "date": "2025-09-22",
+        "encounter_type": "annual_wellness",
+        "codes": [
+          {"type": "CPT", "code": "99395", "description": "Preventive visit, established, 18-39"},
+          {"type": "CPT", "code": "36415", "description": "Venipuncture"},
+          {"type": "ICD-10", "code": "Z00.00", "description": "General adult medical examination"}
+        ],
+        "charges": 380.00,
+        "insurance_paid": 380.00,
+        "patient_responsibility": 0.00,
+        "status": "paid"
+      }
+    ]
+  },
+  {
+    "patient_id": "P-2187",
+    "name": "James Chen",
+    "dob": "1978-11-02",
+    "demographics": {
+      "address": "1589 Oak Avenue, Seattle, WA 98101",
+      "phone": "(206) 555-0237",
+      "emergency_contact": "Linda Chen — (206) 555-0244"
+    },
+    "insurance": {
+      "provider": "Aetna",
+      "plan": "HMO-Standard",
+      "member_id": "AET-7782187",
+      "group_number": "GRP-8810",
+      "copay": 40,
+      "deductible_remaining": 1200.00
+    },
+    "medical_records": [
+      {
+        "date": "2026-03-20",
+        "type": "office_visit",
+        "provider": "Dr. Marcus Webb",
+        "chief_complaint": "Type 2 diabetes management, recent A1C elevated",
+        "notes": "Patient returns for diabetes follow-up. Reports difficulty maintaining diet over holidays. A1C rose from 6.8% to 7.4%. Current regimen: metformin 1000mg BID. Feet exam normal, no neuropathy signs. Monofilament test intact bilaterally. Assessment: T2DM, worsening glycemic control. Plan: add glipizide 5mg daily, repeat A1C in 3 months, refer to diabetes educator, order comprehensive metabolic panel.",
+        "vitals": {
+          "bp_systolic": 128,
+          "bp_diastolic": 82,
+          "heart_rate": 74,
+          "temp_f": 98.2,
+          "weight_lbs": 210,
+          "height_in": 70,
+          "bmi": 30.1
+        },
+        "diagnoses": ["E11.65 — Type 2 diabetes mellitus with hyperglycemia", "Z79.84 — Long term use of oral hypoglycemic drugs"]
+      }
+    ],
+    "prescriptions": [
+      {
+        "drug": "Metformin",
+        "dose": "1000mg",
+        "frequency": "twice daily",
+        "prescriber": "Dr. Marcus Webb",
+        "date": "2025-06-15",
+        "status": "active",
+        "refills_remaining": 5
+      }
+    ],
+    "labs": [
+      {
+        "test": "Hemoglobin A1C",
+        "date": "2026-03-18",
+        "ordered_by": "Dr. Marcus Webb",
+        "status": "completed",
+        "results": {
+          "a1c": {"value": 7.4, "unit": "%", "range": "<7.0", "flag": "high"}
+        }
+      },
+      {
+        "test": "Comprehensive Metabolic Panel (CMP)",
+        "date": "2026-03-18",
+        "ordered_by": "Dr. Marcus Webb",
+        "status": "completed",
+        "results": {
+          "glucose": {"value": 156, "unit": "mg/dL", "range": "70-100", "flag": "high"},
+          "bun": {"value": 18, "unit": "mg/dL", "range": "7-20", "flag": "normal"},
+          "creatinine": {"value": 1.0, "unit": "mg/dL", "range": "0.6-1.2", "flag": "normal"},
+          "alt": {"value": 32, "unit": "U/L", "range": "7-56", "flag": "normal"},
+          "ast": {"value": 28, "unit": "U/L", "range": "10-40", "flag": "normal"}
+        }
+      }
+    ],
+    "billing": [
+      {
+        "date": "2026-03-20",
+        "encounter_type": "office_visit",
+        "codes": [
+          {"type": "CPT", "code": "99214", "description": "Office visit, established patient, moderate complexity"},
+          {"type": "CPT", "code": "83036", "description": "Hemoglobin A1C"},
+          {"type": "ICD-10", "code": "E11.65", "description": "Type 2 diabetes with hyperglycemia"}
+        ],
+        "charges": 310.00,
+        "insurance_paid": 230.00,
+        "patient_responsibility": 80.00,
+        "status": "claim_filed"
+      }
+    ]
+  },
+  {
+    "patient_id": "P-3301",
+    "name": "Aisha Patel",
+    "dob": "1992-07-28",
+    "demographics": {
+      "address": "203 Pine Ridge Drive, Portland, OR 97201",
+      "phone": "(503) 555-0391",
+      "emergency_contact": "Raj Patel — (503) 555-0402"
+    },
+    "insurance": {
+      "provider": "UnitedHealthcare",
+      "plan": "PPO-Premium",
+      "member_id": "UHC-3303301",
+      "group_number": "GRP-5567",
+      "copay": 25,
+      "deductible_remaining": 0.00
+    },
+    "medical_records": [
+      {
+        "date": "2026-04-01",
+        "type": "office_visit",
+        "provider": "Dr. Sarah Kim",
+        "chief_complaint": "Persistent cough and mild wheezing for 2 weeks",
+        "notes": "Patient presents with dry, non-productive cough lasting 14 days. No fever. Mild expiratory wheezing on auscultation, bilateral. SpO2 97%. History of seasonal allergies. No prior asthma diagnosis. Chest X-ray clear. Assessment: possible new-onset asthma vs reactive airway disease. Plan: trial of albuterol inhaler PRN, start montelukast 10mg daily, pulmonary function test scheduled in 2 weeks.",
+        "vitals": {
+          "bp_systolic": 118,
+          "bp_diastolic": 74,
+          "heart_rate": 82,
+          "temp_f": 98.6,
+          "weight_lbs": 135,
+          "height_in": 65,
+          "bmi": 22.5,
+          "spo2": 97
+        },
+        "diagnoses": ["J45.20 — Mild intermittent asthma, uncomplicated", "R05.9 — Cough, unspecified"]
+      }
+    ],
+    "prescriptions": [
+      {
+        "drug": "Cetirizine",
+        "dose": "10mg",
+        "frequency": "once daily",
+        "prescriber": "Dr. Sarah Kim",
+        "date": "2025-04-10",
+        "status": "active",
+        "refills_remaining": 11
+      }
+    ],
+    "labs": [
+      {
+        "test": "Complete Blood Count (CBC)",
+        "date": "2026-03-28",
+        "ordered_by": "Dr. Sarah Kim",
+        "status": "completed",
+        "results": {
+          "wbc": {"value": 7.2, "unit": "K/uL", "range": "4.5-11.0", "flag": "normal"},
+          "rbc": {"value": 4.5, "unit": "M/uL", "range": "4.0-5.5", "flag": "normal"},
+          "hemoglobin": {"value": 13.8, "unit": "g/dL", "range": "12.0-16.0", "flag": "normal"},
+          "platelets": {"value": 245, "unit": "K/uL", "range": "150-400", "flag": "normal"},
+          "eosinophils": {"value": 6.2, "unit": "%", "range": "1-4", "flag": "high"}
+        }
+      }
+    ],
+    "billing": [
+      {
+        "date": "2026-04-01",
+        "encounter_type": "office_visit",
+        "codes": [
+          {"type": "CPT", "code": "99213", "description": "Office visit, established patient, low complexity"},
+          {"type": "CPT", "code": "71046", "description": "Chest X-ray, 2 views"},
+          {"type": "ICD-10", "code": "J45.20", "description": "Mild intermittent asthma"}
+        ],
+        "charges": 285.00,
+        "insurance_paid": 260.00,
+        "patient_responsibility": 25.00,
+        "status": "paid"
+      }
+    ]
+  },
+  {
+    "patient_id": "P-4455",
+    "name": "Robert Williams",
+    "dob": "1965-01-19",
+    "demographics": {
+      "address": "8801 Magnolia Blvd, Nashville, TN 37203",
+      "phone": "(615) 555-0512",
+      "emergency_contact": "Dorothy Williams — (615) 555-0520"
+    },
+    "insurance": {
+      "provider": "Cigna",
+      "plan": "EPO-Basic",
+      "member_id": "CIG-1124455",
+      "group_number": "GRP-7701",
+      "copay": 50,
+      "deductible_remaining": 2100.00
+    },
+    "medical_records": [
+      {
+        "date": "2026-03-28",
+        "type": "office_visit",
+        "provider": "Dr. James Rodriguez",
+        "chief_complaint": "Knee pain, worsening over 6 months, difficulty with stairs",
+        "notes": "Patient reports progressive right knee pain, worse with weight-bearing and stairs. Morning stiffness lasting ~20 minutes. No swelling, no locking. X-ray shows moderate joint space narrowing medial compartment, small osteophytes. ROM: flexion 120 degrees (reduced from normal 135). Assessment: Primary osteoarthritis of right knee, moderate. Plan: naproxen 500mg BID with food, PT referral, knee brace, weight management counseling. Consider injection if no improvement in 6 weeks.",
+        "vitals": {
+          "bp_systolic": 136,
+          "bp_diastolic": 84,
+          "heart_rate": 68,
+          "temp_f": 98.4,
+          "weight_lbs": 235,
+          "height_in": 72,
+          "bmi": 31.9
+        },
+        "diagnoses": ["M17.11 — Primary osteoarthritis, right knee", "E66.01 — Morbid obesity due to excess calories"]
+      }
+    ],
+    "prescriptions": [
+      {
+        "drug": "Atorvastatin",
+        "dose": "20mg",
+        "frequency": "once daily at bedtime",
+        "prescriber": "Dr. James Rodriguez",
+        "date": "2025-10-05",
+        "status": "active",
+        "refills_remaining": 4
+      },
+      {
+        "drug": "Omeprazole",
+        "dose": "20mg",
+        "frequency": "once daily before breakfast",
+        "prescriber": "Dr. James Rodriguez",
+        "date": "2025-10-05",
+        "status": "active",
+        "refills_remaining": 3
+      }
+    ],
+    "labs": [
+      {
+        "test": "Lipid Panel",
+        "date": "2026-03-25",
+        "ordered_by": "Dr. James Rodriguez",
+        "status": "completed",
+        "results": {
+          "total_cholesterol": {"value": 198, "unit": "mg/dL", "range": "<200", "flag": "normal"},
+          "ldl": {"value": 112, "unit": "mg/dL", "range": "<100", "flag": "high"},
+          "hdl": {"value": 42, "unit": "mg/dL", "range": ">40", "flag": "normal"},
+          "triglycerides": {"value": 178, "unit": "mg/dL", "range": "<150", "flag": "high"}
+        }
+      }
+    ],
+    "billing": [
+      {
+        "date": "2026-03-28",
+        "encounter_type": "office_visit",
+        "codes": [
+          {"type": "CPT", "code": "99214", "description": "Office visit, established patient, moderate complexity"},
+          {"type": "CPT", "code": "73562", "description": "X-ray knee, 3 views"},
+          {"type": "ICD-10", "code": "M17.11", "description": "Primary osteoarthritis, right knee"}
+        ],
+        "charges": 420.00,
+        "insurance_paid": 310.00,
+        "patient_responsibility": 110.00,
+        "status": "claim_filed"
+      }
+    ]
+  }
+]
