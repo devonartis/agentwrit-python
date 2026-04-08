@@ -1,20 +1,6 @@
 # Getting Started
 
-Get your first agent credential in 5 minutes.
-
-## Table of Contents
-
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Obtain Credentials](#obtain-credentials)
-- [Connect and Authenticate](#connect-and-authenticate)
-- [Issue Your First Token](#issue-your-first-token)
-- [Use the Token](#use-the-token)
-- [Revoke When Done](#revoke-when-done)
-- [What Just Happened](#what-just-happened)
-- [Next Steps](#next-steps)
-
----
+Create your first agent credential in 5 minutes.
 
 ## Prerequisites
 
@@ -27,20 +13,20 @@ Get your first agent credential in 5 minutes.
 Using [uv](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
-uv add git+https://github.com/devonartis/agentauth-python-sdk
+uv add agentauth
 ```
 
-Using pip:
+Or with pip:
 
 ```bash
-pip install git+https://github.com/devonartis/agentauth-python-sdk
+pip install agentauth
 ```
 
-The SDK depends on `requests` (HTTP) and `cryptography` (Ed25519 operations). Both are installed automatically.
+The SDK depends on `httpx` (HTTP) and `cryptography` (Ed25519 operations). Both are installed automatically.
 
 ---
 
-## Obtain Credentials
+## Step 1: Set Up Your Credentials
 
 Your broker operator provides two values when they register your application:
 
@@ -49,7 +35,7 @@ Your broker operator provides two values when they register your application:
 | `client_id` | Identifies your application to the broker |
 | `client_secret` | Authenticates your application (never logged by the SDK) |
 
-Store these as environment variables — never hardcode them in source:
+Store these as environment variables — never hardcode them:
 
 ```bash
 export AGENTAUTH_BROKER_URL="https://broker.yourcompany.com"
@@ -57,90 +43,118 @@ export AGENTAUTH_CLIENT_ID="your-client-id"
 export AGENTAUTH_CLIENT_SECRET="your-client-secret"
 ```
 
-> **Note:** If you are the broker operator, register an app with:
-> ```bash
-> aactl app register --name your-app --scopes "read:data:*,write:data:*"
-> ```
-
 ---
 
-## Connect and Authenticate
+## Step 2: Connect to the Broker
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+app = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
 )
 ```
 
-The client authenticates your application with the broker immediately on creation. If the credentials are wrong, `AuthenticationError` is raised right here — you'll know at startup, not at runtime.
+This creates your app instance. No broker call happens yet — the SDK authenticates lazily on the first `create_agent()` call.
 
 ---
 
-## Issue Your First Token
+## Step 3: Create an Agent
 
 ```python
-token = client.get_token("my-agent", ["read:data:*"])
+agent = app.create_agent(
+    orch_id="my-service",
+    task_id="read-customer-data",
+    requested_scope=["read:data:customers"],
+)
 ```
 
-That's it. `token` is a JWT string scoped to `read:data:*`.
+The SDK just did a lot of work behind the scenes:
+
+1. Authenticated your app with the broker (`POST /v1/app/auth`)
+2. Created a launch token with your requested scope (`POST /v1/app/launch-tokens`)
+3. Generated a fresh Ed25519 keypair in memory
+4. Got a challenge nonce from the broker (`GET /v1/challenge`)
+5. Signed the nonce with the private key
+6. Registered the agent (`POST /v1/register`)
+
+You get back an `Agent` object with:
+
+```python
+print(agent.agent_id)    # spiffe://agentauth.local/agent/my-service/read-customer-data/a1b2c3d4
+print(agent.scope)       # ['read:data:customers']
+print(agent.access_token) # eyJhbGciOiJFZERTQS... (JWT)
+print(agent.expires_in)  # 300 (seconds)
+```
 
 ---
 
-## Use the Token
+## Step 4: Use the Token
 
-The token works as a standard Bearer credential with any HTTP API that validates against the broker:
+The agent's `access_token` is a standard JWT. Use it as a Bearer credential with any API that validates against the broker:
 
 ```python
-import requests
+import httpx
 
-resp = requests.get(
+resp = httpx.get(
     "https://your-api/data/customers",
-    headers={"Authorization": f"Bearer {token}"},
+    headers={"Authorization": f"Bearer {agent.access_token}"},
 )
 print(resp.json())
 ```
 
 ---
 
-## Revoke When Done
+## Step 5: Validate the Token
 
-When your agent finishes its task, revoke the credential:
+Before trusting a token, ask the broker if it's still valid:
 
 ```python
-client.revoke_token(token)
+from agentauth import validate
+
+result = validate(broker_url, agent.access_token)
+
+if result.valid:
+    print(f"Subject: {result.claims.sub}")     # SPIFFE ID
+    print(f"Scope: {result.claims.scope}")      # Granted scope
+    print(f"Task: {result.claims.task_id}")     # Task identifier
+else:
+    print(f"Invalid: {result.error}")
 ```
 
-After revocation, the broker rejects the token on all future requests. This shrinks the attack window — even if the token was stolen, it is already dead.
+`validate()` is a module-level function — any service can call it without having an `AgentAuthApp`. It just needs the broker URL and the token.
 
 ---
 
-## What Just Happened
+## Step 6: Release When Done
 
-The SDK executed an 8-step protocol inside that single `get_token()` call:
+When your agent finishes its task, release the token:
 
-```mermaid
-graph TD
-    S1["1️⃣ <b>Cache Check</b><br/>Miss on first call"] --> S2["2️⃣ <b>App Auth</b><br/>Ensure app JWT valid"]
-    S2 --> S3["3️⃣ <b>Launch Token</b><br/>POST /v1/app/launch-tokens"]
-    S3 --> S4["4️⃣ <b>Key Generation</b><br/>Ed25519 keypair (in memory only)"]
-    S4 --> S5["5️⃣ <b>Challenge</b><br/>GET /v1/challenge → nonce"]
-    S5 --> S6["6️⃣ <b>Sign Nonce</b><br/>Prove key ownership"]
-    S6 --> S7["7️⃣ <b>Register</b><br/>POST /v1/register → Agent JWT"]
-    S7 --> S8["8️⃣ <b>Cache</b><br/>Next call returns instantly"]
-
-    style S1 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
-    style S4 fill:#d1fae5,stroke:#10b981,stroke-width:2px
-    style S6 fill:#d1fae5,stroke:#10b981,stroke-width:2px
-    style S7 fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    style S8 fill:#dcfce7,stroke:#22c55e,stroke-width:2px
+```python
+agent.release()
 ```
 
-On subsequent calls with the same agent name and scope, step 1 returns the cached token immediately — zero network calls.
+After release, the broker rejects the token on all future requests. This shrinks the attack window — even if the token was leaked, it's already dead.
+
+Calling `release()` twice is safe. The second call is a no-op.
+
+---
+
+## What You Just Built
+
+```
+Your App
+  └─ AgentAuthApp (authenticated with broker)
+       └─ Agent (SPIFFE identity + scoped JWT)
+            ├─ Used as Bearer credential
+            ├─ Validated by broker
+            └─ Released when done
+```
+
+The agent had exactly the scope it needed (`read:data:customers`), a unique cryptographic identity, and a short-lived token that was revoked the moment the task finished.
 
 ---
 
@@ -148,6 +162,6 @@ On subsequent calls with the same agent name and scope, step 1 returns the cache
 
 | Guide | What You'll Learn |
 |-------|-------------------|
-| [Concepts](concepts.md) | Architecture, security model, and why AgentAuth works this way |
-| [Developer Guide](developer-guide.md) | Multi-agent delegation, error handling, framework integration, complete examples |
-| [API Reference](api-reference.md) | Complete method signatures and exception reference |
+| [Concepts](concepts.md) | Why AgentAuth exists, the trust model, and how scopes work |
+| [Developer Guide](developer-guide.md) | Delegation, scope gating, error handling, and real patterns |
+| [API Reference](api-reference.md) | Every class, method, parameter, and exception |

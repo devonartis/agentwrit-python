@@ -1,489 +1,424 @@
 # Developer Guide
 
-A comprehensive guide to building Python applications with the AgentAuth SDK. This covers credential management, multi-agent delegation, error handling, and framework integration.
-
-## Table of Contents
-
-- [Part 1: Agent Credentials](#part-1-agent-credentials)
-- [Part 2: Multi-Agent Delegation](#part-2-multi-agent-delegation)
-- [Part 3: Credential Lifecycle](#part-3-credential-lifecycle)
-- [Part 4: Error Handling](#part-4-error-handling)
-- [Part 5: Security Properties](#part-5-security-properties)
-- [Part 6: Framework Integration](#part-6-framework-integration)
-- [Complete Example](#complete-example)
+Patterns for building real applications with the AgentAuth SDK. This guide assumes you've read [Getting Started](getting-started.md) and [Concepts](concepts.md).
 
 ---
 
-## Part 1: Agent Credentials
+## Agent Lifecycle Management
 
-### Connecting to the Broker
+Every agent follows the same lifecycle: create, use, release. The pattern looks the same whether you're building a REST API, a batch job, or an LLM orchestrator.
 
-Every application starts by creating an `AgentAuthClient`. This authenticates your application with the broker — think of it as logging in your application (not your agent).
+### Basic Pattern
 
 ```python
 import os
-from agentauth import AgentAuthClient
+from agentauth import AgentAuthApp
 
-client = AgentAuthClient(
+app = AgentAuthApp(
     broker_url=os.environ["AGENTAUTH_BROKER_URL"],
     client_id=os.environ["AGENTAUTH_CLIENT_ID"],
     client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
 )
-```
 
-If the credentials are wrong, `AuthenticationError` is raised immediately — fail-fast at startup, not at runtime.
-
-### Getting a Token
-
-```python
-token = client.get_token("data-reader", ["read:data:*"])
-```
-
-Behind the scenes, the SDK executes the full 8-step protocol:
-
-```mermaid
-graph LR
-    A["1️⃣ Cache<br/>check"] --> B["2️⃣ App<br/>auth"]
-    B --> C["3️⃣ Launch<br/>token"]
-    C --> D["4️⃣ Ed25519<br/>keygen"]
-    D --> E["5️⃣ Get<br/>challenge"]
-    E --> F["6️⃣ Sign<br/>nonce"]
-    F --> G["7️⃣ Register<br/>agent"]
-    G --> H["8️⃣ Cache<br/>result"]
-
-    style A fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
-    style D fill:#d1fae5,stroke:#10b981,stroke-width:2px
-    style F fill:#d1fae5,stroke:#10b981,stroke-width:2px
-    style H fill:#dcfce7,stroke:#22c55e,stroke-width:2px
-```
-
-The returned `token` is a JWT string. Use it as a standard Bearer credential:
-
-```python
-import requests
-
-response = requests.get(
-    "https://your-api/data/customers",
-    headers={"Authorization": f"Bearer {token}"},
+# Create the agent for a specific task
+agent = app.create_agent(
+    orch_id="my-service",
+    task_id="process-order-123",
+    requested_scope=["read:data:order-123", "write:data:order-123-result"],
 )
-```
-
-### Token Caching
-
-Call `get_token` again with the same arguments — the SDK returns the cached token without contacting the broker:
-
-```python
-token1 = client.get_token("data-reader", ["read:data:*"])
-token2 = client.get_token("data-reader", ["read:data:*"])
-assert token1 == token2  # Same JWT, no broker call on the second request
-```
-
-Different scopes or agent names produce different tokens:
-
-```python
-read_token = client.get_token("reader", ["read:data:*"])
-write_token = client.get_token("writer", ["write:data:*"])
-# Different tokens with different scopes and different SPIFFE identities
-```
-
-```mermaid
-graph TB
-    subgraph Cache["🗃️ In-Memory Token Cache"]
-        direction TB
-        E1["<b>Key:</b> ('reader', frozenset({'read:data:*'}))<br/><b>Value:</b> JWT-abc123 · <i>expires in 4m</i>"]
-        E2["<b>Key:</b> ('writer', frozenset({'write:data:*'}))<br/><b>Value:</b> JWT-def456 · <i>expires in 2m</i>"]
-        E3["<b>Key:</b> ('reader', frozenset({'read:data:reports'}))<br/><b>Value:</b> JWT-ghi789 · <i>expires in 5m</i>"]
-    end
-
-    P1["Scope order invariant<br/>['a','b'] == ['b','a']"]
-    P2["Auto-renewal at 80% TTL"]
-    P3["Thread-safe via threading.Lock"]
-
-    Cache --- P1
-    Cache --- P2
-    Cache --- P3
-
-    style Cache fill:#f0f9ff,stroke:#0ea5e9,stroke-width:2px
-    style P1 fill:#f5f5f5,stroke:#999
-    style P2 fill:#f5f5f5,stroke:#999
-    style P3 fill:#f5f5f5,stroke:#999
-```
-
-### Task and Orchestrator IDs
-
-You can tag tokens with metadata that appears in the SPIFFE identity and audit log:
-
-```python
-token = client.get_token(
-    "data-reader",
-    ["read:data:*"],
-    task_id="quarterly-analysis",
-    orch_id="analytics-pipeline",
-)
-# SPIFFE ID: spiffe://agentauth.local/agent/analytics-pipeline/quarterly-analysis/{instance}
-```
-
-If omitted, `task_id` defaults to `"default"` and `orch_id` defaults to `"sdk"`.
-
----
-
-## Part 2: Multi-Agent Delegation
-
-In multi-agent pipelines, an orchestrator agent might need to give a worker agent a subset of its own permissions.
-
-### Delegating Scope
-
-Agent A has `read:data:*` but Agent B only needs `read:data:results`:
-
-```python
-# Orchestrator gets its credential
-orchestrator_token = client.get_token(
-    "orchestrator",
-    ["read:data:*"],
-    task_id="pipeline-001",
-)
-
-# Worker registers and gets its own credential
-worker_token = client.get_token(
-    "worker",
-    ["read:data:logs"],
-    task_id="pipeline-001",
-)
-
-# Get the worker's SPIFFE ID from its token claims
-worker_claims = client.validate_token(worker_token)
-worker_id = worker_claims["claims"]["sub"]
-
-# Orchestrator delegates narrower scope to the worker
-delegated_token = client.delegate(
-    token=orchestrator_token,
-    to_agent_id=worker_id,
-    scope=["read:data:results"],  # Must be subset of orchestrator's scope
-    ttl=120,
-)
-```
-
-### Delegation Rules
-
-```mermaid
-graph TD
-    O["<b>Orchestrator</b><br/>read:data:*"]
-
-    O -->|"✅ subset"| WA["<b>Worker A</b><br/>read:data:results"]
-    O -->|"✅ subset"| WB["<b>Worker B</b><br/>read:data:logs"]
-    O -.->|"❌ not in scope"| WC["<b>Worker C</b><br/>write:data:records"]
-
-    WA -->|"✅ subset"| SW["<b>Sub-worker</b><br/>read:data:results"]
-    WA -.->|"❌ wider than A"| SW2["<b>Sub-worker</b><br/>read:data:*"]
-
-    style O fill:#3b82f6,color:#fff,stroke:#1d4ed8,stroke-width:2px
-    style WA fill:#22c55e,color:#fff,stroke:#16a34a,stroke-width:2px
-    style WB fill:#22c55e,color:#fff,stroke:#16a34a,stroke-width:2px
-    style WC fill:#ef4444,color:#fff,stroke:#dc2626,stroke-width:2px
-    style SW fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
-    style SW2 fill:#ef4444,color:#fff,stroke:#dc2626,stroke-width:2px
-```
-
-- Scope can only **narrow** at each hop, never widen
-- Maximum delegation depth is 5 hops
-- Each link in the chain is cryptographically signed
-- Revoking Agent A's token invalidates all downstream delegations
-
----
-
-## Part 3: Credential Lifecycle
-
-### Revoking When Done
-
-When your agent finishes its task, revoke its credentials:
-
-```python
-client.revoke_token(token)
-```
-
-After revocation, the token is immediately invalid:
-
-```python
-result = client.validate_token(token)
-assert result["valid"] is False  # Broker rejects it
-```
-
-### Why Revoke?
-
-Tokens expire naturally (default 5 minutes), but explicit revocation provides additional security:
-
-- **Shrinks the attack window** — if a token is stolen, it is already dead
-- **Signals task completion** — the broker logs `token_released` in the audit trail
-- **Demonstrates intent** — the agent explicitly surrendered access
-
-### Online Validation
-
-Validate any token against the broker at any time:
-
-```python
-result = client.validate_token(token)
-
-if result["valid"]:
-    claims = result["claims"]
-    print(f"Subject: {claims['sub']}")      # SPIFFE ID
-    print(f"Scope: {claims['scope']}")       # Granted scope
-    print(f"Expires: {claims['exp']}")       # Expiration timestamp
-else:
-    print(f"Invalid: {result.get('error')}")  # "token revoked", "token expired", etc.
-```
-
----
-
-## Part 4: Error Handling
-
-### Exception Hierarchy
-
-All SDK exceptions inherit from `AgentAuthError`, so you can catch broadly or narrowly:
-
-```mermaid
-graph TD
-    Base["<b>AgentAuthError</b><br/><i>Base exception</i>"]
-
-    Base --> Auth["<b>AuthenticationError</b><br/>HTTP 401 · Bad credentials"]
-    Base --> Scope["<b>ScopeCeilingError</b><br/>HTTP 403 · Scope exceeds ceiling"]
-    Base --> Rate["<b>RateLimitError</b><br/>HTTP 429 · Too many requests"]
-    Base --> Unavail["<b>BrokerUnavailableError</b><br/>5xx · Connection failure"]
-    Base --> Expired["<b>TokenExpiredError</b><br/>Token TTL exceeded"]
-
-    style Base fill:#dc2626,color:#fff,stroke:#991b1b,stroke-width:2px
-    style Auth fill:#ef4444,color:#fff,stroke:#dc2626
-    style Scope fill:#ef4444,color:#fff,stroke:#dc2626
-    style Rate fill:#ef4444,color:#fff,stroke:#dc2626
-    style Unavail fill:#ef4444,color:#fff,stroke:#dc2626
-    style Expired fill:#ef4444,color:#fff,stroke:#dc2626
-```
-
-```python
-from agentauth import AgentAuthError, ScopeCeilingError
 
 try:
-    token = client.get_token("agent", scope)
-except ScopeCeilingError as e:
-    # Fix the scope or contact your operator
-    print(f"Scope too broad: {e}")
-except AgentAuthError:
-    # Catch everything else from the SDK
-    ...
+    # Do work with the agent's token
+    process_order(agent.access_token)
+finally:
+    # Always release — even if the work failed
+    agent.release()
 ```
 
-### Scope Ceiling Violations
+Always release in a `finally` block. If your code crashes, the token expires naturally after its TTL, but explicit release is faster and cleaner.
 
-If you request a scope your app is not allowed to have:
+### Long-Running Tasks
+
+If your task runs longer than the token TTL (default 300 seconds), renew the token:
 
 ```python
-from agentauth import ScopeCeilingError
+agent = app.create_agent(
+    orch_id="export-service",
+    task_id="large-export",
+    requested_scope=["read:data:export-batch"],
+)
 
 try:
-    token = client.get_token("rogue", ["admin:everything:*"])
-except ScopeCeilingError as e:
-    print(e)
-    # "requested scopes exceed app ceiling; allowed: [read:data:* write:data:*]"
+    for chunk in large_dataset:
+        process(chunk, agent.access_token)
+        
+        # Renew periodically — the agent_id stays the same
+        agent.renew()
+finally:
+    agent.release()
 ```
 
-### Broker Unavailability
+After `renew()`:
+- `agent.access_token` is a new JWT
+- `agent.agent_id` is unchanged (same SPIFFE identity)
+- The old token is revoked at the broker
+- `agent.expires_in` is reset
 
-The SDK retries transient failures with exponential backoff automatically. You only see `BrokerUnavailableError` if all retries are exhausted:
+### Short-Lived Tasks with Custom TTL
+
+For quick tasks, set a short TTL to minimize exposure:
 
 ```python
-from agentauth import BrokerUnavailableError
-
-try:
-    token = client.get_token("agent", ["read:data:*"])
-except BrokerUnavailableError:
-    # All retries exhausted — broker is down
-    ...
+agent = app.create_agent(
+    orch_id="quick-check",
+    task_id="verify-customer",
+    requested_scope=["read:data:customer-artis"],
+    max_ttl=30,  # Token expires in 30 seconds
+)
+# If you forget to release, the token dies in 30 seconds anyway
 ```
 
-### Rate Limiting
+### Multiple Agents with Isolated Scopes
 
-The SDK respects `Retry-After` headers automatically. `RateLimitError` is raised only when all retries are exhausted:
+Create separate agents for separate tasks. Each agent has its own identity and scope — compromising one doesn't affect the others:
 
 ```python
-from agentauth import RateLimitError
+reader = app.create_agent(
+    orch_id="data-service",
+    task_id="read-customers",
+    requested_scope=["read:data:customers-west"],
+)
 
-try:
-    token = client.get_token("agent", ["read:data:*"])
-except RateLimitError as e:
-    print(f"Retry after {e.retry_after} seconds")
-```
+writer = app.create_agent(
+    orch_id="data-service",
+    task_id="write-reports",
+    requested_scope=["write:data:quarterly-report-q3"],
+)
 
-### Retry Behavior Summary
-
-```mermaid
-flowchart TD
-    Req["📡 HTTP Request"] --> Check{"Response<br/>Status?"}
-
-    Check -->|"2xx · 3xx · 4xx<br/>(not 429)"| OK["✅ Return Response"]
-    Check -->|"429"| RL["⏳ Sleep per Retry-After"]
-    Check -->|"5xx"| BK["⏳ Exponential Backoff<br/>1s → 2s → 4s"]
-    Check -->|"Connection Error"| BK2["⏳ Exponential Backoff<br/>1s → 2s → 4s"]
-
-    RL --> Retry{"Retries<br/>remaining?"}
-    BK --> Retry
-    BK2 --> Retry
-
-    Retry -->|"Yes"| Req
-    Retry -->|"No (was 429)"| RLE["❌ RateLimitError"]
-    Retry -->|"No (was 5xx/conn)"| BUE["❌ BrokerUnavailableError"]
-
-    style OK fill:#dcfce7,stroke:#22c55e,stroke-width:2px
-    style RLE fill:#fee2e2,stroke:#ef4444,stroke-width:2px
-    style BUE fill:#fee2e2,stroke:#ef4444,stroke-width:2px
-    style Req fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+# reader cannot write, writer cannot read
+# They have different SPIFFE IDs and different tokens
 ```
 
 ---
 
-## Part 5: Security Properties
+## Delegation
 
-When you use this SDK, these security properties are enforced automatically:
+Delegation is how one agent gives a subset of its authority to another agent. The broker issues a new token for the delegate with narrowed scope.
 
-| Property | What It Means For You |
-|----------|----------------------|
-| **Ephemeral keys** | Every `get_token` call generates a fresh Ed25519 keypair in memory. The private key never touches disk. Even if your process is dumped, the key only exists in volatile memory. |
-| **Task-scoped tokens** | Agents can only access what they request, within the app's scope ceiling. No master keys. |
-| **Short TTLs** | Tokens expire in minutes. A stolen token is useless quickly. |
+### Single-Hop Delegation
 
-| **Scope attenuation** | Delegation can only narrow permissions. An agent cannot grant more access than it has. |
-| **Thread safety** | Token cache and app auth state are protected by locks. Safe for concurrent agents. |
-| **TLS by default** | Broker connections verify TLS certificates. No silent `verify=False`. |
-| **No secret leakage** | `client_secret` never appears in error messages, repr output, or logs. |
-
----
-
-## Part 6: Framework Integration
-
-### FastAPI
+Agent A has broad scope, delegates narrow scope to Agent B:
 
 ```python
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
-from agentauth import AgentAuthClient
+agent_a = app.create_agent(
+    orch_id="pipeline",
+    task_id="orchestrator",
+    requested_scope=["read:data:partition-7", "read:data:partition-8"],
+)
+agent_b = app.create_agent(
+    orch_id="pipeline",
+    task_id="worker-p7",
+    requested_scope=["read:data:partition-7"],
+)
 
-# Initialize once at startup
-client: AgentAuthClient | None = None
+# A delegates only partition-7 to B
+delegated = agent_a.delegate(
+    delegate_to=agent_b.agent_id,
+    scope=["read:data:partition-7"],
+)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global client
-    client = AgentAuthClient(broker_url, client_id, client_secret)
-    yield
-
-app = FastAPI(lifespan=lifespan)
-
-def get_client() -> AgentAuthClient:
-    assert client is not None
-    return client
-
-@app.post("/analyze")
-def analyze(client: AgentAuthClient = Depends(get_client)):
-    token = client.get_token("analyzer", ["read:data:*"])
-    # Use the token...
-    return {"status": "complete"}
+# delegated.access_token is a NEW JWT for B with only partition-7
+# delegated.expires_in is the TTL (default 60 seconds)
+# delegated.delegation_chain records the hop
 ```
 
-### Flask
+Always validate the delegated token to confirm the broker actually narrowed it:
 
 ```python
-from flask import Flask
-from agentauth import AgentAuthClient
+from agentauth import validate
 
-app = Flask(__name__)
-
-# Initialize once at module level
-client = AgentAuthClient(broker_url, client_id, client_secret)
-
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    token = client.get_token("analyzer", ["read:data:*"])
-    # Use the token...
-    return {"status": "complete"}
+result = validate(broker_url, delegated.access_token)
+assert result.valid
+assert result.claims.scope == ["read:data:partition-7"]
+# partition-8 is NOT in the delegated token
 ```
 
-### Background Workers (Celery)
+### Multi-Hop Delegation (A → B → C)
+
+To build a real chain where each hop narrows further, the second hop must use the delegated token directly. The SDK's `agent.delegate()` always uses the agent's registration token, not a received delegated token:
 
 ```python
-from celery import Celery
-from agentauth import AgentAuthClient
+import httpx
 
-app = Celery("tasks", broker="redis://localhost:6379")
+# A has 3 scopes
+agent_a = app.create_agent(
+    orch_id="pipeline",
+    task_id="manager",
+    requested_scope=[
+        "read:data:partition-7",
+        "read:data:partition-8",
+        "write:data:results",
+    ],
+)
+agent_b = app.create_agent(
+    orch_id="pipeline",
+    task_id="analyst",
+    requested_scope=["read:data:partition-7", "read:data:partition-8"],
+)
+agent_c = app.create_agent(
+    orch_id="pipeline",
+    task_id="reader",
+    requested_scope=["read:data:partition-7"],
+)
 
-# Initialize per-worker (one client per process)
-client = AgentAuthClient(broker_url, client_id, client_secret)
+# Hop 1: A delegates 2 of 3 scopes to B (drops write)
+delegated_ab = agent_a.delegate(
+    delegate_to=agent_b.agent_id,
+    scope=["read:data:partition-7", "read:data:partition-8"],
+)
 
-@app.task
-def process_data(task_id: str):
-    token = client.get_token(
-        "worker",
-        ["read:data:*"],
-        task_id=task_id,
+# Hop 2: Use the delegated token to delegate further (raw HTTP)
+resp = httpx.post(
+    f"{broker_url}/v1/delegate",
+    json={
+        "delegate_to": agent_c.agent_id,
+        "scope": ["read:data:partition-7"],
+    },
+    headers={"Authorization": f"Bearer {delegated_ab.access_token}"},
+)
+delegated_bc = resp.json()
+
+# C now has only partition-7, and the chain records both hops
+```
+
+### Delegation Failures
+
+If an agent tries to delegate scope it doesn't have:
+
+```python
+from agentauth.errors import AuthorizationError
+
+try:
+    agent_a.delegate(
+        delegate_to=agent_b.agent_id,
+        scope=["read:data:partition-9"],  # A doesn't have this
     )
-    try:
-        # Do work with the token...
-        pass
-    finally:
-        client.revoke_token(token)
+except AuthorizationError as e:
+    print(e.status_code)        # 403
+    print(e.problem.error_code) # scope_violation
+    print(e.problem.detail)     # delegated scope exceeds delegator scope
+```
+
+### What We Learned About Delegation
+
+From acceptance testing against a live broker:
+
+1. **Same-scope delegation is allowed.** The broker treats equal as a valid subset. If A has `["read:data:partition-7"]` and delegates `["read:data:partition-7"]` to B, the broker accepts it.
+
+2. **The delegated token can have MORE scope than B's registration scope.** If A has 3 scopes and delegates all 3 to B (who was registered with only 1), B's delegated token carries all 3 scopes. The delegation doesn't check B's registration scope — it only checks that the delegated scope is a subset of A's scope.
+
+3. **Delegation chain entries record the delegator's full scope** at the time of delegation, not just what was delegated. This is for audit trail purposes.
+
+---
+
+## Scope Gating
+
+The app is responsible for checking scope before allowing agent actions. The broker sets the scope at creation time, but the app must enforce it at runtime.
+
+### The Pattern
+
+```python
+from agentauth import scope_is_subset
+
+agent = app.create_agent(
+    orch_id="customer-service",
+    task_id="lookup",
+    requested_scope=["read:data:customer-artis"],
+)
+
+def handle_action(action_scope: list[str]) -> bool:
+    """Check if the agent is authorized for this action."""
+    if scope_is_subset(action_scope, agent.scope):
+        return True  # proceed
+    return False  # block
+
+# Authorized
+handle_action(["read:data:customer-artis"])    # True
+
+# Blocked — different identifier
+handle_action(["read:data:all-customers"])     # False
+
+# Blocked — different action
+handle_action(["write:data:customer-artis"])   # False
+```
+
+### Validating with the Broker
+
+For zero-trust enforcement, validate the token with the broker AND check scope:
+
+```python
+from agentauth import validate, scope_is_subset
+
+result = validate(broker_url, agent.access_token)
+if result.valid and result.claims:
+    # Token is live — now check scope
+    if scope_is_subset(required_scope, result.claims.scope):
+        # proceed
+        ...
+    else:
+        # token is valid but doesn't have the right scope
+        ...
+else:
+    # token is dead (expired, revoked, or fake)
+    ...
 ```
 
 ---
 
-## Complete Example
+## Error Handling
 
-A data pipeline agent that reads, analyzes, writes, and cleans up:
+### Catching Specific Errors
 
 ```python
-"""Data pipeline agent with credential lifecycle management."""
-
-import os
-import requests as http
-from agentauth import AgentAuthClient
-
-# Connect to the broker
-client = AgentAuthClient(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+from agentauth.errors import (
+    AgentAuthError,
+    AuthenticationError,
+    AuthorizationError,
+    RateLimitError,
+    TransportError,
 )
 
-# Step 1: Get read credentials
-read_token = client.get_token(
-    "data-reader",
-    ["read:data:*"],
-    task_id="quarterly-analysis",
-    orch_id="analytics-pipeline",
-)
-print(f"Read token issued: {read_token[:40]}...")
+try:
+    agent = app.create_agent(
+        orch_id="service",
+        task_id="task",
+        requested_scope=["read:data:resource"],
+    )
+except AuthenticationError as e:
+    # 401 — app credentials are wrong
+    # Check client_id and client_secret
+    print(f"Auth failed: {e.problem.detail}")
 
-# Step 2: Use the read token to access data
-data = http.get(
-    "https://api.internal/customers",
-    headers={"Authorization": f"Bearer {read_token}"},
-).json()
-print(f"Read {len(data)} customer records")
+except AuthorizationError as e:
+    # 403 — scope outside app ceiling
+    # Requested scope exceeds what the operator allowed
+    print(f"Scope rejected: {e.problem.detail}")
+    print(f"Error code: {e.problem.error_code}")
 
-# Step 3: Get write credentials
-write_token = client.get_token(
-    "risk-writer",
-    ["write:data:records"],
-    task_id="quarterly-analysis",
-)
+except RateLimitError as e:
+    # 429 — too many requests
+    print(f"Rate limited: {e.problem.detail}")
 
-# Step 4: Write results
-http.post(
-    "https://api.internal/risk-assessments",
-    headers={"Authorization": f"Bearer {write_token}"},
-    json={"customer": "TechStart Inc", "risk": "medium"},
-)
+except TransportError as e:
+    # Network failure — broker unreachable
+    print(f"Cannot reach broker: {e}")
+```
 
-# Step 5: Revoke all credentials when done
-client.revoke_token(read_token)
-client.revoke_token(write_token)
-print("All credentials revoked. Pipeline complete.")
+### Catching Everything
+
+```python
+from agentauth.errors import AgentAuthError
+
+try:
+    agent = app.create_agent(...)
+except AgentAuthError as e:
+    # Catches any SDK error
+    print(f"AgentAuth error: {e}")
+```
+
+### Released Agent Errors
+
+Calling `renew()` or `delegate()` on a released agent raises `AgentAuthError` immediately — the SDK catches this locally without hitting the broker:
+
+```python
+agent.release()
+
+try:
+    agent.renew()
+except AgentAuthError as e:
+    print(e)  # "agent has been released and cannot be renewed"
+
+try:
+    agent.delegate(delegate_to="...", scope=["..."])
+except AgentAuthError as e:
+    print(e)  # "agent has been released and cannot delegate"
+```
+
+### Garbage Tokens
+
+If someone sends a fake token to your app, `validate()` handles it gracefully:
+
+```python
+from agentauth import validate
+
+result = validate(broker_url, "completely-fake-not-a-jwt")
+print(result.valid)  # False
+print(result.error)  # "token is invalid or expired"
+```
+
+No exception is thrown. The broker returns `valid=False` with a generic error message for all invalid tokens (expired, revoked, malformed, or unknown).
+
+---
+
+## Health Check
+
+Before doing any work, verify the broker is operational:
+
+```python
+health = app.health()
+print(health.status)              # "ok"
+print(health.version)             # "2.0.0"
+print(health.uptime)              # seconds since broker started
+print(health.db_connected)        # True if audit database is reachable
+print(health.audit_events_count)  # total audit events recorded
+```
+
+`health()` calls `GET /v1/health` — a public endpoint that doesn't require authentication.
+
+---
+
+## Token Validation
+
+`validate()` is available two ways:
+
+### Module-Level Function
+
+Any service can validate a token without having an `AgentAuthApp`:
+
+```python
+from agentauth import validate
+
+result = validate("http://broker:8080", token)
+```
+
+This is how downstream services (the ones receiving agent tokens) verify them. They just need the broker URL.
+
+### App Shortcut
+
+If you already have an `AgentAuthApp`, use the shortcut:
+
+```python
+result = app.validate(token)
+```
+
+Same behavior, but uses the app's broker URL and timeout.
+
+### ValidateResult Fields
+
+```python
+result = validate(broker_url, agent.access_token)
+
+if result.valid:
+    print(result.claims.iss)       # "agentauth"
+    print(result.claims.sub)       # SPIFFE ID
+    print(result.claims.scope)     # granted scope list
+    print(result.claims.orch_id)   # orchestrator ID
+    print(result.claims.task_id)   # task ID
+    print(result.claims.jti)       # unique token ID
+    print(result.claims.exp)       # expiration (Unix timestamp)
+    print(result.claims.iat)       # issued at (Unix timestamp)
+else:
+    print(result.error)            # "token is invalid or expired"
 ```
 
 ---
@@ -492,5 +427,6 @@ print("All credentials revoked. Pipeline complete.")
 
 | Guide | What You'll Learn |
 |-------|-------------------|
-| [API Reference](api-reference.md) | Complete method signatures and exception reference |
-| [Concepts](concepts.md) | Architecture, security model, and standards alignment |
+| [Getting Started](getting-started.md) | Install and create your first agent |
+| [Concepts](concepts.md) | Trust model, roles, scopes, and standards |
+| [API Reference](api-reference.md) | Every class, method, parameter, and exception |

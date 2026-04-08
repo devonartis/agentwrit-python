@@ -1,57 +1,50 @@
-"""Ed25519 keypair generation and nonce signing for AgentAuth.
-
-Implements pattern component C1 (Ephemeral Identity Issuance):
-  - Keys are ephemeral -- generated in memory, never persisted to disk.
-  - Public keys are raw 32-byte base64-encoded (what the broker expects).
-  - Nonces are hex-decoded before signing; signatures are base64-encoded.
-
-Security invariant: private key material NEVER touches disk. The key object
-exists only in Python process memory and goes out of scope after signing.
-This is the core property that makes agent identity truly ephemeral (NIST
-IR 8596: "issuing AI systems unique identities and credentials").
-"""
-
 from __future__ import annotations
 
 import base64
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
-def generate_keypair() -> tuple[Ed25519PrivateKey, str]:
-    """Generate an Ed25519 keypair.
+def generate_keypair() -> ed25519.Ed25519PrivateKey:
+    """Generate a new Ed25519 private key.
 
-    Returns:
-        (private_key, base64_public_key) where the public key is the raw
-        32-byte key, base64-encoded (NOT DER format).
+    Business Logic:
+    Required for the agent registration ceremony. The private key is used
+    to sign the cryptographic nonce (challenge) provided by the broker,
+    proving the agent possesses the identity it claims to have.
     """
-    private_key = Ed25519PrivateKey.generate()
-    raw_pub = private_key.public_key().public_bytes_raw()
-    pub_b64 = base64.b64encode(raw_pub).decode("ascii")
-    return private_key, pub_b64
+    return ed25519.Ed25519PrivateKey.generate()
 
+def sign_nonce(private_key: ed25519.Ed25519PrivateKey, nonce_hex: str) -> bytes:
+    """Hex-decode the nonce and sign the resulting bytes.
 
-def sign_nonce(private_key: Ed25519PrivateKey, nonce_hex: str) -> str:
-    """Sign a hex-encoded nonce with the given private key.
+    Returns the raw 64-byte signature.
 
-    The broker sends nonces as 64-character hex strings. This function
-    hex-decodes the nonce, signs the raw bytes, and returns the signature
-    as a base64-encoded string.
-
-    Args:
-        private_key: Ed25519 private key from generate_keypair().
-        nonce_hex: Hex-encoded nonce string from the broker's GET /v1/challenge.
-
-    Returns:
-        Base64-encoded Ed25519 signature (64 bytes when decoded).
+    Business Logic:
+    The broker provides a random hex string as a nonce to prevent
+    replay attacks. The agent must sign the literal bytes represented
+    by that hex string to complete the challenge-response handshake.
     """
-    try:
-        nonce_bytes = bytes.fromhex(nonce_hex)
-    except ValueError as exc:
-        from agentauth.errors import AgentAuthError
+    nonce_bytes = bytes.fromhex(nonce_hex)
+    return private_key.sign(nonce_bytes)
 
-        raise AgentAuthError(
-            f"broker returned malformed nonce (expected hex string): {exc}"
-        ) from exc
-    sig_bytes = private_key.sign(nonce_bytes)
-    return base64.b64encode(sig_bytes).decode("ascii")
+def export_public_key_b64(private_key: ed25519.Ed25519PrivateKey) -> str:
+    """Extract the raw 32-byte public key and base64-encode it.
+
+    Business Logic:
+    The public key is sent to the broker during the `POST /v1/register`
+    call. It allows the broker to verify the signature produced in
+    the signing step.
+    """
+    public_key = private_key.public_key()
+    public_bytes = public_key.public_bytes_raw()
+    return base64.b64encode(public_bytes).decode("utf-8")
+
+def encode_signature_b64(signature: bytes) -> str:
+    """Base64-encode a raw Ed25519 signature.
+
+    Business Logic:
+    The signature must be transmitted in a base64-encoded format as part
+    of the registration JSON body.
+    """
+    return base64.b64encode(signature).decode("utf-8")

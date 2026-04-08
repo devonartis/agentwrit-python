@@ -1,0 +1,28 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 13 — RENEW A RELEASED AGENT
+-----------------------------------------------------------------
+WHO:      Developer code that tries to renew a dead agent
+WHAT:     Agent was released, then renew() is called
+WHY:      SDK must fail fast with a clear error, not hit broker
+EXPECTED: AgentAuthError raised with message about release
+=================================================================
+  agent_id:   spiffe://agentauth.local/agent/lifecycle-test/renew-after-release/383cb9ef845a1c6d
+  scope:      ['read:data:test-resource']
+  expires_in: 300s
+
+  release() called — agent is now dead
+
+  Attempting renew() on released agent...
+  Caught: AgentAuthError
+  Message: agent has been released and cannot be renewed
+
+  PASS: Error message mentions 'released'
+
+  Attempting delegate() on released agent...
+  Caught: AgentAuthError
+  Message: agent has been released and cannot delegate
+
+  PASS: Error message mentions 'released'
+
+═══ STORY 13: PASS ═══

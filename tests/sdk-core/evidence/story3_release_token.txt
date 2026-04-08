@@ -1,0 +1,19 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 3 — RELEASE TOKEN
+-----------------------------------------------------------------
+WHO:      Agent that has finished its task
+WHAT:     Agent calls release() to revoke its own token
+WHY:      Dead tokens cannot be misused if leaked
+EXPECTED: Token revoked at broker, second release() is safe
+=================================================================
+  agent_id:   spiffe://agentauth.local/agent/cleanup-service/cleanup-job-001/f5046a50e548fc1c
+  token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  expires_in: 300s
+
+  release() called
+  validate(released_token): valid=False, error=token is invalid or expired
+  PASS: Broker confirms token revoked
+  PASS: Second release() did not raise
+
+═══ STORY 3: PASS ═══

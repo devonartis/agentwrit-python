@@ -1,47 +1,57 @@
 """AgentAuth Python SDK — ephemeral, task-scoped credentials for AI agents.
 
-This package provides a Python client for the AgentAuth credential broker.
-It wraps the broker's 8-step Ed25519 challenge-response flow into simple
-function calls, handling key generation, token caching, renewal, and retry.
+Implements the App-as-Container model: AgentAuthApp is the developer's
+entry point, Agent is an ephemeral per-task principal created by the app.
+All agent authority flows from the app's scope ceiling set by the operator.
 
-Quick start::
-
-    from agentauth import AgentAuthClient
-
-    client = AgentAuthClient(broker_url, client_id, client_secret)
-    token = client.get_token("my-agent", ["read:data:*"])
-
-For full documentation, see: https://github.com/devonartis/agentauth-python-sdk
-
-Exports:
-    AgentAuthClient         — Main client class (the primary entry point)
-    AgentAuthError          — Base exception for all SDK errors
-    AuthenticationError     — 401: bad credentials
-    ScopeCeilingError       — 403: scope exceeds app ceiling
-    RateLimitError          — 429: rate limited after all retries
-    BrokerUnavailableError  — 5xx / connection failure after all retries
-    TokenExpiredError       — Token has expired
+Spec: .plans/specs/NEW_SPECS_TO_USED.md
+ADRs: .plans/specs/SPEC_ADR.md (SDK-001 through SDK-012)
 """
 
-__version__ = "0.2.0"
+from __future__ import annotations
 
-from agentauth.client import AgentAuthClient
+from agentauth.agent import Agent
+from agentauth.app import AgentAuthApp
 from agentauth.errors import (
     AgentAuthError,
     AuthenticationError,
-    BrokerUnavailableError,
+    AuthorizationError,
+    CryptoError,
+    ProblemResponseError,
     RateLimitError,
-    ScopeCeilingError,
-    TokenExpiredError,
+    TransportError,
 )
+from agentauth.models import (
+    AgentClaims,
+    DelegatedToken,
+    DelegationRecord,
+    HealthStatus,
+    ProblemDetail,
+    RegisterResult,
+    ValidateResult,
+)
+from agentauth.scope import scope_is_subset, validate
+
+__version__ = "0.3.0"
 
 __all__ = [
-    "AgentAuthClient",
-    "__version__",
+    "Agent",
+    "AgentAuthApp",
     "AgentAuthError",
+    "AgentClaims",
     "AuthenticationError",
-    "BrokerUnavailableError",
+    "AuthorizationError",
+    "CryptoError",
+    "DelegatedToken",
+    "DelegationRecord",
+    "HealthStatus",
+    "ProblemDetail",
+    "ProblemResponseError",
     "RateLimitError",
-    "ScopeCeilingError",
-    "TokenExpiredError",
+    "RegisterResult",
+    "TransportError",
+    "ValidateResult",
+    "__version__",
+    "scope_is_subset",
+    "validate",
 ]

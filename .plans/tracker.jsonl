@@ -1,17 +1,19 @@
-{"type":"story","id":"DEMO-PC1","title":"Broker Is Running and Accessible","classification":"PRECONDITION","status":"NOT_VERIFIED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-PC2","title":"Anthropic API Key Is Valid","classification":"PRECONDITION","status":"NOT_VERIFIED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-PC3","title":"Demo App Starts Successfully","classification":"PRECONDITION","status":"NOT_VERIFIED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S1","title":"Pipeline Processes All 12 Transactions","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S2","title":"Each Agent Gets Correctly Scoped Credential","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S3","title":"Prompt Injection Contained by Credential Layer","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S4","title":"Report Writer Never Sees Raw Transactions","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S5","title":"Delegation Chain Shows Scope Attenuation","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S6","title":"Audit Trail Has Verifiable Hash Chain","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S7","title":"All Tokens Revoked After Pipeline Completes","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S8","title":"Startup Fails Clearly When Dependencies Missing","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"story","id":"DEMO-S9","title":"Dashboard Shows Real-Time Token Lifecycle","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/2026-04-01-demo-app-spec.md"}
-{"type":"step","id":"STEP-1","title":"Brainstorm","status":"DONE","note":"Design v2 approved - real LLM pipeline, not showcase booth"}
-{"type":"step","id":"STEP-2","title":"Write Spec","status":"DONE","note":"Rewritten against v2 design"}
-{"type":"step","id":"STEP-3","title":"Impl Plan","status":"DONE","note":"Plan saved to .plans/2026-04-01-demo-app-plan.md — 10 tasks"}
-{"type":"step","id":"STEP-4","title":"Acceptance Tests","status":"DONE","note":"12 stories (3 PC + 9 ACC) in tests/demo-app/user-stories.md"}
-{"type":"step","id":"STEP-5","title":"Register Tracker","status":"DONE","note":"This file"}
+{"type":"note","id":"v0.2.0-SHIPPED","title":"v0.2.0 stories (SDK-S1..S13) shipped 2026-04-01","status":"PASS","note":"119 unit + 13 integration tests green. HITL removed, API aligned."}
+{"type":"note","id":"DEMO-ARCHIVED","title":"Demo app stories archived","status":"ARCHIVED","note":"Demo app archived 2026-04-04 (commit 958541f). Prior tracker entries moved to .plans/ARCHIVE/tracker-demo-app.jsonl."}
+{"type":"note","id":"OLD-PHASES-SUPERSEDED","title":"v0.3.0 Phase 2-7 incremental approach superseded","status":"SUPERSEDED","note":"Replaced by spec-driven rewrite (2026-04-06). Old phase specs/stories no longer applicable."}
+{"type":"step","id":"v0.3.0-REWRITE","title":"v0.3.0 Spec-Driven SDK Rewrite","status":"CODE_DONE","note":"All 9 endpoints implemented. 98 unit tests, all gates green. Branch: feature/v0.3.0-sdk-spec-rewrite"}
+{"type":"step","id":"v0.3.0-REWRITE-PHASE-1","title":"Foundational Types (models, errors, crypto, scope)","status":"DONE","note":"Commit cfda743. 46 unit tests."}
+{"type":"step","id":"v0.3.0-REWRITE-PHASE-2","title":"Transport + App Container","status":"DONE","note":"Commit cfda743. _transport.py with RFC 7807, app.py with lazy auth."}
+{"type":"step","id":"v0.3.0-REWRITE-PHASE-3","title":"Agent Lifecycle (TDD: renew, release, delegate)","status":"DONE","note":"Commit d252846. 15 tests written first, then implemented."}
+{"type":"step","id":"v0.3.0-REWRITE-PHASE-4","title":"App + Validate Tests","status":"DONE","note":"Commits 90463be, 55caa68. 17 app tests + 7 validate tests."}
+{"type":"step","id":"v0.3.0-REWRITE-INTEG","title":"Integration Tests Against Live Broker","status":"NOT_STARTED","note":"Next: ./broker/scripts/stack_up.sh then run acceptance stories."}
+{"type":"story","id":"STORY-P3-S1","title":"App Lazy Authentication","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_app.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S2","title":"App Session Renewal","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_app.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S3","title":"Successful Agent Creation (Happy Path)","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_app.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S4","title":"Agent Scope Ceiling Enforcement","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_app.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S5","title":"Agent Token Renewal","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_agent.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S6","title":"Agent Release (Self-Revocation)","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_agent.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S7","title":"Successful Scope-Attenuated Delegation","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_agent.py. Needs live broker for acceptance."}
+{"type":"story","id":"STORY-P3-S8","title":"Delegation Depth Limit","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Integration-only — requires 6 agents against live broker."}
+{"type":"story","id":"STORY-P3-S9","title":"Tool-Gating with scope_is_subset","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Pure function, unit-tested in test_scope.py. Acceptance script not yet written."}
+{"type":"story","id":"STORY-P3-S10","title":"RFC 7807 Problem Detail Parsing","classification":"ACCEPTANCE","status":"NOT_STARTED","spec":".plans/specs/NEW_SPECS_TO_USED.md","note":"Unit-tested in test_transport.py. Acceptance script not yet written."}
