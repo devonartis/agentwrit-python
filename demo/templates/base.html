@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAssist AI — AgentAuth Demo</title>
+    <link rel="stylesheet" href="/static/style.css?v=3">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="logo">
+            <span class="logo-icon">&#x2695;</span>
+            <h1>MedAssist AI</h1>
+            <span class="subtitle">AgentAuth Healthcare Demo</span>
+        </div>
+        <nav class="tabs">
+            <a href="/" class="tab {% if active_tab == 'encounter' %}active{% endif %}">
+                <span class="tab-icon">&#x1F3E5;</span> Encounter
+            </a>
+            <a href="/audit" class="tab {% if active_tab == 'audit' %}active{% endif %}">
+                <span class="tab-icon">&#x1F4CB;</span> Audit Trail
+            </a>
+            <a href="/operator" class="tab {% if active_tab == 'operator' %}active{% endif %}">
+                <span class="tab-icon">&#x2699;</span> Operator
+            </a>
+        </nav>
+    </header>
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="/static/app.js?v=3" defer></script>
+</body>
+</html>

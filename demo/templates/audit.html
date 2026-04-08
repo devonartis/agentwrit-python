@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="audit-page">
+    <div class="audit-controls">
+        <h2>Broker Audit Trail</h2>
+        <p class="description">Hash-chained, immutable record of every credential event. Each entry links to the previous via SHA-256 hash.</p>
+        <div class="control-group">
+            <button class="btn-secondary" hx-get="/api/audit/events?limit=100" hx-target="#audit-table-body" hx-swap="innerHTML" hx-indicator="#audit-loading">
+                Refresh Events
+            </button>
+            <select id="audit-filter-type" onchange="filterAudit()">
+                <option value="">All Event Types</option>
+                <option value="agent_registered">Agent Registered</option>
+                <option value="token_issued">Token Issued</option>
+                <option value="token_renewed">Token Renewed</option>
+                <option value="token_released">Token Released</option>
+                <option value="token_revoked">Token Revoked</option>
+                <option value="delegation_created">Delegation Created</option>
+                <option value="scope_violation">Scope Violation</option>
+                <option value="token_auth_failed">Auth Failed</option>
+            </select>
+            <span id="audit-loading" class="htmx-indicator">Loading...</span>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <div class="audit-table-wrapper">
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Agent ID</th>
+                    <th>Task</th>
+                    <th>Outcome</th>
+                    <th>Detail</th>
+                    <th>Hash Chain</th>
+                </tr>
+            </thead>
+            <tbody id="audit-table-body">
+                {% for event in events %}
+                <tr class="audit-row outcome-{{ event.get('outcome', 'unknown') }}">
+                    <td class="mono">{{ event.get('id', '') }}</td>
+                    <td class="mono">{{ event.get('timestamp', '')[:19] }}</td>
+                    <td>
+                        <span class="event-type-badge type-{{ event.get('event_type', '') }}">
+                            {{ event.get('event_type', '') }}
+                        </span>
+                    </td>
+                    <td class="mono truncate" title="{{ event.get('agent_id', '') }}">
+                        {{ event.get('agent_id', '')[-30:] }}
+                    </td>
+                    <td>{{ event.get('task_id', '') }}</td>
+                    <td>
+                        <span class="outcome-badge outcome-{{ event.get('outcome', '') }}">
+                            {{ event.get('outcome', '') }}
+                        </span>
+                    </td>
+                    <td class="detail-cell">{{ event.get('detail', '') }}</td>
+                    <td class="mono truncate" title="hash: {{ event.get('hash', '') }}&#10;prev: {{ event.get('prev_hash', '') }}">
+                        {{ event.get('hash', '')[:12] }}...
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not events %}
+                <tr><td colspan="8" class="empty-state">No audit events. Run an encounter first.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

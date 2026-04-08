@@ -3,7 +3,7 @@
 > **Date:** 2026-04-02
 > **Status:** Reviewed — Codex adversarial review added findings 12–15
 > **Scope:** Every field the broker returns vs what the Python SDK exposes, drops, or hides.
-> **Source of truth:** Broker handlers in `agentauth-core/internal/handler/` and `agentauth-core/internal/admin/`, `agentauth-core/internal/app/`. API spec: `agentauth-core/docs/api.md`.
+> **Source of truth:** Broker handlers in `broker/internal/handler/`, `broker/internal/admin/`, `broker/internal/app/` (vendored). API spec: `broker/docs/api.md`.
 
 ---
 
