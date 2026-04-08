@@ -262,15 +262,18 @@ For broker setup and administration, see the [AgentAuth broker documentation](ht
 
 ## Contributing
 
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentauth](https://github.com/devonartis/agentauth) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
+
+Quick local checks (no broker required for unit tests):
+
 ```bash
 git clone https://github.com/devonartis/agentauth-python.git
 cd agentauth-python
-uv sync
+uv sync --all-extras
 
-# Run checks
-uv run ruff check .                    # lint
-uv run mypy --strict src/              # type check
-uv run pytest tests/unit/              # unit tests (no broker)
+uv run ruff check .
+uv run mypy --strict src/
+uv run pytest tests/unit/
 ```
 
 ## License
