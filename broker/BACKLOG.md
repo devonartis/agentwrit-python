@@ -87,3 +87,58 @@ class Agent:
 ### References
 - Original finding: See `../REJECT-FIX_NOW.md` (false alarm, documented for history)
 - Broker endpoint: `POST /v1/token/validate` (see `broker/docs/api.md`)
+
+---
+
+## Feature Request: Scope Update on Existing Agent
+
+**Status:** Proposed | **Priority:** Medium | **Depends On:** Broker support (new endpoint)
+
+### Problem
+Once an agent is created, its scope is fixed for its lifetime. If a running agent needs additional scopes (still within the app's ceiling), the only option is to release the agent and create a new one. This breaks the agent's SPIFFE identity, invalidates any delegated tokens, and forces the app to re-wire everything downstream.
+
+### Observation
+The broker already has `POST /v1/token/renew` which issues a new JWT for the same agent identity (same SPIFFE ID, new JTI, fresh timestamps). The same mechanism could issue a new JWT with an updated scope, as long as the new scope remains within the app's scope ceiling. The trust chain stays intact — the ceiling still caps authority.
+
+### Proposed Broker Endpoint
+```
+POST /v1/token/update-scope
+Authorization: Bearer <agent-token>
+
+{
+  "requested_scope": ["read:data:customer-7291", "write:notes:customer-7291"]
+}
+```
+
+**Behavior:**
+1. Validate Bearer token (same as renew)
+2. Validate `requested_scope` is within the app's scope ceiling
+3. Revoke old token
+4. Issue new JWT with same agent identity + updated scope
+5. Return new `access_token` + `expires_in`
+
+### Proposed SDK Method
+```python
+agent = app.create_agent(
+    orch_id="support",
+    task_id="ticket-42",
+    requested_scope=[f"read:data:{customer_id}"],
+)
+
+# Later, the task needs write access too
+agent.update_scope([
+    f"read:data:{customer_id}",
+    f"write:notes:{customer_id}",
+])
+# agent.access_token is now updated, same SPIFFE identity
+```
+
+### Why This Is Useful
+- **Long-running agents** that discover they need additional authority mid-task (e.g., an LLM agent that starts read-only and determines it needs to write)
+- **Avoids identity churn** — the agent keeps its SPIFFE ID, delegation chains remain valid
+- **Still safe** — the app's ceiling is the hard limit, scope can only be updated within it
+
+### Notes
+- This is a **broker-side feature request** — the SDK cannot implement this without a new broker endpoint
+- This file lives in the SDK repo, not the broker repo, so it survives broker re-vendoring
+- The broker is currently frozen; this is for a future upstream release

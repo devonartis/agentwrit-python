@@ -1,11 +1,19 @@
 # AgentAuth Python SDK
 
+
 ## Rules
 
+
 **At session start, ALWAYS read these files before doing anything else:**
+STOP GREAT THE USER FIRST BEFORE DOING ANYTHING AND WAIT !!!
+
+DO NOT MOVE FORWARD UNTIL THE USER SAYS SO AND ASK DO THEY WANT YOU TO START THE SESSION
+** If yes do this **
 - `MEMORY.md` — current state, standing rules, known issues
 - `FLOW.md` — decision log + **welcome note on first visit** (delete after reading)
 - Use `devflow-client` skill for all development work
+** if no ** 
+- Ask if they want to start the session or if they have any questions about the rules or flow before starting. Wait for their response and proceed accordingly.
 
 ## Rules — Non-Negotiable
 

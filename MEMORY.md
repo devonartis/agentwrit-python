@@ -67,6 +67,35 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - Not on PyPI yet
 - Not pushed to GitHub as `devonartis/agentauth-python` yet
 
+## Rebrand: AgentAuth → AgentWrit
+
+**Domain:** `agentwrit.com` purchased 2026-04-09 (Cloudflare Registrar, WHOIS privacy confirmed)
+
+**Why:** Name collision with `substrates-ai/agentauth` (published June 2025, 9 months before us). They own `agentauth.co`, `agentauth.io`, `@agentauth` on npm. Different product (stateless UUID identity for MCP, no scope/lifecycle/delegation/audit) but same name in the same space. Clean break avoids trademark conflict.
+
+**Rename path — three steps:**
+
+### Step 1: Brand only (now)
+- Use "AgentWrit" on website, docs site, marketing materials
+- Domain `agentwrit.com` ready
+- Code stays `agentauth` everywhere — nothing published yet, no urgency
+- GitHub repos stay as-is for now
+
+### Step 2: Package rename (at PyPI publish time)
+- Python package: `agentauth` → `agentwrit` (pyproject.toml name + `src/agentauth/` → `src/agentwrit/`)
+- User-facing imports become `from agentwrit import AgentAuthApp, ...`
+- GitHub repos renamed (GitHub auto-redirects old URLs)
+- Full test suite rerun after rename
+
+### Step 3: Never (or v2.0)
+- Internal protocol stays `agentauth` indefinitely:
+  - SPIFFE URIs: `spiffe://agentauth.local/...`
+  - JWT issuer: `"iss": "agentauth"`
+  - Prometheus metrics: `agentauth_*`
+  - Environment variables: `AGENTAUTH_*`
+  - Go module path
+- These are internal protocol details, not user-facing brand. Changing them is a breaking change for zero benefit. Plenty of products have internal names that differ from brand.
+
 ## Tech Debt
 
 **Old 25-item phase list is superseded.** The new spec covers all material issues. Remaining tech debt will be tracked post-v0.3.0.
