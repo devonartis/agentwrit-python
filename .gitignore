@@ -37,3 +37,6 @@ htmlcov/
 
 # Vendored broker (local testing only — do not commit Go source)
 broker/
+
+# Local archive (historical artifacts, not for repo)
+archive/
