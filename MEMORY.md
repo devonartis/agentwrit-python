@@ -59,13 +59,29 @@ Python SDK for the AgentAuth credential broker. Wraps the broker's Ed25519 chall
 - Story 8: Broker ACCEPTS same-scope delegation (equal is a valid subset — `broker_accepts_full_delegation = True`)
 - Old test suite (22 stories) was deleted — delegation tests never validated the DelegatedToken, scope formats were wrong, tests passed for wrong reasons
 
-**What's NOT done (see FLOW.md roadmap):**
-- README/license cleanup on branch `docs/readme-license-cleanup` — awaiting user review before merge
+**What's done (2026-04-09):**
+- **Rebrand decided:** AgentAuth → AgentWrit. `agentwrit.com` purchased. 3-step rename plan.
+- **Demo2 built:** Support ticket demo (Flask + HTMX + SSE) — 3 LLM-driven agents (triage, knowledge, response), dynamic scopes per customer, 5 quick-fill scenarios (Happy Path, Delete Account, Cross-Customer, External Action, Natural Expiry)
+- **Agent cryptographic identity vision:** `docs/concepts-agent-cryptographic-identity.md` — Ed25519 keypair as first-class agent identity (SSH for AI agents, known_agents, PKI for the agentic web)
+- **Vision transcript:** `docs/vision-transcript-2026-04-09.md` — full conversation captured
+- **Scope examples fixed:** `docs/concepts.md` — dynamic f-string patterns, multi-scope examples
+- **Scope update feature request:** `AgentWrit_BACKLOG.md` — POST /v1/token/update-scope
+- **8 sample app guides:** `docs/sample-apps/` (01-08)
+- **CONTRIBUTING.md** added
+- **MIT LICENSE** added
+- **README rewrite** — fixed links, MedAssist demo section
+- **broker/ gitignored** — vendored Go source never committed, confirmed safe
+- **archive/ gitignored**
+- **docs/readme-license-cleanup merged into develop**
+
+**What's NOT done:**
+- Demo2 Cross-Customer and Delete Account scenarios need LLM behavior tuning
 - `demo/.env.example` has hardcoded vLLM URL — needs generic placeholder
 - Core repo (`agentauth`) README needs demo section pointing to this SDK
 - No CI (GitHub Actions)
 - Not on PyPI yet
-- Not pushed to GitHub as `devonartis/agentauth-python` yet
+- Not pushed to GitHub yet
+- **Not merged to main** — see FLOW.md for merge strategy discussion
 
 ## Rebrand: AgentAuth → AgentWrit
 

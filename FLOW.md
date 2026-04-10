@@ -222,12 +222,92 @@ Key decisions:
 - SDK README documentation table links need verification against actual doc content
 - `demo/.env.example` has a hardcoded vLLM URL (`spark-3171`) — should be a generic placeholder
 
+### 2026-04-09 — Rebrand, Demo2, Agent PKI Vision
+
+**Session covered four major areas:**
+
+#### 1. Competitor analysis + rebrand
+
+Reviewed `substrates-ai/agentauth` (June 2025, 9 months prior art). Different product — stateless UUID identity for MCP vs full credential broker — but same name. Their repo is dormant (last activity Sept 2025) but they own `agentauth.co`, `agentauth.io`, `@agentauth` npm.
+
+**Decision:** Rebrand to **AgentWrit**. Domain `agentwrit.com` purchased (Cloudflare, WHOIS private). Code stays `agentauth` until PyPI publish. Internal protocol names stay forever.
+
+#### 2. Demo2 — support ticket app
+
+Built `demo2/` — Flask + HTMX + SSE (different stack from demo1's FastAPI). Three LLM-driven agents process support tickets:
+- **Triage Agent** — extracts customer identity, classifies priority/category, routes to other agents
+- **Knowledge Agent** — searches internal KB for policies (only spawned when needed)
+- **Response Agent** — calls tools (get_balance, issue_refund, etc.) with customer-scoped credentials
+
+5 scenarios tested via Playwright:
+- **Happy Path** — PASS. Lewis Smith billing dispute, tools called, external email DENIED by scope, refund issued.
+- **External Action** — PASS. Anonymous user, pipeline stops at triage with "verify your identity" response.
+- **Jane Doe Hi** — PASS. Simple greeting resolved at triage. No knowledge or response agents spawned.
+- **Natural Expiry** — PASS. 5-second TTL, no release() called, token expires on its own.
+- **Cross-Customer** — LLM self-censors instead of attempting cross-customer access. Scope enforcement works but LLM doesn't trigger it reliably. Needs prompt tuning.
+- **Delete Account** — Not fully tested yet.
+
+Key fixes during testing:
+- Static agent cards → dynamic (appear on agent_created, show SPIFFE ID)
+- HITL references removed (SDK has no HITL)
+- Triage routing: LLM decides which agents to spawn
+- Anonymous identity gate: unverified users stop at triage
+
+#### 3. Agent cryptographic identity vision
+
+Major insight: every agent's Ed25519 keypair is a **first-class cryptographic identity**, not just a registration artifact. The same primitive SSH uses for machine auth.
+
+**What it enables:**
+- Agent-to-agent mutual auth (broker Go code exists, not HTTP-exposed)
+- Agent-to-service auth without broker at verification time
+- Signed actions (non-repudiable audit)
+- Key persistence for long-lived agents (`key_path` parameter)
+- Cross-broker federation (no shared secrets)
+- `known_agents` file (like SSH `known_hosts`)
+- Public key discovery (well-known URLs)
+
+**Documents produced:**
+- `docs/concepts-agent-cryptographic-identity.md` — full technical vision
+- `docs/vision-transcript-2026-04-09.md` — Devon's raw thinking preserved
+
+**This is the core differentiator.** Not a token service. A PKI for AI agents.
+
+#### 4. Housekeeping
+
+- `broker/` added to `.gitignore` — vendored Go source was never committed, confirmed safe
+- `archive/` added to `.gitignore`
+- `AgentWrit_BACKLOG.md` moved to repo root (survives broker re-vendor)
+- CONTRIBUTING.md, MIT LICENSE, README rewrite — all merged to develop
+- 8 sample app guides in `docs/sample-apps/`
+- Scope examples in `docs/concepts.md` fixed (dynamic, multi-scope)
+
+**All branches merged to develop. Nothing on main.** Main merge requires deliberate review — see below.
+
+---
+
+### Main merge — NOT DONE, requires decision
+
+**Current state of main:** v0.2.0 (HITL removal, April 1). Has never seen v0.3.0 SDK rewrite, demos, docs, license, or any work from April 2-9.
+
+**Develop has 45+ commits ahead of main.** Merging everything blindly would be wrong. Need to decide:
+
+1. What goes to main (public-facing, release-quality)?
+2. What stays on develop (dev files, planning artifacts)?
+3. Do we strip dev files before merge (as per `strip_for_main.sh` pattern from core repo)?
+4. Do we run the full gate suite first (ruff, mypy, pytest)?
+5. Is demo2 ready for main or does it need more testing?
+6. Does the README need updating for AgentWrit branding before going public?
+
+**This is a human decision. Do not auto-merge.**
+
 ---
 
 **Roadmap (after v0.3.0):**
-1. Push to GitHub as `divineartis/agentauth-python`
-2. CI setup — GitHub Actions for lint, type check, unit tests on every PR
-3. PyPI publishing — `agentauth` package on PyPI
-4. TypeScript SDK — same process → `divineartis/agentauth-ts`
-5. Archive `devonartis/agentauth-clients` monorepo
-6. Repo rename: `agentauth-core` → `divineartis/agentauth`
+1. Decide what goes to main (see above)
+2. Push to GitHub as `divineartis/agentauth-python`
+3. CI setup — GitHub Actions for lint, type check, unit tests on every PR
+4. PyPI publishing — `agentwrit` package on PyPI (Step 2 of rebrand)
+5. `agentwrit.com` website — landing page with PKI vision
+6. TypeScript SDK — same process → `divineartis/agentwrit-ts`
+7. Agent key persistence — `key_path`/`key_store` parameter on `create_agent()`
+8. Archive `devonartis/agentauth-clients` monorepo
