@@ -98,11 +98,17 @@ TRIAGE_SYSTEM = """You are a Support Triage Agent. Your job:
 3. Classify the ticket:
    - priority: P1 (critical/account deletion), P2 (billing/money), P3 (standard), P4 (info)
    - category: billing, account, access, general, security
+4. Determine which agents are needed:
+   - needs_knowledge: true if the ticket requires looking up policies, procedures, or guidance
+   - needs_response: true if the ticket requires taking action (billing, account changes, tools)
+   - For simple greetings, status checks, or informational messages: both can be false
+5. If no agents are needed, provide a direct_response to the customer.
 
 Respond with ONLY valid JSON, no markdown:
-{"customer_name": "...", "priority": "P1|P2|P3|P4", "category": "...", "summary": "one line summary"}
+{"customer_name": "...", "priority": "P1|P2|P3|P4", "category": "...", "summary": "one line summary", "needs_knowledge": true|false, "needs_response": true|false, "direct_response": "...or empty string"}
 
 If no customer name is found, use "anonymous".
+If the ticket is a simple greeting or doesn't require action, set needs_knowledge and needs_response to false and provide a direct_response.
 """
 
 KNOWLEDGE_SYSTEM = """You are a Knowledge Base Agent. You search the internal KB to find
@@ -123,12 +129,13 @@ Given the ticket, customer info, triage classification, and KB guidance:
 3. Draft a professional customer response
 
 IMPORTANT RULES:
-- You can ONLY access data for the customer identified in the ticket
-- You CANNOT send external emails — only internal (@company.com)
-- Account deletion requires HITL approval — you cannot do it alone
+- You MUST attempt to fulfill EVERY part of the customer's request using tools
+- If the customer asks about another customer's data, attempt the tool call anyway — the system will enforce scope boundaries
+- Do NOT skip requests because you think they might be denied — always try
+- If the customer requests account deletion, use the delete_account tool
 - Always write case notes summarizing what you did
 
-Use the tools provided. Do not make up data.
+Use the tools provided. Do not make up data. Do not refuse to try a tool call.
 """
 
 
@@ -140,8 +147,15 @@ def run_pipeline(
     llm_client: OpenAI,
     llm_model: str,
     broker_url: str,
+    *,
+    natural_expiry: bool = False,
 ) -> Generator[PipelineEvent, None, None]:
-    """Run the full support ticket pipeline, yielding SSE events."""
+    """Run the full support ticket pipeline, yielding SSE events.
+
+    If natural_expiry is True, the triage agent is created with a 5-second TTL
+    and NOT released — it expires on its own. Demonstrates that credentials
+    die automatically without explicit revocation.
+    """
 
     yield PipelineEvent("system", "pipeline", {
         "message": "Initializing Zero-Trust Pipeline Run",
@@ -150,6 +164,13 @@ def run_pipeline(
     # ── Phase 1: Triage ──────────────────────────────────
 
     triage_scopes = ["read:tickets:*"]
+    triage_ttl = 5 if natural_expiry else 300
+
+    if natural_expiry:
+        yield PipelineEvent("info", "triage", {
+            "message": "Natural Expiry mode: agent TTL set to 5 seconds. No release() will be called.",
+        })
+
     yield PipelineEvent("scope", "triage", {
         "message": f"Triage requested base scope: {', '.join(triage_scopes)}",
         "scope": triage_scopes,
@@ -160,6 +181,7 @@ def run_pipeline(
             orch_id="support",
             task_id="triage",
             requested_scope=triage_scopes,
+            max_ttl=triage_ttl,
         )
     except AgentAuthError as e:
         yield PipelineEvent("error", "triage", {"message": f"Agent creation failed: {e}"})
@@ -202,16 +224,26 @@ def run_pipeline(
     priority = triage_result.get("priority", "P3")
     category = triage_result.get("category", "general")
     summary = triage_result.get("summary", "")
+    needs_knowledge = triage_result.get("needs_knowledge", True)
+    needs_response = triage_result.get("needs_response", True)
+    direct_response = triage_result.get("direct_response", "")
 
-    # Identity resolution
+    # Identity resolution — match against known customers
     customer = data.resolve_customer(customer_name)
-    customer_id = customer["id"] if customer else "anonymous"
+    customer_id = customer["id"] if customer else None
 
-    yield PipelineEvent("info", "triage", {
-        "message": f"Identity Resolution: {customer_name} identified as {customer_id}",
-        "customer_id": customer_id,
-        "customer_name": customer_name,
-    })
+    if customer_id:
+        yield PipelineEvent("info", "triage", {
+            "message": f"Identity Resolution: {customer_name} verified as {customer_id}",
+            "customer_id": customer_id,
+            "customer_name": customer_name,
+        })
+    else:
+        yield PipelineEvent("info", "triage", {
+            "message": f"Identity Resolution: \"{customer_name}\" — no matching customer found",
+            "customer_id": "anonymous",
+            "customer_name": customer_name,
+        })
 
     yield PipelineEvent("info", "triage", {
         "message": f"Triage Classification: {priority} {category.lower()}, Category: {category}",
@@ -220,87 +252,200 @@ def run_pipeline(
         "summary": summary,
     })
 
-    # Release triage agent — done with its job
-    triage_agent.release()
-    yield PipelineEvent("system", "triage", {
-        "message": "Triage task complete. Credential immediately revoked.",
+    # Routing decision
+    route_parts = []
+    if needs_knowledge:
+        route_parts.append("Knowledge")
+    if needs_response:
+        route_parts.append("Response")
+    if not route_parts:
+        route_parts.append("Direct reply (no agents needed)")
+
+    yield PipelineEvent("info", "triage", {
+        "message": f"Routing: {' → '.join(route_parts)}",
     })
+
+    # Release triage agent — or let it expire naturally
+    if natural_expiry:
+        yield PipelineEvent("system", "triage", {
+            "message": "Triage task complete. Token NOT released — waiting for natural expiry.",
+        })
+
+        # Check token is still valid right now
+        check_before = validate(broker_url, triage_agent.access_token)
+        yield PipelineEvent("info", "triage", {
+            "message": f"Token still valid: {check_before.valid} (TTL {triage_ttl}s, waiting for expiry...)",
+        })
+
+        # Wait for expiry
+        yield PipelineEvent("system", "triage", {
+            "message": f"Waiting {triage_ttl + 1} seconds for token to expire naturally...",
+        })
+        time.sleep(triage_ttl + 1)
+
+        # Verify it's dead
+        check_after = validate(broker_url, triage_agent.access_token)
+        yield PipelineEvent("system", "triage", {
+            "message": f"Token expired naturally: valid={check_after.valid}. No release() was called.",
+        })
+
+        yield PipelineEvent("llm_response", "triage", {
+            "message": (
+                f"Hi {customer_name}! Your account is active. "
+                "This request was handled by a triage agent with a 5-second credential. "
+                "The credential expired on its own — no explicit revocation needed."
+            ),
+        })
+
+        yield PipelineEvent("complete", "pipeline", {
+            "message": "Pipeline complete. Credential died naturally via TTL expiry.",
+        })
+        return
+    else:
+        triage_agent.release()
+        yield PipelineEvent("system", "triage", {
+            "message": "Triage task complete. Credential immediately revoked.",
+        })
+
+    # Gate: anonymous users stop here
+    if not customer_id:
+        yield PipelineEvent("scope_denied", "pipeline", {
+            "message": "Identity verification failed. Pipeline halted — cannot issue customer-scoped credentials without verified identity.",
+            "required_scope": ["read:customers:<verified-id>"],
+            "held_scope": [],
+        })
+
+        yield PipelineEvent("llm_response", "pipeline", {
+            "message": (
+                "Thank you for contacting support. We were unable to verify your identity "
+                "from the information provided. Please reply with your registered name or "
+                "email address, or log in to your account portal to submit a verified ticket."
+            ),
+        })
+
+        yield PipelineEvent("complete", "pipeline", {
+            "message": "Pipeline stopped at triage — unverified identity.",
+        })
+        return
+
+    # Gate: if triage says no agents needed, respond directly
+    if not needs_knowledge and not needs_response:
+        if direct_response:
+            yield PipelineEvent("llm_response", "triage", {
+                "message": direct_response,
+            })
+        else:
+            yield PipelineEvent("llm_response", "triage", {
+                "message": f"Hello {customer_name}! How can we help you today?",
+            })
+
+        yield PipelineEvent("complete", "pipeline", {
+            "message": "Pipeline complete. Resolved at triage — no additional agents needed.",
+        })
+        return
 
     # ── Phase 2: Knowledge Retrieval ─────────────────────
 
-    yield PipelineEvent("system", "knowledge", {
-        "message": "Knowledge agent active. Requesting KB access.",
-    })
-
-    kb_scopes = ["read:kb:*"]
-    try:
-        kb_agent = app.create_agent(
-            orch_id="support",
-            task_id="knowledge",
-            requested_scope=kb_scopes,
-        )
-    except AgentAuthError as e:
-        yield PipelineEvent("error", "knowledge", {"message": f"Agent creation failed: {e}"})
-        return
-
-    yield PipelineEvent("agent_created", "knowledge", {
-        "agent_id": kb_agent.agent_id,
-        "scope": list(kb_agent.scope),
-        "message": "Knowledge Agent created",
-    })
-
-    # LLM KB search with tool use
-    kb_tools = [TOOLS["search_knowledge_base"].openai_schema()]
-
-    kb_response = _llm_call(
-        llm_client, llm_model, KNOWLEDGE_SYSTEM,
-        f"Ticket summary: {summary}\nCategory: {category}\nPriority: {priority}",
-        tools=kb_tools,
-    )
-
     kb_guidance = ""
-    tool_calls = _extract_tool_calls(kb_response)
 
-    if tool_calls:
-        for tc in tool_calls:
-            tool_def = TOOLS.get(tc["name"])
-            if not tool_def:
-                continue
-
-            required = tool_def.required_scope(customer_id)
-            authorized = scope_is_subset(required, list(kb_agent.scope))
-
-            if authorized:
-                result = execute_tool(tc["name"], tc["arguments"])
-                parsed = json.loads(result)
-                articles = parsed.get("results", [])
-                kb_guidance = " | ".join(
-                    f"{a['title']}: {a['content']}" for a in articles
-                )
-                yield PipelineEvent("info", "knowledge", {
-                    "message": f"Knowledge Retrieval: found {len(articles)} relevant articles",
-                    "articles": [a["title"] for a in articles],
-                })
-            else:
-                yield PipelineEvent("scope_denied", "knowledge", {
-                    "message": f"KB agent denied: {tc['name']} requires {required}",
-                    "required_scope": required,
-                    "held_scope": list(kb_agent.scope),
-                })
+    if not needs_knowledge:
+        yield PipelineEvent("info", "pipeline", {
+            "message": "Knowledge lookup skipped — not required for this ticket.",
+        })
     else:
-        # LLM didn't use tools — use its direct response
-        kb_guidance = kb_response.choices[0].message.content or ""
-        yield PipelineEvent("info", "knowledge", {
-            "message": f"Knowledge Retrieval: {kb_guidance[:120]}",
+        yield PipelineEvent("system", "knowledge", {
+            "message": "Knowledge agent active. Requesting KB access.",
         })
 
-    # Release knowledge agent
-    kb_agent.release()
-    yield PipelineEvent("system", "knowledge", {
-        "message": "Knowledge search complete. Credential revoked.",
-    })
+        kb_scopes = ["read:kb:*"]
+        try:
+            kb_agent = app.create_agent(
+                orch_id="support",
+                task_id="knowledge",
+                requested_scope=kb_scopes,
+            )
+        except AgentAuthError as e:
+            yield PipelineEvent("error", "knowledge", {"message": f"Agent creation failed: {e}"})
+            return
+
+        yield PipelineEvent("agent_created", "knowledge", {
+            "agent_id": kb_agent.agent_id,
+            "scope": list(kb_agent.scope),
+            "message": "Knowledge Agent created",
+        })
+
+        # LLM KB search with tool use
+        kb_tools = [TOOLS["search_knowledge_base"].openai_schema()]
+
+        kb_response = _llm_call(
+            llm_client, llm_model, KNOWLEDGE_SYSTEM,
+            f"Ticket summary: {summary}\nCategory: {category}\nPriority: {priority}",
+            tools=kb_tools,
+        )
+
+        tool_calls = _extract_tool_calls(kb_response)
+
+        if tool_calls:
+            for tc in tool_calls:
+                tool_def = TOOLS.get(tc["name"])
+                if not tool_def:
+                    continue
+
+                required = tool_def.required_scope(customer_id)
+                authorized = scope_is_subset(required, list(kb_agent.scope))
+
+                if authorized:
+                    result = execute_tool(tc["name"], tc["arguments"])
+                    parsed = json.loads(result)
+                    articles = parsed.get("results", [])
+                    kb_guidance = " | ".join(
+                        f"{a['title']}: {a['content']}" for a in articles
+                    )
+                    yield PipelineEvent("info", "knowledge", {
+                        "message": f"Knowledge Retrieval: found {len(articles)} relevant articles",
+                        "articles": [a["title"] for a in articles],
+                    })
+                else:
+                    yield PipelineEvent("scope_denied", "knowledge", {
+                        "message": f"KB agent denied: {tc['name']} requires {required}",
+                        "required_scope": required,
+                        "held_scope": list(kb_agent.scope),
+                    })
+        else:
+            # LLM didn't use tools — use its direct response
+            kb_guidance = kb_response.choices[0].message.content or ""
+            yield PipelineEvent("info", "knowledge", {
+                "message": f"Knowledge Retrieval: {kb_guidance[:120]}",
+            })
+
+        # Release knowledge agent
+        kb_agent.release()
+        yield PipelineEvent("system", "knowledge", {
+            "message": "Knowledge search complete. Credential revoked.",
+        })
 
     # ── Phase 3: Response & Resolution ───────────────────
+
+    if not needs_response:
+        yield PipelineEvent("info", "pipeline", {
+            "message": "Response agent skipped — not required for this ticket.",
+        })
+
+        # Still verify triage token is dead
+        check = validate(broker_url, triage_agent.access_token)
+        yield PipelineEvent("system", "pipeline", {
+            "message": f"Post-run verify: triage token valid={check.valid}",
+        })
+        if needs_knowledge:
+            check = validate(broker_url, kb_agent.access_token)
+            yield PipelineEvent("system", "pipeline", {
+                "message": f"Post-run verify: knowledge token valid={check.valid}",
+            })
+
+        yield PipelineEvent("complete", "pipeline", {
+            "message": "Pipeline complete. All credentials revoked and verified.",
+        })
+        return
 
     yield PipelineEvent("system", "response", {
         "message": "Response agent active. Requesting scoped tools.",

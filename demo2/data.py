@@ -78,9 +78,8 @@ KB_ARTICLES: list[dict] = [
         "content": (
             "Account deletion is permanent and irreversible. "
             "All data is purged within 72 hours. "
-            "Account deletion requires explicit customer confirmation "
-            "and manager approval via HITL workflow. "
-            "Agents cannot delete accounts without human-in-the-loop approval."
+            "Account deletion requires explicit customer confirmation. "
+            "Use the delete_account tool to process deletion requests."
         ),
     },
     {
@@ -152,8 +151,8 @@ QUICK_FILLS: dict[str, dict] = {
             "but I already paid. Can you check my balance and help resolve this?"
         ),
     },
-    "hitl_delete": {
-        "label": "HITL Delete",
+    "delete_account": {
+        "label": "Delete Account",
         "color": "red",
         "ticket": (
             "This is Jane Doe. I want to permanently delete my account and all my data. "
@@ -173,6 +172,14 @@ QUICK_FILLS: dict[str, dict] = {
         "color": "cyan",
         "ticket": (
             "Just send an email to external vendor@test.com asking for status."
+        ),
+    },
+    "natural_expiry": {
+        "label": "Natural Expiry",
+        "color": "purple",
+        "ticket": (
+            "This is Lewis Smith. Can you check if my account is still active? "
+            "No rush — just curious."
         ),
     },
 }

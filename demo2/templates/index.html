@@ -45,35 +45,7 @@
                 <span class="panel-icon">⚡</span>
                 AGENT LIFECYCLE
             </div>
-            <div id="agent-cards">
-                <div class="agent-card" id="agent-triage">
-                    <div class="agent-icon">📋</div>
-                    <div class="agent-info">
-                        <div class="agent-name">Triage Agent</div>
-                        <div class="agent-model">LLM-Powered</div>
-                    </div>
-                    <span class="agent-dot dot-inactive"></span>
-                    <div class="agent-status">No active token</div>
-                </div>
-                <div class="agent-card" id="agent-knowledge">
-                    <div class="agent-icon">📚</div>
-                    <div class="agent-info">
-                        <div class="agent-name">Knowledge Agent</div>
-                        <div class="agent-model">LLM-Powered</div>
-                    </div>
-                    <span class="agent-dot dot-inactive"></span>
-                    <div class="agent-status">No active token</div>
-                </div>
-                <div class="agent-card" id="agent-response">
-                    <div class="agent-icon">💬</div>
-                    <div class="agent-info">
-                        <div class="agent-name">Response Agent</div>
-                        <div class="agent-model">LLM-Powered</div>
-                    </div>
-                    <span class="agent-dot dot-inactive"></span>
-                    <div class="agent-status">No active token</div>
-                </div>
-            </div>
+            <div id="agent-cards"></div>
         </div>
 
         <!-- Center: Live Pipeline Stream -->
@@ -148,29 +120,67 @@
         return map[eventType] || 'EVENT';
     }
 
+    function formatStreamMessage(event) {
+        const d = event.data;
+        const type = event.event_type;
+
+        if (type === 'agent_created') {
+            return `${d.message}<br><span class="spiffe-id">${d.agent_id || ''}</span>`;
+        }
+        if (type === 'tool_call') {
+            const parsed = typeof d === 'string' ? JSON.parse(d) : d;
+            const tool = parsed.tool || d.tool || '';
+            const auth = parsed.authorized !== false ? '✅' : '⛔';
+            const scope = (parsed.required_scope || []).join(', ');
+            return `${auth} ${tool}<br><span class="scope-inline">${scope}</span>`;
+        }
+        if (type === 'scope_denied') {
+            const tool = d.tool || '';
+            const scope = (d.required_scope || []).join(', ');
+            return `⛔ ${d.message || 'Scope denied'}<br><span class="scope-inline">${scope}</span>`;
+        }
+        return d.message || JSON.stringify(d);
+    }
+
     function addStreamEntry(event) {
         const el = document.createElement('div');
         el.className = 'stream-entry';
         el.innerHTML = `
             <span class="stream-time">[${formatTime(event.timestamp)}]</span>
             <span class="stream-type ${typeClass(event.event_type)}">${typeLabel(event.event_type)}</span>
-            <span class="stream-msg">${event.data.message || JSON.stringify(event.data)}</span>
+            <span class="stream-msg">${formatStreamMessage(event)}</span>
         `;
         stream.appendChild(el);
         stream.scrollTop = stream.scrollHeight;
     }
 
-    function updateAgentCard(role, status, scope) {
+    const agentIcons = { triage: '📋', knowledge: '📚', response: '💬' };
+    const agentNames = { triage: 'Triage Agent', knowledge: 'Knowledge Agent', response: 'Response Agent' };
+
+    function createAgentCard(role, agentId, scope) {
+        const cards = document.getElementById('agent-cards');
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.id = 'agent-' + role;
+        card.innerHTML = `
+            <div class="agent-icon">${agentIcons[role] || '🤖'}</div>
+            <div class="agent-info">
+                <div class="agent-name">${agentNames[role] || role}</div>
+                <div class="agent-spiffe">${agentId}</div>
+            </div>
+            <span class="agent-dot dot-active"></span>
+            <div class="agent-status status-active">Token active</div>
+        `;
+        cards.appendChild(card);
+    }
+
+    function updateAgentCard(role, status) {
         const card = document.getElementById('agent-' + role);
         if (!card) return;
         const dot = card.querySelector('.agent-dot');
         const statusEl = card.querySelector('.agent-status');
 
-        if (status === 'active') {
-            dot.className = 'agent-dot dot-active';
-            statusEl.textContent = 'Token active';
-            statusEl.className = 'agent-status status-active';
-        } else if (status === 'revoked') {
+        if (status === 'revoked') {
             dot.className = 'agent-dot dot-revoked';
             statusEl.textContent = 'Token revoked';
             statusEl.className = 'agent-status status-revoked';
@@ -197,14 +207,9 @@
     function resetUI() {
         stream.innerHTML = '';
         scopeCards.innerHTML = '';
+        document.getElementById('agent-cards').innerHTML = '';
         finalResponse.style.display = 'none';
         finalContent.textContent = '';
-
-        document.querySelectorAll('.agent-dot').forEach(d => d.className = 'agent-dot dot-inactive');
-        document.querySelectorAll('.agent-status').forEach(s => {
-            s.textContent = 'No active token';
-            s.className = 'agent-status';
-        });
     }
 
     form.addEventListener('submit', function(e) {
@@ -261,7 +266,7 @@
         const d = event.data;
 
         if (type === 'agent_created') {
-            updateAgentCard(role, 'active', d.scope);
+            createAgentCard(role, d.agent_id || '', d.scope);
             addScopeCard(role, d.scope, true,
                 role === 'triage' ? 'Auto-approved (read-only base scope)' :
                 role === 'knowledge' ? 'Auto-approved (read-only base scope)' :

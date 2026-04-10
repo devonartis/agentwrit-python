@@ -60,8 +60,15 @@ def run_ticket():
 
     aa_app, llm_client, llm_model, broker_url = _get_app_and_llm()
 
+    # Detect natural expiry scenario
+    natural_expiry = request.form.get("natural_expiry", "false") == "true"
+    # Also detect from ticket content matching the quick fill
+    if "no rush" in ticket_text.lower():
+        natural_expiry = True
+
     def generate():
-        for event in run_pipeline(ticket_text, aa_app, llm_client, llm_model, broker_url):
+        for event in run_pipeline(ticket_text, aa_app, llm_client, llm_model, broker_url,
+                                  natural_expiry=natural_expiry):
             yield event.to_sse()
 
     return Response(
