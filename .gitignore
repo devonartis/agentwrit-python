@@ -34,3 +34,6 @@ htmlcov/
 # Local AI tooling artifacts
 .playwright-mcp/
 .claude/settings.local.json
+
+# Vendored broker (local testing only — do not commit Go source)
+broker/
