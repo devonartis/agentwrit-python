@@ -61,20 +61,20 @@ import sys
 
 import httpx
 
-from agentauth import (
-    AgentAuthApp,
+from agentwrit import (
+    AgentWritApp,
     DelegatedToken,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AuthorizationError
+from agentwrit.errors import AuthorizationError
 
 
 def main() -> None:
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
     broker_url = app.broker_url
 
@@ -262,9 +262,9 @@ uv add httpx
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python deploy_runner.py
 ```
@@ -278,15 +278,15 @@ CI/CD Deployment Runner — Multi-Hop Delegation
 =======================================================
 
 Orchestrator created
-  ID:    spiffe://agentauth.local/agent/deploy-pipeline/release-v2.4.1/a1b2...
+  ID:    spiffe://agentwrit.local/agent/deploy-pipeline/release-v2.4.1/a1b2...
   Scope: ['read:config:*', 'read:deploy:*', 'write:deploy:*']
 
 Analyst created
-  ID:    spiffe://agentauth.local/agent/deploy-pipeline/review-v2.4.1/c3d4...
+  ID:    spiffe://agentwrit.local/agent/deploy-pipeline/review-v2.4.1/c3d4...
   Scope: ['read:config:*', 'read:deploy:*']
 
 Deployer created
-  ID:    spiffe://agentauth.local/agent/deploy-pipeline/push-v2.4.1/e5f6...
+  ID:    spiffe://agentwrit.local/agent/deploy-pipeline/push-v2.4.1/e5f6...
   Scope: ['write:deploy:*']
 
 Hop 1: Orchestrator → Analyst

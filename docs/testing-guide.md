@@ -1,6 +1,6 @@
 # Testing Guide
 
-How to run the AgentAuth SDK test suite. There are two levels: unit tests (no broker) and acceptance tests (live broker required).
+How to run the AgentWrit SDK test suite. There are two levels: unit tests (no broker) and acceptance tests (live broker required).
 
 ---
 
@@ -24,16 +24,16 @@ Acceptance tests run against a live broker. They exercise every SDK operation en
 
 1. **A running broker.** Start it with:
    ```bash
-   ./broker/scripts/stack_up.sh
+   docker compose up -d
    ```
 
 2. **A registered test app** with scope ceiling `["read:data:*", "write:data:*"]`. The test credentials are in the run script.
 
 3. **Environment variables** (already set in the run script):
    ```bash
-   export AGENTAUTH_BROKER_URL=http://127.0.0.1:8080
-   export AGENTAUTH_CLIENT_ID=sit-d1eeee10a81e
-   export AGENTAUTH_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a
+   export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
+   export AGENTWRIT_CLIENT_ID=sit-d1eeee10a81e
+   export AGENTWRIT_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a
    ```
 
 ### Running
@@ -53,9 +53,9 @@ Or start the broker automatically if it's not running:
 **Or run directly with pytest:**
 
 ```bash
-AGENTAUTH_BROKER_URL=http://127.0.0.1:8080 \
-AGENTAUTH_CLIENT_ID=sit-d1eeee10a81e \
-AGENTAUTH_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a \
+AGENTWRIT_BROKER_URL=http://127.0.0.1:8080 \
+AGENTWRIT_CLIENT_ID=sit-d1eeee10a81e \
+AGENTWRIT_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a \
 uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
 ```
 
@@ -77,7 +77,7 @@ The `-s` flag is important — it shows the banners in the console.
 | 10 | Natural token expiry — 5s TTL, no release, broker rejects after | `create_agent(max_ttl=5)`, `validate()` |
 | 11 | RFC 7807 error structure — ProblemDetail fields verified | `delegate()`, `AuthorizationError` |
 | 12 | Multiple agents — isolated scopes, unique identities | `create_agent()` x3, `scope_is_subset()` |
-| 13 | Renew released agent — SDK guard prevents dead agent usage | `release()`, `renew()`, `AgentAuthError` |
+| 13 | Renew released agent — SDK guard prevents dead agent usage | `release()`, `renew()`, `AgentWritError` |
 | 14 | Garbage token — broker handles gracefully, no crash | `validate()` with fake tokens |
 | 15 | Health check — broker status, version, uptime, db_connected | `health()` |
 
@@ -106,7 +106,7 @@ Follow this pattern:
 class TestStoryN:
     """STORY N: One sentence describing what this proves."""
 
-    def test_descriptive_name(self, client: AgentAuthApp, broker_url: str) -> None:
+    def test_descriptive_name(self, client: AgentWritApp, broker_url: str) -> None:
         banner = [
             "",
             "=" * 65,
