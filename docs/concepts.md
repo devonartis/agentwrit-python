@@ -203,34 +203,83 @@ There are exactly 3 segments. Everything after the second colon is the identifie
 
 ### Using scope_is_subset() as a Gatekeeper
 
-In real applications, the app checks scope before allowing an agent to act:
+Scopes should always be **dynamic** — derived from runtime context like a request, a task, or a user session. Hardcoding scope identifiers defeats the purpose of per-task isolation. If every agent gets `"read:data:customer-artis"`, you've just built a static API key with extra steps.
+
+The pattern: **the request determines the scope, the scope determines the agent's authority.**
+
+**Simple case — one scope, one agent:**
 
 ```python
 from agentauth import scope_is_subset
 
+# The customer ID comes from the request — never hardcoded
+customer_id = request.customer_id  # e.g. "customer-7291"
+
 agent = app.create_agent(
     orch_id="customer-service",
     task_id="lookup",
-    requested_scope=["read:data:customer-artis"],
+    requested_scope=[f"read:data:{customer_id}"],
 )
 
-# Before any action, check if the agent is authorized
-action_scope = ["read:data:customer-artis"]
-if scope_is_subset(action_scope, agent.scope):
-    # proceed — agent is authorized
-    ...
+# Before any action, check if the agent is authorized for THIS customer
+required = [f"read:data:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    result = fetch_customer_data(customer_id)
 else:
-    # block — agent doesn't have this scope
-    ...
+    raise PermissionError(f"Agent not authorized for {customer_id}")
 
-# Agent tries to read ALL customers — blocked
-scope_is_subset(["read:data:all-customers"], agent.scope)  # False
+# Agent tries to access a different customer — blocked
+other_customer = "customer-9999"
+scope_is_subset([f"read:data:{other_customer}"], agent.scope)  # False
 
 # Agent tries to WRITE — blocked (read-only agent)
-scope_is_subset(["write:data:customer-artis"], agent.scope)  # False
+scope_is_subset([f"write:data:{customer_id}"], agent.scope)  # False
 ```
 
-This is the app's responsibility. The broker sets the scope at creation time, but the app must enforce it before every action.
+**Real-world case — multiple scopes per agent:**
+
+Most tasks need more than one scope. A support ticket agent needs to read customer data, read billing history, and write case notes — but not issue refunds:
+
+```python
+customer_id = request.customer_id
+
+agent = app.create_agent(
+    orch_id="customer-service",
+    task_id="support-ticket",
+    requested_scope=[
+        f"read:data:{customer_id}",
+        f"read:billing:{customer_id}",
+        f"write:notes:{customer_id}",
+    ],
+)
+
+# The agent has 3 scopes, but each tool checks only what IT needs:
+
+# Look up customer profile — authorized
+required = [f"read:data:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    profile = fetch_customer_data(customer_id)
+
+# Check billing history — authorized
+required = [f"read:billing:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    billing = fetch_billing_history(customer_id)
+
+# Save case notes — authorized
+required = [f"write:notes:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    save_case_notes(customer_id, notes="Resolved billing dispute")
+
+# Issue a refund — BLOCKED (has read:billing, not write:billing)
+required = [f"write:billing:{customer_id}"]
+scope_is_subset(required, agent.scope)  # False
+
+# Access a different customer — BLOCKED (scoped to one customer)
+other_customer = "customer-9999"
+scope_is_subset([f"read:data:{other_customer}"], agent.scope)  # False
+```
+
+This is the app's responsibility. The broker sets the scope at creation time, but the app must enforce it before every action. The MedAssist demo shows this pattern end-to-end: each tool declares a scope template (e.g. `"read:records:{patient_id}"`), and the pipeline resolves it with the real patient ID at runtime — see `demo/pipeline/tools.py` for the implementation.
 
 ---
 

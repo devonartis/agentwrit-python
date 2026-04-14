@@ -1,4 +1,4 @@
-"""Environment configuration for the MedAssist demo."""
+"""Environment configuration for the Support Ticket demo."""
 
 from __future__ import annotations
 
@@ -25,19 +25,22 @@ class DemoConfig:
             client_id=os.environ.get("AGENTAUTH_CLIENT_ID", ""),
             client_secret=os.environ.get("AGENTAUTH_CLIENT_SECRET", ""),
             admin_secret=os.environ.get("AGENTAUTH_ADMIN_SECRET", ""),
-            llm_base_url=os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1"),
-            llm_api_key=os.environ.get("LLM_API_KEY", ""),
-            llm_model=os.environ.get("LLM_MODEL", "gpt-4o-mini"),
+            llm_base_url=os.environ.get("LLM_BASE_URL", ""),
+            llm_api_key=os.environ.get("LLM_API_KEY", "EMPTY"),
+            llm_model=os.environ.get("LLM_MODEL", ""),
         )
 
 
+# Scope ceiling for the support app — registered with broker at setup time.
+# Agents get subsets of this, never the full ceiling.
 APP_SCOPE_CEILING: list[str] = [
-    "read:records:*",
-    "write:records:*",
-    "read:labs:*",
-    "write:prescriptions:*",
-    "read:formulary:*",
+    "read:tickets:*",
+    "read:customers:*",
+    "write:customers:*",
+    "read:kb:*",
     "read:billing:*",
     "write:billing:*",
-    "read:insurance:*",
+    "write:notes:*",
+    "write:email:internal",
+    "delete:account:*",
 ]
