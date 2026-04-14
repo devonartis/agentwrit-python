@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/agentauth-logo.png" alt="AgentWrit" width="300">
+  <img src="docs/assets/agentwrit-logo.png" alt="AgentWrit" width="300">
 </p>
 
 <h1 align="center">AgentWrit Python SDK</h1>
@@ -26,7 +26,7 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 - **Short-lived by default** — tokens expire in minutes, not hours or days
 - **Delegation chains** — agents can delegate narrower permissions to other agents, enforced at every hop
 
-This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentauth). The broker is the credential authority; this SDK makes it easy to integrate from Python.
+This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit). The broker is the credential authority; this SDK makes it easy to integrate from Python.
 
 ## Installation
 
@@ -40,7 +40,7 @@ Or with pip:
 pip install agentwrit
 ```
 
-**Requirements:** Python 3.10+ and a running [AgentWrit broker](https://github.com/devonartis/agentauth) instance.
+**Requirements:** Python 3.10+ and a running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance.
 
 ## Quick Start
 
@@ -248,7 +248,7 @@ Delegated Agent (sub-agent, max 5 hops)
 | [API Reference](docs/api-reference.md) | Every class, method, parameter, and exception |
 | [Testing Guide](docs/testing-guide.md) | Unit tests, integration tests, running the test suite |
 
-For broker setup and administration, see the [AgentWrit broker documentation](https://github.com/devonartis/agentauth/tree/main/docs).
+For broker setup and administration, see the [AgentWrit broker documentation](https://github.com/devonartis/agentwrit/tree/main/docs).
 
 ## Standards Alignment
 
@@ -262,7 +262,7 @@ For broker setup and administration, see the [AgentWrit broker documentation](ht
 
 ## Contributing
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentauth](https://github.com/devonartis/agentauth) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentwrit](https://github.com/devonartis/agentwrit) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
 
 Quick local checks (no broker required for unit tests):
 
@@ -280,4 +280,4 @@ uv run pytest tests/unit/
 
 This SDK is licensed under the [MIT License](LICENSE).
 
-The [AgentWrit broker](https://github.com/devonartis/agentauth) is licensed separately under AGPL-3.0. See the broker repo for details.
+The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under AGPL-3.0. See the broker repo for details.

@@ -31,7 +31,7 @@ Maintainers will not merge broker-facing changes on faith. You must exercise the
 
 **Do not assume** a copy of the broker exists inside your clone of this repository. If you have a local checkout that includes a `broker/` tree, that is optional tooling; **contributors should obtain the server from the broker project** or use a deployment they already run.
 
-1. **Run the broker from source** — Clone [github.com/devonartis/agentauth](https://github.com/devonartis/agentauth) and follow that repository's instructions to build and run the stack (Docker or otherwise).
+1. **Run the broker from source** — Clone [github.com/devonartis/agentwrit](https://github.com/devonartis/agentwrit) and follow that repository's instructions to build and run the stack (Docker or otherwise).
 
 2. **Or use an existing broker** you control — Point tests and demos at its base URL and register an application with a scope ceiling appropriate for the tests you run.
 
