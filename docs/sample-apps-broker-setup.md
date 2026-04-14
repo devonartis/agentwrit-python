@@ -3,7 +3,7 @@
 > **Purpose:** Set up the broker so the [sample apps](sample-app-mini-max.md) can run.
 > The apps need specific scope ceilings configured per app.
 > **Audience:** Operators registering apps, or developers verifying their app's ceiling.
-> **Prerequisites:** Broker running. See [Getting Started: Operator](../broker/docs/getting-started-operator.md) for broker deployment.
+> **Prerequisites:** Broker running. See the [AgentWrit broker documentation](https://github.com/devonartis/agentwrit/tree/main/docs) for broker deployment.
 
 ---
 

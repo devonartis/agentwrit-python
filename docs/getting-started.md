@@ -10,16 +10,16 @@ Create your first agent credential in 5 minutes.
 
 ## Installation
 
-Using [uv](https://docs.astral.sh/uv/) (recommended):
+Using [uv](https://docs.astral.sh/uv/) (recommended — install from GitHub, not yet on PyPI):
 
 ```bash
-uv add agentwrit
+uv add git+https://github.com/devonartis/agentwrit-python.git
 ```
 
 Or with pip:
 
 ```bash
-pip install agentwrit
+pip install git+https://github.com/devonartis/agentwrit-python.git
 ```
 
 The SDK depends on `httpx` (HTTP) and `cryptography` (Ed25519 operations). Both are installed automatically.

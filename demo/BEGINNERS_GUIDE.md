@@ -195,6 +195,5 @@ See also [`.env.example`](.env.example) for variable names.
 
 ## 11. Further reading
 
-- **Product / technical spec:** [`.plans/specs/2026-04-08-medassist-demo-spec.md`](../.plans/specs/2026-04-08-medassist-demo-spec.md) (repo root)
 - **Presenter script:** [PRESENTERS_GUIDE.md](PRESENTERS_GUIDE.md)
-- **Broker API (source of truth for integration):** `broker/docs/api.md`
+- **Broker API (source of truth for integration):** [AgentWrit broker docs](https://github.com/devonartis/agentwrit/tree/main/docs)

@@ -2,7 +2,7 @@ version = 1
 requires-python = ">=3.10"
 
 [[package]]
-name = "agentauth"
+name = "agentwrit"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [

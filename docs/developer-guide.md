@@ -72,7 +72,7 @@ For quick tasks, set a short TTL to minimize exposure:
 agent = app.create_agent(
     orch_id="quick-check",
     task_id="verify-customer",
-    requested_scope=["read:data:customer-artis"],
+    requested_scope=["read:data:customer-7291"],
     max_ttl=30,  # Token expires in 30 seconds
 )
 # If you forget to release, the token dies in 30 seconds anyway
@@ -233,7 +233,7 @@ from agentwrit import scope_is_subset
 agent = app.create_agent(
     orch_id="customer-service",
     task_id="lookup",
-    requested_scope=["read:data:customer-artis"],
+    requested_scope=["read:data:customer-7291"],
 )
 
 def handle_action(action_scope: list[str]) -> bool:
@@ -243,13 +243,13 @@ def handle_action(action_scope: list[str]) -> bool:
     return False  # block
 
 # Authorized
-handle_action(["read:data:customer-artis"])    # True
+handle_action(["read:data:customer-7291"])    # True
 
 # Blocked — different identifier
 handle_action(["read:data:all-customers"])     # False
 
 # Blocked — different action
-handle_action(["write:data:customer-artis"])   # False
+handle_action(["write:data:customer-7291"])   # False
 ```
 
 ### Validating with the Broker
