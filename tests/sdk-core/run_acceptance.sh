@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run all acceptance tests using pytest with session-scoped fixture.
-# This avoids rate limiting by sharing one AgentAuthApp across all tests.
+# This avoids rate limiting by sharing one AgentWritApp across all tests.
 #
 # Usage:
 #   ./tests/sdk-core/run_acceptance.sh          # Run with existing broker
@@ -11,13 +11,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-export AGENTAUTH_BROKER_URL="${AGENTAUTH_BROKER_URL:-http://127.0.0.1:8080}"
-export AGENTAUTH_CLIENT_ID="${AGENTAUTH_CLIENT_ID:-sit-d1eeee10a81e}"
-export AGENTAUTH_CLIENT_SECRET="${AGENTAUTH_CLIENT_SECRET:-08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a}"
+export AGENTWRIT_BROKER_URL="${AGENTWRIT_BROKER_URL:-http://127.0.0.1:8080}"
+export AGENTWRIT_CLIENT_ID="${AGENTWRIT_CLIENT_ID:-sit-d1eeee10a81e}"
+export AGENTWRIT_CLIENT_SECRET="${AGENTWRIT_CLIENT_SECRET:-08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a}"
 
 # Check if broker is running
 broker_up() {
-    curl -sf "${AGENTAUTH_BROKER_URL}/v1/health" > /dev/null 2>&1
+    curl -sf "${AGENTWRIT_BROKER_URL}/v1/health" > /dev/null 2>&1
 }
 
 # Parse arguments
@@ -66,9 +66,9 @@ if ! broker_up; then
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Running AgentAuth SDK Acceptance Tests"
-echo "  Broker: ${AGENTAUTH_BROKER_URL}"
-echo "  Client: ${AGENTAUTH_CLIENT_ID}"
+echo "  Running AgentWrit SDK Acceptance Tests"
+echo "  Broker: ${AGENTWRIT_BROKER_URL}"
+echo "  Client: ${AGENTWRIT_CLIENT_ID}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 

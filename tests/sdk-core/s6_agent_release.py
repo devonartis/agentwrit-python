@@ -18,14 +18,14 @@ print("║  useless — the window of exposure is minimized.                 ║
 print("╚══════════════════════════════════════════════════════════════════╝")
 print()
 
-from agentauth import AgentAuthApp, validate
-from agentauth.errors import AgentAuthError
+from agentwrit import AgentWritApp, validate
+from agentwrit.errors import AgentWritError
 
-broker_url = os.environ["AGENTAUTH_BROKER_URL"]
-client_id = os.environ["AGENTAUTH_CLIENT_ID"]
-client_secret = os.environ["AGENTAUTH_CLIENT_SECRET"]
+broker_url = os.environ["AGENTWRIT_BROKER_URL"]
+client_id = os.environ["AGENTWRIT_CLIENT_ID"]
+client_secret = os.environ["AGENTWRIT_CLIENT_SECRET"]
 
-app = AgentAuthApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
+app = AgentWritApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
 
 print("Step 1: Agent starts working on user-42")
 agent = app.create_agent(
@@ -51,14 +51,14 @@ print("Step 4: Verify the agent can't be used after release")
 renew_blocked = False
 try:
     agent.renew()
-except AgentAuthError as e:
+except AgentWritError as e:
     renew_blocked = True
     print(f"  agent.renew() raised: {e}")
 
 delegate_blocked = False
 try:
     agent.delegate(delegate_to="spiffe://x", scope=["read:data:user-42"])
-except AgentAuthError as e:
+except AgentWritError as e:
     delegate_blocked = True
     print(f"  agent.delegate() raised: {e}")
 print()

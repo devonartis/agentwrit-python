@@ -19,13 +19,13 @@ print("║  The old token is revoked — captured tokens become useless.     ║
 print("╚══════════════════════════════════════════════════════════════════╝")
 print()
 
-from agentauth import AgentAuthApp, validate
+from agentwrit import AgentWritApp, validate
 
-broker_url = os.environ["AGENTAUTH_BROKER_URL"]
-client_id = os.environ["AGENTAUTH_CLIENT_ID"]
-client_secret = os.environ["AGENTAUTH_CLIENT_SECRET"]
+broker_url = os.environ["AGENTWRIT_BROKER_URL"]
+client_id = os.environ["AGENTWRIT_CLIENT_ID"]
+client_secret = os.environ["AGENTWRIT_CLIENT_SECRET"]
 
-app = AgentAuthApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
+app = AgentWritApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
 
 print("Step 1: Agent starts working on user-42")
 agent = app.create_agent(
