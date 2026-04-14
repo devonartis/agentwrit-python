@@ -484,7 +484,7 @@ This identity is:
 
 ## Standards Alignment
 
-The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md) pattern (v1.2), which aligns with:
+The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.3.md) pattern (v1.3), which aligns with:
 
 | Standard | What it addresses |
 |----------|-------------------|

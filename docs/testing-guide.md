@@ -32,8 +32,8 @@ Acceptance tests run against a live broker. They exercise every SDK operation en
 3. **Environment variables** (already set in the run script):
    ```bash
    export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
-   export AGENTWRIT_CLIENT_ID=sit-d1eeee10a81e
-   export AGENTWRIT_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a
+   export AGENTWRIT_CLIENT_ID=<your-client-id>
+   export AGENTWRIT_CLIENT_SECRET=<your-client-secret>
    ```
 
 ### Running
@@ -54,8 +54,8 @@ Or start the broker automatically if it's not running:
 
 ```bash
 AGENTWRIT_BROKER_URL=http://127.0.0.1:8080 \
-AGENTWRIT_CLIENT_ID=sit-d1eeee10a81e \
-AGENTWRIT_CLIENT_SECRET=08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a \
+AGENTWRIT_CLIENT_ID=<your-client-id> \
+AGENTWRIT_CLIENT_SECRET=<your-client-secret> \
 uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
 ```
 

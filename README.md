@@ -30,14 +30,24 @@ This SDK is the Python client for the [AgentWrit broker](https://github.com/devo
 
 ## Installation
 
+Install from GitHub (not yet on PyPI):
+
 ```bash
-uv add agentwrit
+uv add git+https://github.com/devonartis/agentwrit-python.git
 ```
 
 Or with pip:
 
 ```bash
-pip install agentwrit
+pip install git+https://github.com/devonartis/agentwrit-python.git
+```
+
+For local development:
+
+```bash
+git clone https://github.com/devonartis/agentwrit-python.git
+cd agentwrit-python
+uv sync --all-extras
 ```
 
 **Requirements:** Python 3.10+ and a running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance.
@@ -267,8 +277,8 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **
 Quick local checks (no broker required for unit tests):
 
 ```bash
-git clone https://github.com/devonartis/agentauth-python.git
-cd agentauth-python
+git clone https://github.com/devonartis/agentwrit-python.git
+cd agentwrit-python
 uv sync --all-extras
 
 uv run ruff check .
@@ -280,4 +290,4 @@ uv run pytest tests/unit/
 
 This SDK is licensed under the [MIT License](LICENSE).
 
-The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under AGPL-3.0. See the broker repo for details.
+The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under PolyForm Internal Use 1.0.0. See the broker repo for details.

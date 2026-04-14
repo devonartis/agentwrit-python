@@ -82,4 +82,4 @@ Demo work under [`demo/`](demo/) should follow the same rule: run against a real
 
 ## Security issues
 
-Please report security-sensitive problems through [GitHub Security Advisories](https://github.com/devonartis/agentauth-python/security/advisories) for this repository (or the maintainer's preferred private channel if one is published elsewhere). Do not file exploitable details in public issues before they are addressed.
+Please report security-sensitive problems through [GitHub Security Advisories](https://github.com/devonartis/agentwrit-python/security/advisories) for this repository (or the maintainer's preferred private channel if one is published elsewhere). Do not file exploitable details in public issues before they are addressed.
