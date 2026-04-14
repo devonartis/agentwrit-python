@@ -73,8 +73,8 @@ jobs:
       - run: uv sync --all-extras
       - name: Run integration tests
         env:
-          AGENTAUTH_BROKER_URL: http://localhost:8080
-          AGENTAUTH_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
+          AGENTWRIT_BROKER_URL: http://localhost:8080
+          AGENTWRIT_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
         run: uv run pytest -m integration -q
 
   secrets-scan:
