@@ -71,11 +71,46 @@ jobs:
         with:
           version: "latest"
       - run: uv sync --all-extras
-      - name: Run integration tests
+      - name: Register test app with broker
+        id: register-app
+        env:
+          AGENTWRIT_BROKER_URL: http://localhost:8080
+          AA_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
+        run: |
+          # Authenticate as admin
+          ADMIN_TOKEN=$(curl -sf -X POST "${AGENTWRIT_BROKER_URL}/v1/admin/auth" \
+            -H "Content-Type: application/json" \
+            -d "{\"secret\":\"${AA_ADMIN_SECRET}\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+          # Register a test app with broad scope ceiling
+          APP_JSON=$(curl -sf -X POST "${AGENTWRIT_BROKER_URL}/v1/admin/apps" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -d '{"name":"ci-integration","scopes":["read:data:*","write:data:*"]}')
+
+          # Extract credentials and mask the secret
+          CLIENT_ID=$(echo "${APP_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['client_id'])")
+          CLIENT_SECRET=$(echo "${APP_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['client_secret'])")
+
+          echo "::add-mask::${CLIENT_SECRET}"
+          echo "client_id=${CLIENT_ID}" >> "$GITHUB_OUTPUT"
+          echo "client_secret=${CLIENT_SECRET}" >> "$GITHUB_OUTPUT"
+          echo "Registered test app: ${CLIENT_ID}"
+      - name: Run integration tests (all 15 stories)
         env:
           AGENTWRIT_BROKER_URL: http://localhost:8080
           AGENTWRIT_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
-        run: uv run pytest -m integration -q
+          AGENTWRIT_CLIENT_ID: ${{ steps.register-app.outputs.client_id }}
+          AGENTWRIT_CLIENT_SECRET: ${{ steps.register-app.outputs.client_secret }}
+        run: |
+          result=$(uv run pytest -m integration -v 2>&1)
+          echo "${result}"
+
+          # Fail if any tests were skipped — no silent skips allowed
+          if echo "${result}" | grep -q "skipped"; then
+            echo "::error::Integration tests had skipped stories — all 15 must run"
+            exit 1
+          fi
 
   secrets-scan:
     name: Secrets Scan
