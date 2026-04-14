@@ -5,7 +5,7 @@ and prints the client_id/client_secret for .env configuration.
 
 Usage:
     # Start broker first
-    ./broker/scripts/stack_up.sh
+    docker compose up -d
 
     # Run setup
     uv run python demo/setup.py
@@ -18,8 +18,8 @@ import sys
 
 import httpx
 
-BROKER_URL = os.environ.get("AGENTAUTH_BROKER_URL", "http://localhost:8080")
-ADMIN_SECRET = os.environ.get("AGENTAUTH_ADMIN_SECRET", "")
+BROKER_URL = os.environ.get("AGENTWRIT_BROKER_URL", "http://localhost:8080")
+ADMIN_SECRET = os.environ.get("AGENTWRIT_ADMIN_SECRET", "")
 
 APP_SCOPE_CEILING = [
     "read:records:*",
@@ -35,8 +35,8 @@ APP_SCOPE_CEILING = [
 
 def main() -> None:
     if not ADMIN_SECRET:
-        print("ERROR: Set AGENTAUTH_ADMIN_SECRET environment variable")
-        print("  export AGENTAUTH_ADMIN_SECRET=<your-admin-secret>")
+        print("ERROR: Set AGENTWRIT_ADMIN_SECRET environment variable")
+        print("  export AGENTWRIT_ADMIN_SECRET=<your-admin-secret>")
         sys.exit(1)
 
     print(f"Broker: {BROKER_URL}")
@@ -49,7 +49,7 @@ def main() -> None:
         print(f"Broker status: {h['status']} (v{h['version']}, uptime {h['uptime']}s)")
     except Exception as e:
         print(f"ERROR: Cannot reach broker at {BROKER_URL}: {e}")
-        print("  Start the broker first: ./broker/scripts/stack_up.sh")
+        print("  Start the broker first: docker compose up -d")
         sys.exit(1)
 
     # Authenticate as admin
@@ -100,10 +100,10 @@ def main() -> None:
     print(f"\n{'='*60}")
     print("Add these to demo/.env:")
     print(f"{'='*60}")
-    print(f"AGENTAUTH_BROKER_URL={BROKER_URL}")
-    print(f"AGENTAUTH_CLIENT_ID={client_id}")
-    print(f"AGENTAUTH_CLIENT_SECRET={client_secret}")
-    print(f"AGENTAUTH_ADMIN_SECRET={ADMIN_SECRET}")
+    print(f"AGENTWRIT_BROKER_URL={BROKER_URL}")
+    print(f"AGENTWRIT_CLIENT_ID={client_id}")
+    print(f"AGENTWRIT_CLIENT_SECRET={client_secret}")
+    print(f"AGENTWRIT_ADMIN_SECRET={ADMIN_SECRET}")
     print("OPENAI_API_KEY=<your-openai-key>")
     print(f"{'='*60}")
 

@@ -19,12 +19,12 @@ from typing import Any
 
 from openai import OpenAI
 
-from agentauth import (
-    AgentAuthApp,
+from agentwrit import (
+    AgentWritApp,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AgentAuthError
+from agentwrit.errors import AgentWritError
 from demo2 import data
 from demo2.tools import TOOLS, execute_tool, scopes_for_tools
 
@@ -141,7 +141,7 @@ Use the tools provided. Do not make up data. Do not refuse to try a tool call.
 
 def run_pipeline(
     ticket_text: str,
-    app: AgentAuthApp,
+    app: AgentWritApp,
     llm_client: OpenAI,
     llm_model: str,
     broker_url: str,
@@ -181,7 +181,7 @@ def run_pipeline(
             requested_scope=triage_scopes,
             max_ttl=triage_ttl,
         )
-    except AgentAuthError as e:
+    except AgentWritError as e:
         yield PipelineEvent("error", "triage", {"message": f"Agent creation failed: {e}"})
         return
 
@@ -362,7 +362,7 @@ def run_pipeline(
                 task_id="knowledge",
                 requested_scope=kb_scopes,
             )
-        except AgentAuthError as e:
+        except AgentWritError as e:
             yield PipelineEvent("error", "knowledge", {"message": f"Agent creation failed: {e}"})
             return
 
@@ -468,7 +468,7 @@ def run_pipeline(
             task_id="response",
             requested_scope=response_scopes,
         )
-    except AgentAuthError as e:
+    except AgentWritError as e:
         yield PipelineEvent("error", "response", {"message": f"Agent creation failed: {e}"})
         return
 

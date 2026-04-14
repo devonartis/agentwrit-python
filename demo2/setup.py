@@ -1,7 +1,7 @@
 """One-time setup: register the support ticket demo app with the broker.
 
 Usage:
-    ./broker/scripts/stack_up.sh
+    docker compose up -d
     uv run python demo2/setup.py
 """
 
@@ -12,8 +12,8 @@ import sys
 
 import httpx
 
-BROKER_URL = os.environ.get("AGENTAUTH_BROKER_URL", "http://localhost:8080")
-ADMIN_SECRET = os.environ.get("AGENTAUTH_ADMIN_SECRET", "")
+BROKER_URL = os.environ.get("AGENTWRIT_BROKER_URL", "http://localhost:8080")
+ADMIN_SECRET = os.environ.get("AGENTWRIT_ADMIN_SECRET", "")
 
 APP_SCOPE_CEILING = [
     "read:tickets:*",
@@ -30,7 +30,7 @@ APP_SCOPE_CEILING = [
 
 def main() -> None:
     if not ADMIN_SECRET:
-        print("ERROR: Set AGENTAUTH_ADMIN_SECRET environment variable")
+        print("ERROR: Set AGENTWRIT_ADMIN_SECRET environment variable")
         sys.exit(1)
 
     print(f"Broker: {BROKER_URL}")
@@ -90,10 +90,10 @@ def main() -> None:
     print(f"\n{'='*60}")
     print("Add these to demo2/.env:")
     print(f"{'='*60}")
-    print(f"AGENTAUTH_BROKER_URL={BROKER_URL}")
-    print(f"AGENTAUTH_CLIENT_ID={app_data['client_id']}")
-    print(f"AGENTAUTH_CLIENT_SECRET={app_data['client_secret']}")
-    print(f"AGENTAUTH_ADMIN_SECRET={ADMIN_SECRET}")
+    print(f"AGENTWRIT_BROKER_URL={BROKER_URL}")
+    print(f"AGENTWRIT_CLIENT_ID={app_data['client_id']}")
+    print(f"AGENTWRIT_CLIENT_SECRET={app_data['client_secret']}")
+    print(f"AGENTWRIT_ADMIN_SECRET={ADMIN_SECRET}")
     print("LLM_BASE_URL=<your-llm-base-url>")
     print("LLM_API_KEY=<your-api-key>")
     print("LLM_MODEL=<your-model>")

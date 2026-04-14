@@ -1,6 +1,6 @@
-"""MedAssist AI — AgentAuth Healthcare Demo.
+"""MedAssist AI — AgentWrit Healthcare Demo.
 
-FastAPI app that demonstrates the AgentAuth Python SDK through a
+FastAPI app that demonstrates the AgentWrit Python SDK through a
 realistic healthcare multi-agent pipeline with clinical, prescription,
 and billing agents operating under strict scope isolation.
 """
@@ -20,8 +20,8 @@ from demo.routes.pages import router as pages_router
 load_dotenv(Path(__file__).parent / ".env")
 
 app = FastAPI(
-    title="MedAssist AI — AgentAuth Demo",
-    description="Healthcare multi-agent demo showcasing AgentAuth scope isolation",
+    title="MedAssist AI — AgentWrit Demo",
+    description="Healthcare multi-agent demo showcasing AgentWrit scope isolation",
     version="1.0.0",
 )
 

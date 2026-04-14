@@ -73,8 +73,8 @@ async def operator_page(request: Request) -> HTMLResponse:
     error_msg: str | None = None
 
     try:
-        from agentauth import AgentAuthApp
-        aa_app = AgentAuthApp(cfg.broker_url, cfg.client_id, cfg.client_secret)
+        from agentwrit import AgentWritApp
+        aa_app = AgentWritApp(cfg.broker_url, cfg.client_id, cfg.client_secret)
         h = aa_app.health()
         health_data = {
             "status": h.status,

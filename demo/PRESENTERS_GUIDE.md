@@ -2,9 +2,9 @@
 
 **New to the demo?** Read [BEGINNERS_GUIDE.md](BEGINNERS_GUIDE.md) for architecture diagrams and how each piece fits together.
 
-Use this as a loose script. The goal is **show AgentAuth doing real work**: short-lived agents, per-patient scopes, denials you can see, delegation when needed, and cleanup at the end.
+Use this as a loose script. The goal is **show AgentWrit doing real work**: short-lived agents, per-patient scopes, denials you can see, delegation when needed, and cleanup at the end.
 
-**Before you go live:** broker up (`./broker/scripts/stack_up.sh`), `demo/.env` filled (broker + LLM), and `uv run uvicorn demo.app:app --port 5000`.
+**Before you go live:** broker up (`docker compose up -d`), `demo/.env` filled (broker + LLM), and `uv run uvicorn demo.app:app --port 5000`.
 
 ---
 
@@ -113,7 +113,7 @@ Switch to **Audit trail** and **Operator** tabs:
 
 | Symptom | Check |
 |--------|--------|
-| Empty trace / error | broker URL, `AGENTAUTH_CLIENT_ID` / SECRET in `demo/.env` |
+| Empty trace / error | broker URL, `AGENTWRIT_CLIENT_ID` / SECRET in `demo/.env` |
 | LLM errors | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` (vLLM often `EMPTY`) |
 | No delegation | Model must call `write_prescription` after Rx + clinical exist; try run #3 wording again |
 

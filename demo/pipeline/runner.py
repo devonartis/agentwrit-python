@@ -25,14 +25,14 @@ from typing import Any
 import httpx
 from openai import OpenAI
 
-from agentauth import (
+from agentwrit import (
     Agent,
-    AgentAuthApp,
+    AgentWritApp,
     DelegatedToken,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AgentAuthError, AuthorizationError
+from agentwrit.errors import AgentWritError, AuthorizationError
 from demo.pipeline.agents import billing, clinical, prescription
 from demo.pipeline.tools import (
     TOOLS,
@@ -177,7 +177,7 @@ def _run_llm_tool_loop(
 
 
 def run_encounter(
-    app: AgentAuthApp,
+    app: AgentWritApp,
     config: ScenarioConfig,
     openai_api_key: str,
     admin_secret: str,
@@ -613,7 +613,7 @@ def run_encounter(
                     "task_id": agent.task_id,
                 },
             ))
-        except AgentAuthError as e:
+        except AgentWritError as e:
             events.append(PipelineEvent(
                 event_type="release_error",
                 agent_role="system",

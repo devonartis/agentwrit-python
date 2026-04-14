@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from flask import Flask, Response, render_template, request, stream_with_context
 from openai import OpenAI
 
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 from demo2.config import APP_SCOPE_CEILING, DemoConfig
 from demo2.data import QUICK_FILLS
 from demo2.pipeline import run_pipeline
@@ -26,10 +26,10 @@ app = Flask(
 )
 
 
-def _get_app_and_llm() -> tuple[AgentAuthApp, OpenAI, str, str]:
+def _get_app_and_llm() -> tuple[AgentWritApp, OpenAI, str, str]:
     """Initialize SDK app and LLM client from env config."""
     cfg = DemoConfig.from_env()
-    aa_app = AgentAuthApp(
+    aa_app = AgentWritApp(
         broker_url=cfg.broker_url,
         client_id=cfg.client_id,
         client_secret=cfg.client_secret,
