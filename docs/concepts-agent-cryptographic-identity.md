@@ -2,7 +2,7 @@
 
 ## The Key Insight
 
-Every AgentAuth agent holds an Ed25519 private key. Today, that key is used once — to sign a nonce during registration, proving the agent controls the keypair. The broker stores the public key and issues a JWT.
+Every AgentWrit agent holds an Ed25519 private key. Today, that key is used once — to sign a nonce during registration, proving the agent controls the keypair. The broker stores the public key and issues a JWT.
 
 But that private key is more than a registration artifact. It's a **cryptographic identity** — the same primitive that SSH uses for machine authentication, that TLS uses for mutual auth, and that SPIFFE/SPIRE uses for workload identity. The agent can prove "I am this specific entity" to anyone who holds its public key, without passwords, without tokens, without the broker being online.
 
@@ -49,7 +49,7 @@ The agent's private key never leaves the SDK. Only the public key is transmitted
 
 SSH machines prove identity the same way:
 
-| SSH | AgentAuth |
+| SSH | AgentWrit |
 |-----|-----------|
 | `ssh-keygen` generates keypair | `generate_keypair()` at agent creation |
 | Public key added to `authorized_keys` | Public key stored in broker's `AgentRecord` |
@@ -57,7 +57,7 @@ SSH machines prove identity the same way:
 | Machine proves identity by signing challenge | Agent proves identity by signing nonce |
 | `known_hosts` tracks which key belongs to which host | Broker tracks which key belongs to which SPIFFE ID |
 
-The difference: SSH keys are long-lived (persist on disk). AgentAuth keys are ephemeral (live in memory, die with the agent). But the cryptographic primitive is identical — and there's no reason agent keys can't be persisted too.
+The difference: SSH keys are long-lived (persist on disk). AgentWrit keys are ephemeral (live in memory, die with the agent). But the cryptographic primitive is identical — and there's no reason agent keys can't be persisted too.
 
 ## What the Agent's Private Key Could Do
 
@@ -137,7 +137,7 @@ agent = app.create_agent(
     orch_id="monitor",
     task_id="watchdog",
     requested_scope=["read:metrics:*"],
-    key_path="/var/agentauth/watchdog.key",  # Persisted
+    key_path="/var/agentwrit/watchdog.key",  # Persisted
 )
 
 # Later — agent restarts, re-registers with same key
@@ -145,7 +145,7 @@ agent = app.create_agent(
     orch_id="monitor",
     task_id="watchdog",
     requested_scope=["read:metrics:*"],
-    key_path="/var/agentauth/watchdog.key",  # Same key loaded
+    key_path="/var/agentwrit/watchdog.key",  # Same key loaded
 )
 # Broker sees same public key → recognizes as same entity
 ```
@@ -469,7 +469,7 @@ Every AI security framework — NIST IR 8596, OWASP Agentic AI, IETF WIMSE, the 
 The current solutions:
 - **API keys** — static, shared, no identity, no expiry, no audit
 - **OAuth tokens** — designed for humans, no agent-specific claims, no delegation chains
-- **UUID-based identity** (like substrates-ai/agentauth) — proves "I'm the same agent as before" but nothing else. No scope, no lifecycle, no revocation, no cryptographic proof.
+- **UUID-based identity** (like substrates-ai/agentwrit) — proves "I'm the same agent as before" but nothing else. No scope, no lifecycle, no revocation, no cryptographic proof.
 
 What a keypair-based identity provides:
 - **Cryptographic proof** — the agent can prove who it is to anything, anywhere

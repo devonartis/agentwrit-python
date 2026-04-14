@@ -1,4 +1,4 @@
-"""Unit tests for agentauth.models — frozen dataclasses.
+"""Unit tests for agentwrit.models — frozen dataclasses.
 
 Verifies construction, field access, immutability, and optional fields
 for all public response models defined in spec Section 7.
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentauth.models import (
+from agentwrit.models import (
     AgentClaims,
     DelegatedToken,
     DelegationRecord,
@@ -21,11 +21,11 @@ from agentauth.models import (
 class TestDelegationRecord:
     def test_construction(self):
         rec = DelegationRecord(
-            agent="spiffe://agentauth.local/agent/orch/task/abc123",
+            agent="spiffe://agentwrit.local/agent/orch/task/abc123",
             scope=["read:data:*"],
             delegated_at="2026-04-06T12:00:00Z",
         )
-        assert rec.agent == "spiffe://agentauth.local/agent/orch/task/abc123"
+        assert rec.agent == "spiffe://agentwrit.local/agent/orch/task/abc123"
         assert rec.scope == ["read:data:*"]
         assert rec.delegated_at == "2026-04-06T12:00:00Z"
 
@@ -38,9 +38,9 @@ class TestDelegationRecord:
 class TestAgentClaims:
     def test_all_required_fields(self):
         claims = AgentClaims(
-            iss="agentauth",
-            sub="spiffe://agentauth.local/agent/orch/task/abc",
-            aud=["agentauth"],
+            iss="agentwrit",
+            sub="spiffe://agentwrit.local/agent/orch/task/abc",
+            aud=["agentwrit"],
             exp=1700000000,
             nbf=1699999700,
             iat=1699999700,
@@ -49,7 +49,7 @@ class TestAgentClaims:
             task_id="task-1",
             orch_id="orch-1",
         )
-        assert claims.iss == "agentauth"
+        assert claims.iss == "agentwrit"
         assert claims.sub.startswith("spiffe://")
         assert claims.sid is None
         assert claims.delegation_chain is None
@@ -58,7 +58,7 @@ class TestAgentClaims:
     def test_optional_fields(self):
         chain = [DelegationRecord(agent="a", scope=["s"], delegated_at="t")]
         claims = AgentClaims(
-            iss="agentauth",
+            iss="agentwrit",
             sub="spiffe://x",
             aud=[],
             exp=0,
@@ -88,7 +88,7 @@ class TestAgentClaims:
 class TestValidateResult:
     def test_valid_result(self):
         claims = AgentClaims(
-            iss="agentauth", sub="s", aud=[], exp=0, nbf=0, iat=0,
+            iss="agentwrit", sub="s", aud=[], exp=0, nbf=0, iat=0,
             jti="j", scope=[], task_id="t", orch_id="o",
         )
         result = ValidateResult(valid=True, claims=claims)
@@ -119,7 +119,7 @@ class TestDelegatedToken:
 class TestRegisterResult:
     def test_construction(self):
         rr = RegisterResult(
-            agent_id="spiffe://agentauth.local/agent/o/t/i",
+            agent_id="spiffe://agentwrit.local/agent/o/t/i",
             access_token="eyJ...",
             expires_in=300,
         )
@@ -143,12 +143,12 @@ class TestHealthStatus:
 class TestProblemDetail:
     def test_required_fields(self):
         pd = ProblemDetail(
-            type="urn:agentauth:error:scope_violation",
+            type="urn:agentwrit:error:scope_violation",
             title="Forbidden",
             detail="scope exceeds ceiling",
             instance="/v1/app/launch-tokens",
         )
-        assert pd.type == "urn:agentauth:error:scope_violation"
+        assert pd.type == "urn:agentwrit:error:scope_violation"
         assert pd.status is None
         assert pd.error_code is None
         assert pd.request_id is None

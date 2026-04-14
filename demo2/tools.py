@@ -1,6 +1,6 @@
 """Support tools with scope-gated execution.
 
-Each tool maps to a required AgentAuth scope parameterized by customer_id.
+Each tool maps to a required AgentWrit scope parameterized by customer_id.
 The LLM decides which tools to use. The pipeline checks scope_is_subset()
 before every execution.
 """

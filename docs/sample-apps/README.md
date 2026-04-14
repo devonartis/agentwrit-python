@@ -1,6 +1,6 @@
 # Sample Apps
 
-Self-contained tutorials that teach the AgentAuth SDK by building real-world systems. Each app is a complete, runnable program — not a code snippet — with its own business scenario, architecture walkthrough, and learning outcomes.
+Self-contained tutorials that teach the AgentWrit SDK by building real-world systems. Each app is a complete, runnable program — not a code snippet — with its own business scenario, architecture walkthrough, and learning outcomes.
 
 ---
 
@@ -27,7 +27,7 @@ Before running any sample app, you need to understand one critical concept that 
 
 ### The App Ceiling Is Broad — The Agent Scope Is Narrow
 
-AgentAuth has two layers of authority:
+AgentWrit has two layers of authority:
 
 1. **App scope ceiling** — set by the operator when they register your app. This is the **maximum** authority your app can ever grant to any agent. Think of it as the outer fence.
 
@@ -66,7 +66,7 @@ Register a single app with a broad ceiling that covers every sample app. You onl
 ### Step 1: Start the Broker
 
 ```bash
-./broker/scripts/stack_up.sh
+docker compose up -d
 ```
 
 ### Step 2: Register the Universal Sample App
@@ -110,9 +110,9 @@ Copy the `client_id` and `client_secret` from the response.
 ### Step 3: Set Environment Variables
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<client_id from step 2>"
-export AGENTAUTH_CLIENT_SECRET="<client_secret from step 2>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<client_id from step 2>"
+export AGENTWRIT_CLIENT_SECRET="<client_secret from step 2>"
 ```
 
 These same environment variables work for **every** sample app. Each app will request its own narrow scope within this ceiling.
@@ -125,7 +125,7 @@ The broker returns an `AuthorizationError` (HTTP 403) with `error_code: scope_vi
 
 ## Learning Path
 
-**Start here if you're new to AgentAuth:**
+**Start here if you're new to AgentWrit:**
 
 ```
 App 1 (lifecycle basics)

@@ -1,4 +1,4 @@
-"""Unit tests for agentauth.agent — Agent lifecycle methods.
+"""Unit tests for agentwrit.agent — Agent lifecycle methods.
 
 TDD: tests written before implementation for renew(), release(), delegate().
 Uses pytest-httpx to mock broker responses via the transport layer.
@@ -16,24 +16,24 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_httpx import HTTPXMock
 
-from agentauth._transport import AgentAuthTransport
-from agentauth.agent import Agent
-from agentauth.app import AgentAuthApp
-from agentauth.errors import AgentAuthError
-from agentauth.models import DelegatedToken
+from agentwrit._transport import AgentWritTransport
+from agentwrit.agent import Agent
+from agentwrit.app import AgentWritApp
+from agentwrit.errors import AgentWritError
+from agentwrit.models import DelegatedToken
 
 
 def _make_agent(httpx_mock: HTTPXMock) -> Agent:
     """Create an Agent with a mocked transport for unit testing."""
-    # Mock app auth so AgentAuthApp can be constructed
-    app = MagicMock(spec=AgentAuthApp)
-    app._transport = AgentAuthTransport(broker_url="http://broker.test", timeout=5.0)
+    # Mock app auth so AgentWritApp can be constructed
+    app = MagicMock(spec=AgentWritApp)
+    app._transport = AgentWritTransport(broker_url="http://broker.test", timeout=5.0)
     app.broker_url = "http://broker.test"
     app.timeout = 5.0
 
     return Agent(
         app=app,
-        agent_id="spiffe://agentauth.local/agent/orch/task/abc123",
+        agent_id="spiffe://agentwrit.local/agent/orch/task/abc123",
         access_token="eyJ.original.token",
         expires_in=300,
         scope=["read:data:*"],
@@ -112,7 +112,7 @@ class TestRenew:
         )
         agent.release()
 
-        with pytest.raises(AgentAuthError, match="released"):
+        with pytest.raises(AgentWritError, match="released"):
             agent.renew()
 
 
@@ -181,7 +181,7 @@ class TestDelegate:
                 "expires_in": 60,
                 "delegation_chain": [
                     {
-                        "agent": "spiffe://agentauth.local/agent/orch/task/abc123",
+                        "agent": "spiffe://agentwrit.local/agent/orch/task/abc123",
                         "scope": ["read:data:*"],
                         "delegated_at": "2026-04-07T00:00:00Z",
                     }
@@ -190,7 +190,7 @@ class TestDelegate:
         )
 
         result = agent.delegate(
-            delegate_to="spiffe://agentauth.local/agent/orch/task/def456",
+            delegate_to="spiffe://agentwrit.local/agent/orch/task/def456",
             scope=["read:data:customers"],
         )
 
@@ -245,7 +245,7 @@ class TestDelegate:
         )
         agent.release()
 
-        with pytest.raises(AgentAuthError, match="released"):
+        with pytest.raises(AgentWritError, match="released"):
             agent.delegate(delegate_to="spiffe://t", scope=["s"])
 
 

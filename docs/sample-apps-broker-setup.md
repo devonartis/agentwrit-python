@@ -57,9 +57,9 @@ Save the `client_id` and `client_secret` from the response. The `client_secret` 
 ## Step 2: Set Environment Variables
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://localhost:8080"
-export AGENTAUTH_CLIENT_ID="sample-apps"
-export AGENTAUTH_CLIENT_SECRET="your-client-secret"
+export AGENTWRIT_BROKER_URL="http://localhost:8080"
+export AGENTWRIT_CLIENT_ID="sample-apps"
+export AGENTWRIT_CLIENT_SECRET="your-client-secret"
 ```
 
 ---
@@ -116,7 +116,7 @@ What it uses:            Admin auth only (aactl or raw HTTP admin API)
                           GET /v1/audit/events with admin Bearer token
 ```
 
-The SDK is not used. The app uses raw HTTP to authenticate as admin and read events. The SDK (`AgentAuthApp`) only handles app-level operations — it has no admin auth path.
+The SDK is not used. The app uses raw HTTP to authenticate as admin and read events. The SDK (`AgentWritApp`) only handles app-level operations — it has no admin auth path.
 
 ### App 6: Token Lifecycle Manager
 
@@ -198,7 +198,7 @@ curl -X POST "http://localhost:8080/v1/admin/apps/sample-apps" \
 
 ```bash
 AA_ADMIN_SECRET="your-admin-secret" \
-AA_DB_PATH="/tmp/agentauth.db" \
+AA_DB_PATH="/tmp/agentwrit.db" \
 AA_DEFAULT_TTL="300" \
 AA_MAX_TTL="600" \
 ./broker

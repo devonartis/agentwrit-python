@@ -5,7 +5,7 @@ Create your first agent credential in 5 minutes.
 ## Prerequisites
 
 - **Python 3.10+**
-- A running [AgentAuth broker](https://github.com/devonartis/agentAuth) instance
+- A running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance
 - App credentials (`client_id` and `client_secret`) from your broker operator
 
 ## Installation
@@ -13,13 +13,13 @@ Create your first agent credential in 5 minutes.
 Using [uv](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
-uv add agentauth
+uv add agentwrit
 ```
 
 Or with pip:
 
 ```bash
-pip install agentauth
+pip install agentwrit
 ```
 
 The SDK depends on `httpx` (HTTP) and `cryptography` (Ed25519 operations). Both are installed automatically.
@@ -38,9 +38,9 @@ Your broker operator provides two values when they register your application:
 Store these as environment variables — never hardcode them:
 
 ```bash
-export AGENTAUTH_BROKER_URL="https://broker.yourcompany.com"
-export AGENTAUTH_CLIENT_ID="your-client-id"
-export AGENTAUTH_CLIENT_SECRET="your-client-secret"
+export AGENTWRIT_BROKER_URL="https://broker.yourcompany.com"
+export AGENTWRIT_CLIENT_ID="your-client-id"
+export AGENTWRIT_CLIENT_SECRET="your-client-secret"
 ```
 
 ---
@@ -49,12 +49,12 @@ export AGENTAUTH_CLIENT_SECRET="your-client-secret"
 
 ```python
 import os
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 ```
 
@@ -84,7 +84,7 @@ The SDK just did a lot of work behind the scenes:
 You get back an `Agent` object with:
 
 ```python
-print(agent.agent_id)    # spiffe://agentauth.local/agent/my-service/read-customer-data/a1b2c3d4
+print(agent.agent_id)    # spiffe://agentwrit.local/agent/my-service/read-customer-data/a1b2c3d4
 print(agent.scope)       # ['read:data:customers']
 print(agent.access_token) # eyJhbGciOiJFZERTQS... (JWT)
 print(agent.expires_in)  # 300 (seconds)
@@ -113,7 +113,7 @@ print(resp.json())
 Before trusting a token, ask the broker if it's still valid:
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 result = validate(broker_url, agent.access_token)
 
@@ -125,7 +125,7 @@ else:
     print(f"Invalid: {result.error}")
 ```
 
-`validate()` is a module-level function — any service can call it without having an `AgentAuthApp`. It just needs the broker URL and the token.
+`validate()` is a module-level function — any service can call it without having an `AgentWritApp`. It just needs the broker URL and the token.
 
 ---
 
@@ -147,7 +147,7 @@ Calling `release()` twice is safe. The second call is a no-op.
 
 ```
 Your App
-  └─ AgentAuthApp (authenticated with broker)
+  └─ AgentWritApp (authenticated with broker)
        └─ Agent (SPIFFE identity + scoped JWT)
             ├─ Used as Bearer credential
             ├─ Validated by broker
@@ -162,6 +162,6 @@ The agent had exactly the scope it needed (`read:data:customers`), a unique cryp
 
 | Guide | What You'll Learn |
 |-------|-------------------|
-| [Concepts](concepts.md) | Why AgentAuth exists, the trust model, and how scopes work |
+| [Concepts](concepts.md) | Why AgentWrit exists, the trust model, and how scopes work |
 | [Developer Guide](developer-guide.md) | Delegation, scope gating, error handling, and real patterns |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |

@@ -17,14 +17,14 @@ print("║  authentication transparently on the first create_agent() call.  ║"
 print("╚══════════════════════════════════════════════════════════════════╝")
 print()
 
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 
-broker_url = os.environ["AGENTAUTH_BROKER_URL"]
-client_id = os.environ["AGENTAUTH_CLIENT_ID"]
-client_secret = os.environ["AGENTAUTH_CLIENT_SECRET"]
+broker_url = os.environ["AGENTWRIT_BROKER_URL"]
+client_id = os.environ["AGENTWRIT_CLIENT_ID"]
+client_secret = os.environ["AGENTWRIT_CLIENT_SECRET"]
 
 print("Step 1: App starts up")
-app = AgentAuthApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
+app = AgentWritApp(broker_url=broker_url, client_id=client_id, client_secret=client_secret)
 print("  App initialized (no broker call yet)")
 print()
 

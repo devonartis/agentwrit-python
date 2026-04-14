@@ -1,4 +1,4 @@
-"""Unit tests for agentauth.crypto — Ed25519 helpers.
+"""Unit tests for agentwrit.crypto — Ed25519 helpers.
 
 Tests the four public functions defined in spec Section 6.6:
 - generate_keypair() → Ed25519PrivateKey
@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
-from agentauth.crypto import (
+from agentwrit.crypto import (
     encode_signature_b64,
     export_public_key_b64,
     generate_keypair,

@@ -1,4 +1,4 @@
-"""Internal HTTP transport for the AgentAuth SDK.
+"""Internal HTTP transport for the AgentWrit SDK.
 
 Wraps httpx.Client and translates broker HTTP responses into the SDK's
 typed exception hierarchy. Parses RFC 7807 application/problem+json
@@ -19,18 +19,18 @@ from __future__ import annotations
 
 import httpx
 
-from agentauth.errors import (
+from agentwrit.errors import (
     AuthenticationError,
     AuthorizationError,
     ProblemResponseError,
     RateLimitError,
     TransportError,
 )
-from agentauth.models import ProblemDetail
+from agentwrit.models import ProblemDetail
 
 
-class AgentAuthTransport:
-    """Internal HTTP transport handler for the AgentAuth SDK.
+class AgentWritTransport:
+    """Internal HTTP transport handler for the AgentWrit SDK.
 
     Manages the httpx.Client and translates broker RFC 7807 error
     responses into the SDK's typed exception hierarchy.
@@ -45,7 +45,7 @@ class AgentAuthTransport:
         self.broker_url = broker_url.rstrip("/")
         self._client = httpx.Client(
             timeout=timeout,
-            headers={"User-Agent": user_agent or "agentauth-python/0.3.0"},
+            headers={"User-Agent": user_agent or "agentwrit-python/0.3.0"},
         )
 
     def _parse_problem(self, response: httpx.Response) -> ProblemDetail:

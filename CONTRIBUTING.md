@@ -1,4 +1,4 @@
-# Contributing to AgentAuth Python
+# Contributing to AgentWrit Python
 
 Thank you for helping improve this SDK. This document describes how we work and what we need to review a pull request with confidence.
 
@@ -8,7 +8,7 @@ This project is released under the [MIT License](LICENSE). By contributing, you 
 
 ## What belongs in this repository
 
-This repo is the **open-source Python SDK** for the AgentAuth broker: challenge-response registration, scoped agents, delegation, validation, and related helpers.
+This repo is the **open-source Python SDK** for the AgentWrit broker: challenge-response registration, scoped agents, delegation, validation, and related helpers.
 
 **Do not add** HITL flows, OIDC or cloud identity federation, or enterprise-only sidecar integrations. Those belong in separate products or extensions.
 
@@ -23,15 +23,15 @@ This repo is the **open-source Python SDK** for the AgentAuth broker: challenge-
 
   (`--all-extras` pulls in `dev` optional dependencies used by tests and tooling.)
 
-- For HTTP behavior, treat [`broker/docs/api.md`](broker/docs/api.md) as the integration contract (vendored API description in this repo).
+- For HTTP behavior, treat [https://github.com/devonartis/agentwrit/blob/main/docs/api.md](https://github.com/devonartis/agentwrit/blob/main/docs/api.md) as the integration contract.
 
-## You need a running AgentAuth broker
+## You need a running AgentWrit broker
 
 Maintainers will not merge broker-facing changes on faith. You must exercise the SDK against a **live** broker.
 
 **Do not assume** a copy of the broker exists inside your clone of this repository. If you have a local checkout that includes a `broker/` tree, that is optional tooling; **contributors should obtain the server from the broker project** or use a deployment they already run.
 
-1. **Run the broker from source** — Clone [github.com/devonartis/agentauth](https://github.com/devonartis/agentauth) and follow that repository’s instructions to build and run the stack (Docker or otherwise).
+1. **Run the broker from source** — Clone [github.com/devonartis/agentwrit](https://github.com/devonartis/agentwrit) and follow that repository's instructions to build and run the stack (Docker or otherwise).
 
 2. **Or use an existing broker** you control — Point tests and demos at its base URL and register an application with a scope ceiling appropriate for the tests you run.
 
@@ -40,10 +40,10 @@ Maintainers will not merge broker-facing changes on faith. You must exercise the
 4. **Export credentials** (example — adjust host and secrets):
 
    ```bash
-   export AGENTAUTH_BROKER_URL=http://127.0.0.1:8080
-   export AGENTAUTH_ADMIN_SECRET=<admin-secret>
-   export AGENTAUTH_CLIENT_ID=<client_id>
-   export AGENTAUTH_CLIENT_SECRET=<client_secret>
+   export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
+   export AGENTWRIT_ADMIN_SECRET=<admin-secret>
+   export AGENTWRIT_CLIENT_ID=<client_id>
+   export AGENTWRIT_CLIENT_SECRET=<client_secret>
    ```
 
 ## Checks to run before opening a PR
@@ -82,4 +82,4 @@ Demo work under [`demo/`](demo/) should follow the same rule: run against a real
 
 ## Security issues
 
-Please report security-sensitive problems through [GitHub Security Advisories](https://github.com/devonartis/agentauth-python/security/advisories) for this repository (or the maintainer’s preferred private channel if one is published elsewhere). Do not file exploitable details in public issues before they are addressed.
+Please report security-sensitive problems through [GitHub Security Advisories](https://github.com/devonartis/agentauth-python/security/advisories) for this repository (or the maintainer's preferred private channel if one is published elsewhere). Do not file exploitable details in public issues before they are addressed.

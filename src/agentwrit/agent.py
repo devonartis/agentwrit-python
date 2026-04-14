@@ -1,4 +1,4 @@
-"""Agent — an ephemeral per-task principal created by AgentAuthApp.
+"""Agent — an ephemeral per-task principal created by AgentWritApp.
 
 Maps to the broker's agent identity model: each Agent holds a SPIFFE ID
 (from POST /v1/register), a JWT access token, and lifecycle methods that
@@ -19,23 +19,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agentauth.errors import AgentAuthError
-from agentauth.models import DelegatedToken, DelegationRecord
+from agentwrit.errors import AgentWritError
+from agentwrit.models import DelegatedToken, DelegationRecord
 
 if TYPE_CHECKING:
-    from agentauth.app import AgentAuthApp
+    from agentwrit.app import AgentWritApp
 
 
 class Agent:
-    """An ephemeral agent registered under an AgentAuthApp.
+    """An ephemeral agent registered under an AgentWritApp.
 
-    Created by AgentAuthApp.create_agent(). Holds the agent JWT and
+    Created by AgentWritApp.create_agent(). Holds the agent JWT and
     a back-reference to its parent app for transport reuse.
     """
 
     def __init__(
         self,
-        app: AgentAuthApp,
+        app: AgentWritApp,
         agent_id: str,
         access_token: str,
         expires_in: int,
@@ -65,7 +65,7 @@ class Agent:
         expires_in on this Agent instance. The agent_id does not change.
         """
         if self._released:
-            raise AgentAuthError("agent has been released and cannot be renewed")
+            raise AgentWritError("agent has been released and cannot be renewed")
 
         response = self._app._transport.request(
             "POST",
@@ -108,7 +108,7 @@ class Agent:
         Max delegation depth: 5.
         """
         if self._released:
-            raise AgentAuthError("agent has been released and cannot delegate")
+            raise AgentWritError("agent has been released and cannot delegate")
 
         payload: dict[str, object] = {
             "delegate_to": delegate_to,

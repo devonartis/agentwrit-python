@@ -1,4 +1,4 @@
-# AgentAuth Python SDK
+# AgentWrit Python SDK
 
 ## Rules
 
@@ -38,5 +38,5 @@ uv run pytest tests/unit/              # unit tests
 - **Read `~/proj/devflow/agentwrit-python/MEMORY.md` first** every session — it has current state and lessons.
 - **Read `~/proj/devflow/agentwrit-python/FLOW.md`** for decision history and what's next.
 - **Use `devflow-client`** skill for all development work.
-- **API source of truth:** `broker/docs/api.md` — always verify SDK calls against it.
-- **Live broker for verification:** Stand up broker via `./broker/scripts/stack_up.sh` (pulls `devonartis/agentwrit` from Docker Hub).
+- **API source of truth:** [https://github.com/devonartis/agentwrit/blob/main/docs/api.md](https://github.com/devonartis/agentwrit/blob/main/docs/api.md) — always verify SDK calls against it.
+- **Live broker for verification:** Stand up broker via `docker compose up -d` (pulls `devonartis/agentwrit` from Docker Hub).

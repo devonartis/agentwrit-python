@@ -1,15 +1,15 @@
-"""Acceptance tests for AgentAuth SDK v0.3.0 — Stories 1-9.
+"""Acceptance tests for AgentWrit SDK v0.3.0 — Stories 1-9.
 
 These tests verify the SDK against a live broker. Each story exercises
 one distinct SDK behavior with no overlap.
 
 All tests use the session-scoped `client` fixture (one authenticated
-AgentAuthApp) to avoid rate limiting.
+AgentWritApp) to avoid rate limiting.
 
 Usage:
-    export AGENTAUTH_BROKER_URL=http://127.0.0.1:8080
-    export AGENTAUTH_CLIENT_ID=<id>
-    export AGENTAUTH_CLIENT_SECRET=<secret>
+    export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
+    export AGENTWRIT_CLIENT_ID=<id>
+    export AGENTWRIT_CLIENT_SECRET=<secret>
     uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
 """
 from __future__ import annotations
@@ -22,8 +22,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agentauth import AgentAuthApp, scope_is_subset, validate
-from agentauth.errors import AgentAuthError, AuthorizationError
+from agentwrit import AgentWritApp, scope_is_subset, validate
+from agentwrit.errors import AgentWritError, AuthorizationError
 
 pytestmark = pytest.mark.integration
 
@@ -33,7 +33,7 @@ EVIDENCE_DIR = Path(__file__).parent.parent / "sdk-core" / "evidence"
 @pytest.fixture(scope="session", autouse=True)
 def check_broker_running() -> None:
     """Verify broker is running before any test executes."""
-    broker_url = os.environ.get("AGENTAUTH_BROKER_URL", "http://127.0.0.1:8080")
+    broker_url = os.environ.get("AGENTWRIT_BROKER_URL", "http://127.0.0.1:8080")
     try:
         resp = httpx.get(f"{broker_url}/v1/health", timeout=5)
         if resp.status_code != 200:
@@ -70,7 +70,7 @@ def print_banner(lines: list[str]) -> None:
 class TestStory1:
     """STORY 1: App creates an agent with specific scope."""
 
-    def test_create_agent(self, client: AgentAuthApp) -> None:
+    def test_create_agent(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,
@@ -132,7 +132,7 @@ class TestStory2:
     """STORY 2: Agent renews its token mid-task."""
 
     def test_renew_token(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -206,7 +206,7 @@ class TestStory3:
     """STORY 3: Agent releases its token after task completes."""
 
     def test_release_token(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -269,7 +269,7 @@ class TestStory4:
     """STORY 4: App validates a live agent token."""
 
     def test_validate_live_token(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -358,7 +358,7 @@ class TestStory5:
     """STORY 5: Agent delegates narrow scope to another agent."""
 
     def test_delegate_narrow_scope(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -450,7 +450,7 @@ class TestStory5:
 class TestStory6:
     """STORY 6: Agent tries to delegate scope it doesn't have."""
 
-    def test_delegate_scope_not_held(self, client: AgentAuthApp) -> None:
+    def test_delegate_scope_not_held(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,
@@ -528,7 +528,7 @@ class TestStory7:
     """
 
     def test_delegation_chain(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -693,7 +693,7 @@ class TestStory8:
     """
 
     def test_delegate_all_scope(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -800,7 +800,7 @@ class TestStory8:
 class TestStory9:
     """STORY 9: Agent attempts action outside its granted scope."""
 
-    def test_scope_gating(self, client: AgentAuthApp) -> None:
+    def test_scope_gating(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,
@@ -888,7 +888,7 @@ class TestStory10:
     """
 
     def test_token_natural_expiry(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -965,7 +965,7 @@ class TestStory11:
     title, status, detail, and error_code to debug what went wrong.
     """
 
-    def test_rfc7807_error_structure(self, client: AgentAuthApp) -> None:
+    def test_rfc7807_error_structure(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,
@@ -1084,7 +1084,7 @@ class TestStory12:
     """
 
     def test_multiple_agents_isolated(
-        self, client: AgentAuthApp, broker_url: str
+        self, client: AgentWritApp, broker_url: str
     ) -> None:
         banner = [
             "",
@@ -1184,11 +1184,11 @@ class TestStory13:
 
     Developer bug: agent finished its task and was released, but
     another part of the code tries to renew it. The SDK must catch
-    this locally and raise AgentAuthError — not send a dead token
+    this locally and raise AgentWritError — not send a dead token
     to the broker.
     """
 
-    def test_renew_released_agent(self, client: AgentAuthApp) -> None:
+    def test_renew_released_agent(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,
@@ -1197,7 +1197,7 @@ class TestStory13:
             "WHO:      Developer code that tries to renew a dead agent",
             "WHAT:     Agent was released, then renew() is called",
             "WHY:      SDK must fail fast with a clear error, not hit broker",
-            "EXPECTED: AgentAuthError raised with message about release",
+            "EXPECTED: AgentWritError raised with message about release",
             "=" * 65,
         ]
         print_banner(banner)
@@ -1224,7 +1224,7 @@ class TestStory13:
             agent.renew()
             output.append("  FAIL: renew() succeeded on released agent")
             passed = False
-        except AgentAuthError as e:
+        except AgentWritError as e:
             output.append(f"  Caught: {type(e).__name__}")
             output.append(f"  Message: {e}")
             output.append("")
@@ -1244,7 +1244,7 @@ class TestStory13:
             )
             output.append("  FAIL: delegate() succeeded on released agent")
             passed = False
-        except AgentAuthError as e:
+        except AgentWritError as e:
             output.append(f"  Caught: {type(e).__name__}")
             output.append(f"  Message: {e}")
             output.append("")
@@ -1338,7 +1338,7 @@ class TestStory15:
     uptime, and database connectivity.
     """
 
-    def test_health_check(self, client: AgentAuthApp) -> None:
+    def test_health_check(self, client: AgentWritApp) -> None:
         banner = [
             "",
             "=" * 65,

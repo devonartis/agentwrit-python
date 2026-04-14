@@ -1,7 +1,7 @@
-"""Unit tests for agentauth.scope.validate — module-level token validation.
+"""Unit tests for agentwrit.scope.validate — module-level token validation.
 
 Tests the standalone validate(broker_url, token) function that any
-resource server can use without constructing an AgentAuthApp.
+resource server can use without constructing an AgentWritApp.
 
 Spec: Section 6.4, ADR SDK-007 (module-level functions)
 """
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pytest_httpx import HTTPXMock
 
-from agentauth.models import ValidateResult
-from agentauth.scope import validate
+from agentwrit.models import ValidateResult
+from agentwrit.scope import validate
 
 
 class TestValidateValid:
@@ -20,9 +20,9 @@ class TestValidateValid:
             json={
                 "valid": True,
                 "claims": {
-                    "iss": "agentauth",
-                    "sub": "spiffe://agentauth.local/agent/o/t/i",
-                    "aud": ["agentauth"],
+                    "iss": "agentwrit",
+                    "sub": "spiffe://agentwrit.local/agent/o/t/i",
+                    "aud": ["agentwrit"],
                     "exp": 9999999999,
                     "nbf": 1000000000,
                     "iat": 1000000000,
@@ -37,7 +37,7 @@ class TestValidateValid:
         assert isinstance(result, ValidateResult)
         assert result.valid is True
         assert result.claims is not None
-        assert result.claims.iss == "agentauth"
+        assert result.claims.iss == "agentwrit"
         assert result.claims.scope == ["read:data:*"]
         assert result.claims.task_id == "t"
         assert result.claims.orch_id == "o"
@@ -48,7 +48,7 @@ class TestValidateValid:
             json={
                 "valid": True,
                 "claims": {
-                    "iss": "agentauth",
+                    "iss": "agentwrit",
                     "sub": "spiffe://x",
                     "aud": [],
                     "exp": 0,
@@ -60,7 +60,7 @@ class TestValidateValid:
                     "orch_id": "o",
                     "delegation_chain": [
                         {
-                            "agent": "spiffe://agentauth.local/agent/o/t/abc",
+                            "agent": "spiffe://agentwrit.local/agent/o/t/abc",
                             "scope": ["read:data:*"],
                             "delegated_at": "2026-04-07T00:00:00Z",
                         }
@@ -81,7 +81,7 @@ class TestValidateValid:
             json={
                 "valid": True,
                 "claims": {
-                    "iss": "agentauth",
+                    "iss": "agentwrit",
                     "sub": "spiffe://x",
                     "aud": [],
                     "exp": 0,
@@ -156,8 +156,8 @@ class TestValidateBrokerRealShape:
             json={
                 "valid": True,
                 "claims": {
-                    "iss": "agentauth",
-                    "sub": "spiffe://agentauth.local/agent/o/t/abc",
+                    "iss": "agentwrit",
+                    "sub": "spiffe://agentwrit.local/agent/o/t/abc",
                     "exp": 9999999999,
                     "nbf": 1000000000,
                     "iat": 1000000000,

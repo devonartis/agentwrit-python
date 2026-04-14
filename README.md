@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/assets/agentauth-logo.png" alt="AgentAuth" width="300">
+  <img src="docs/assets/agentwrit-logo.png" alt="AgentWrit" width="300">
 </p>
 
-<h1 align="center">AgentAuth Python SDK</h1>
+<h1 align="center">AgentWrit Python SDK</h1>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
@@ -17,42 +17,42 @@
 
 ---
 
-## Why AgentAuth?
+## Why AgentWrit?
 
-AI agents need credentials to access databases, APIs, and file systems. Most teams give agents shared API keys or inherit user permissions — both create over-privileged, long-lived, unauditable access. AgentAuth takes a different approach:
+AI agents need credentials to access databases, APIs, and file systems. Most teams give agents shared API keys or inherit user permissions — both create over-privileged, long-lived, unauditable access. AgentWrit takes a different approach:
 
 - **Ephemeral identities** — every agent gets a unique Ed25519 keypair, generated in memory and never persisted to disk
 - **Task-scoped tokens** — credentials are limited to exactly what the agent needs (`read:data:customers`, not `read:*:*`)
 - **Short-lived by default** — tokens expire in minutes, not hours or days
 - **Delegation chains** — agents can delegate narrower permissions to other agents, enforced at every hop
 
-This SDK is the Python client for the [AgentAuth broker](https://github.com/devonartis/agentauth). The broker is the credential authority; this SDK makes it easy to integrate from Python.
+This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit). The broker is the credential authority; this SDK makes it easy to integrate from Python.
 
 ## Installation
 
 ```bash
-uv add agentauth
+uv add agentwrit
 ```
 
 Or with pip:
 
 ```bash
-pip install agentauth
+pip install agentwrit
 ```
 
-**Requirements:** Python 3.10+ and a running [AgentAuth broker](https://github.com/devonartis/agentauth) instance.
+**Requirements:** Python 3.10+ and a running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance.
 
 ## Quick Start
 
 ```python
 import os
-from agentauth import AgentAuthApp, validate
+from agentwrit import AgentWritApp, validate
 
 # Connect to the broker (lazy — no auth until first create_agent)
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 # Create an agent with specific scope
@@ -84,7 +84,7 @@ agent.release()
 agent = app.create_agent(orch_id="svc", task_id="task", requested_scope=["read:data:x"])
 
 # Use — agent.access_token is a standard Bearer JWT
-print(agent.agent_id)      # spiffe://agentauth.local/agent/svc/task/a1b2c3d4
+print(agent.agent_id)      # spiffe://agentwrit.local/agent/svc/task/a1b2c3d4
 print(agent.scope)         # ['read:data:x']
 print(agent.expires_in)    # 300 (seconds)
 
@@ -100,7 +100,7 @@ agent.release()
 
 ## MedAssist AI Demo
 
-The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive healthcare demo that showcases every AgentAuth capability against a live broker.
+The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive healthcare demo that showcases every AgentWrit capability against a live broker.
 
 **What it does:** A FastAPI web app where you enter a patient ID and a plain-language request. A local LLM (OpenAI-compatible) chooses which tools to call. The app dynamically creates broker agents with only the scopes those tools need, for that specific patient. You see scope enforcement, cross-patient denial, delegation, token renewal, and release — all in a real-time execution trace.
 
@@ -118,11 +118,11 @@ The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive heal
 ### Running the demo
 
 ```bash
-# 1. Start the AgentAuth broker
-cd broker && ./scripts/stack_up.sh && cd ..
+# 1. Start the AgentWrit broker
+docker compose up -d
 
 # 2. Register the demo app with the broker (one-time setup)
-export AGENTAUTH_ADMIN_SECRET="your-admin-secret"
+export AGENTWRIT_ADMIN_SECRET="your-admin-secret"
 uv run python demo/setup.py
 # → Prints client_id and client_secret
 
@@ -150,7 +150,7 @@ read:data:*                  — wildcard: read ANY data resource
 Wildcard `*` only works in the identifier (third) position. Action and resource must match exactly.
 
 ```python
-from agentauth import scope_is_subset
+from agentwrit import scope_is_subset
 
 scope_is_subset(["read:data:customers"], ["read:data:*"])     # True
 scope_is_subset(["write:data:customers"], ["read:data:*"])    # False (write != read)
@@ -182,7 +182,7 @@ print(result.claims.scope)  # ['read:data:partition-7']
 ## Error Handling
 
 ```python
-from agentauth.errors import AuthorizationError, TransportError
+from agentwrit.errors import AuthorizationError, TransportError
 
 try:
     agent = app.create_agent(orch_id="svc", task_id="t", requested_scope=scope)
@@ -200,10 +200,10 @@ except TransportError:
 graph TB
     subgraph App["Your Application"]
         direction TB
-        Client["AgentAuthApp"]
+        Client["AgentWritApp"]
     end
 
-    subgraph Broker["AgentAuth Broker"]
+    subgraph Broker["AgentWrit Broker"]
         direction LR
         AuthGroup["App Auth<br/>/v1/app/auth<br/>/v1/app/launch-tokens"]
         CredGroup["Credentials<br/>/v1/challenge<br/>/v1/register"]
@@ -229,7 +229,7 @@ graph TB
 Operator (root of trust)
   │  registers app, sets scope ceiling
   ▼
-Application (your code — AgentAuthApp)
+Application (your code — AgentWritApp)
   │  creates agents within ceiling
   ▼
 Agent (ephemeral SPIFFE identity + scoped JWT)
@@ -248,7 +248,7 @@ Delegated Agent (sub-agent, max 5 hops)
 | [API Reference](docs/api-reference.md) | Every class, method, parameter, and exception |
 | [Testing Guide](docs/testing-guide.md) | Unit tests, integration tests, running the test suite |
 
-For broker setup and administration, see the [AgentAuth broker documentation](https://github.com/devonartis/agentauth/tree/main/docs).
+For broker setup and administration, see the [AgentWrit broker documentation](https://github.com/devonartis/agentwrit/tree/main/docs).
 
 ## Standards Alignment
 
@@ -262,7 +262,7 @@ For broker setup and administration, see the [AgentAuth broker documentation](ht
 
 ## Contributing
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentauth](https://github.com/devonartis/agentauth) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentwrit](https://github.com/devonartis/agentwrit) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
 
 Quick local checks (no broker required for unit tests):
 
@@ -280,4 +280,4 @@ uv run pytest tests/unit/
 
 This SDK is licensed under the [MIT License](LICENSE).
 
-The [AgentAuth broker](https://github.com/devonartis/agentauth) is licensed separately under AGPL-3.0. See the broker repo for details.
+The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under AGPL-3.0. See the broker repo for details.

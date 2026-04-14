@@ -1,6 +1,6 @@
 # Concepts
 
-This document explains how AgentAuth works and what you need to understand before writing application code. Read this first — it will save you hours of debugging.
+This document explains how AgentWrit works and what you need to understand before writing application code. Read this first — it will save you hours of debugging.
 
 ---
 
@@ -23,7 +23,7 @@ These approaches share three failures:
 
 ## The Three Roles
 
-AgentAuth has three distinct roles. Understanding them is critical because the SDK operates as one of them.
+AgentWrit has three distinct roles. Understanding them is critical because the SDK operates as one of them.
 
 ### Operator
 
@@ -43,16 +43,16 @@ Your software that uses the SDK. The application:
 - Cannot exceed the ceiling the operator set
 - Cannot revoke other apps' agents or read the audit trail
 
-When you create an `AgentAuthApp`, you are acting as the Application role:
+When you create an `AgentWritApp`, you are acting as the Application role:
 
 ```python
-app = AgentAuthApp(broker_url, client_id, client_secret)
+app = AgentWritApp(broker_url, client_id, client_secret)
 ```
 
 ### Agent
 
 An ephemeral identity created by your application for a specific task. The agent:
-- Has a unique SPIFFE identity (e.g., `spiffe://agentauth.local/agent/my-service/task-001/a1b2c3d4`)
+- Has a unique SPIFFE identity (e.g., `spiffe://agentwrit.local/agent/my-service/task-001/a1b2c3d4`)
 - Holds a short-lived JWT with specific scope
 - Can renew its token, release it, or delegate to other agents
 - Cannot create other agents — only the app can do that
@@ -136,7 +136,7 @@ This is critical to understand. The broker enforces exact match on action and re
 The SDK provides `scope_is_subset()` to check if a requested scope is covered by an allowed scope:
 
 ```python
-from agentauth import scope_is_subset
+from agentwrit import scope_is_subset
 
 # Exact match — works
 scope_is_subset(["read:data:customers"], ["read:data:customers"])  # True
@@ -210,7 +210,7 @@ The pattern: **the request determines the scope, the scope determines the agent'
 **Simple case — one scope, one agent:**
 
 ```python
-from agentauth import scope_is_subset
+from agentwrit import scope_is_subset
 
 # The customer ID comes from the request — never hardcoded
 customer_id = request.customer_id  # e.g. "customer-7291"
@@ -321,8 +321,8 @@ agent.release()
 
 After release:
 - The broker rejects the token on all future requests
-- `renew()` raises `AgentAuthError`
-- `delegate()` raises `AgentAuthError`
+- `renew()` raises `AgentWritError`
+- `delegate()` raises `AgentWritError`
 - Calling `release()` again is safe (no-op)
 
 ### Expired
@@ -411,12 +411,12 @@ This is a known SDK limitation. Single-hop delegation works through the SDK. Mul
 Any service can validate a token by asking the broker:
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 result = validate(broker_url, agent.access_token)
 ```
 
-`validate()` is a module-level function. It doesn't need an `AgentAuthApp` — just the broker URL and the token. This is how downstream services verify agent tokens.
+`validate()` is a module-level function. It doesn't need an `AgentWritApp` — just the broker URL and the token. This is how downstream services verify agent tokens.
 
 The broker returns `valid=True` with claims, or `valid=False` with an error message. The broker intentionally returns the same generic error ("token is invalid or expired") for all failure cases — expired, revoked, malformed, or unknown — to prevent information leakage.
 
@@ -429,7 +429,7 @@ When the broker rejects a request, it returns an RFC 7807 Problem Detail. The SD
 ### Exception Hierarchy
 
 ```
-AgentAuthError (base — catch this to handle any SDK error)
+AgentWritError (base — catch this to handle any SDK error)
 ├── ProblemResponseError (broker returned an error response)
 │   ├── AuthenticationError (401 — bad credentials)
 │   ├── AuthorizationError (403 — scope violation, delegation rejected)
@@ -443,13 +443,13 @@ AgentAuthError (base — catch this to handle any SDK error)
 When you catch a `ProblemResponseError` (or any subclass), you get structured error info:
 
 ```python
-from agentauth.errors import AuthorizationError
+from agentwrit.errors import AuthorizationError
 
 try:
     agent_a.delegate(delegate_to=agent_b.agent_id, scope=["read:data:something-else"])
 except AuthorizationError as e:
     print(e.status_code)          # 403
-    print(e.problem.type)         # urn:agentauth:error:scope_violation
+    print(e.problem.type)         # urn:agentwrit:error:scope_violation
     print(e.problem.title)        # Forbidden
     print(e.problem.detail)       # delegated scope exceeds delegator scope
     print(e.problem.error_code)   # scope_violation
@@ -466,12 +466,12 @@ Every field is available for logging, alerting, or debugging. The `request_id` m
 Every agent gets a unique SPIFFE identity:
 
 ```
-spiffe://agentauth.local/agent/{orch_id}/{task_id}/{instance_id}
+spiffe://agentwrit.local/agent/{orch_id}/{task_id}/{instance_id}
 ```
 
 For example:
 ```
-spiffe://agentauth.local/agent/data-pipeline/manager/8ece9e2d8a22fdb8
+spiffe://agentwrit.local/agent/data-pipeline/manager/8ece9e2d8a22fdb8
 ```
 
 This identity is:

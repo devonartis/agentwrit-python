@@ -1,8 +1,8 @@
 # Sample Apps: Mini-Max
 
-> **Purpose:** Teach the AgentAuth Python SDK through 10 real apps that solve actual problems.
+> **Purpose:** Teach the AgentWrit Python SDK through 10 real apps that solve actual problems.
 > Each app is a working service or script. They teach by building, not by repeating concepts.
-> **Audience:** Developers integrating AgentAuth into AI agent applications.
+> **Audience:** Developers integrating AgentWrit into AI agent applications.
 > **Prerequisites:** Python 3.10+, a running broker, app credentials from your operator.
 
 ---
@@ -35,9 +35,9 @@ Each app needs the broker configured with a **scope ceiling** that covers the sc
 ## Setup (once)
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://localhost:8080"
-export AGENTAUTH_CLIENT_ID="your-client-id"
-export AGENTAUTH_CLIENT_SECRET="your-client-secret"
+export AGENTWRIT_BROKER_URL="http://localhost:8080"
+export AGENTWRIT_CLIENT_ID="your-client-id"
+export AGENTWRIT_CLIENT_SECRET="your-client-secret"
 ```
 
 ---
@@ -65,12 +65,12 @@ Simulates:
   - Agent requests /files/audit-log   → denied  (scope: read:files:report-q3 only)
 """
 import os
-from agentauth import AgentAuthApp, validate, scope_is_subset
+from agentwrit import AgentWritApp, validate, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 # Create a file-reading agent
@@ -93,7 +93,7 @@ for method, path in requests:
     required_scope = [f"read:files:{file_id}"]
 
     # Gate 1: validate token at the broker
-    result = validate(os.environ["AGENTAUTH_BROKER_URL"], agent.access_token)
+    result = validate(os.environ["AGENTWRIT_BROKER_URL"], agent.access_token)
     if not result.valid:
         print(f"{method} {path} → 401 TOKEN_INVALID")
         continue
@@ -111,7 +111,7 @@ agent.release()
 - Resource servers (APIs, file stores, databases) receive Bearer tokens
 - They call `validate()` to confirm the token is live
 - They call `scope_is_subset()` to confirm the token covers the requested resource
-- This is how you retrofit AgentAuth onto any existing service
+- This is how you retrofit AgentWrit onto any existing service
 
 ---
 
@@ -130,17 +130,17 @@ agent.release()
 API gateway that proxies requests to a downstream customer API.
 Only agents with matching scope can pass through.
 
-This pattern wraps any existing REST API with AgentAuth security.
+This pattern wraps any existing REST API with AgentWrit security.
 The downstream API never sees untrusted tokens — this gateway enforces scope.
 """
 import os
 import httpx
-from agentauth import AgentAuthApp, validate, scope_is_subset
+from agentwrit import AgentWritApp, validate, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 DOWNSTREAM = "http://api.internal/v1"
@@ -148,7 +148,7 @@ DOWNSTREAM = "http://api.internal/v1"
 def proxy_request(token: str, method: str, url: str, downstream_url: str) -> dict:
     """Validate token, check scope, then proxy to downstream."""
     # 1. Validate at broker
-    result = validate(os.environ["AGENTAUTH_BROKER_URL"], token)
+    result = validate(os.environ["AGENTWRIT_BROKER_URL"], token)
     if not result.valid:
         return {"status": 401, "body": "token invalid"}
 
@@ -192,7 +192,7 @@ agent.release()
 - Agents hold tokens scoped to specific resources
 - Your gateway sits in front of real infrastructure
 - Before any request reaches downstream, the gateway validates and scopes
-- This is how you add AgentAuth to an existing microservices architecture without changing downstream services
+- This is how you add AgentWrit to an existing microservices architecture without changing downstream services
 
 ---
 
@@ -214,12 +214,12 @@ The LLM picks tools; this executor checks scope before running them.
 The LLM can ask for anything — this decides what's actually allowed.
 """
 import os
-from agentauth import AgentAuthApp, scope_is_subset
+from agentwrit import AgentWritApp, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 TOOLS = {
@@ -308,12 +308,12 @@ Stage 3: write results
 Each stage gets only the scope it needs. If any stage fails, all agents are released.
 """
 import os
-from agentauth import AgentAuthApp, scope_is_subset
+from agentwrit import AgentWritApp, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 
@@ -382,7 +382,7 @@ run_pipeline("batch-102")
 
 **What it solves:** You need to read the broker's audit trail to investigate what agents did.
 
-**What you learn:** Admin auth is not part of the SDK — it uses raw HTTP or `aactl`. The SDK only handles app-level operations. This app does not use `AgentAuthApp`.
+**What you learn:** Admin auth is not part of the SDK — it uses raw HTTP or `aactl`. The SDK only handles app-level operations. This app does not use `AgentWritApp`.
 
 **Broker ceiling required:** N/A — no agent scopes, no SDK
 **What it uses:** `AACTL_ADMIN_SECRET` for admin auth. `GET /v1/audit/events` with an admin Bearer token.
@@ -398,7 +398,7 @@ Requires admin credentials (AACTL_ADMIN_SECRET). The SDK does not handle admin a
 import os
 import httpx
 
-BROKER_URL = os.environ["AGENTAUTH_BROKER_URL"]
+BROKER_URL = os.environ["AGENTWRIT_BROKER_URL"]
 ADMIN_SECRET = os.environ["AACTL_ADMIN_SECRET"]
 
 # Step 1: Authenticate as admin (raw HTTP — not part of the SDK)
@@ -477,13 +477,13 @@ import os
 import signal
 import sys
 import time
-from agentauth import AgentAuthApp, validate
-from agentauth.errors import AgentAuthError
+from agentwrit import AgentWritApp, validate
+from agentwrit.errors import AgentWritError
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 shutdown = False
@@ -503,7 +503,7 @@ def worker_loop(agent, interval: int = 60):
     """Run the worker, renewing the token every `interval` seconds."""
     iterations = 0
     while not shutdown:
-        result = validate(os.environ["AGENTAUTH_BROKER_URL"], agent.access_token)
+        result = validate(os.environ["AGENTWRIT_BROKER_URL"], agent.access_token)
         if not result.valid:
             print(f"[{iterations}] Token invalid: {result.error} — stopping")
             break
@@ -518,7 +518,7 @@ def worker_loop(agent, interval: int = 60):
                 try:
                     agent.renew()
                     print(f"[{iterations}] Token renewed, new TTL={agent.expires_in}s")
-                except AgentAuthError as e:
+                except AgentWritError as e:
                     print(f"[{iterations}] Renewal failed: {e} — stopping")
                     break
 
@@ -568,19 +568,19 @@ Each tenant gets agents scoped to their own data.
 Tenants cannot see each other's data — enforced by scope, not code.
 """
 import os
-from agentauth import AgentAuthApp, scope_is_subset
+from agentwrit import AgentWritApp, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 
 class TenantAgentFactory:
     """Creates per-tenant agents with isolated scopes."""
 
-    def __init__(self, app: AgentAuthApp):
+    def __init__(self, app: AgentWritApp):
         self.app = app
         self._cache: dict[str, object] = {}
 
@@ -669,12 +669,12 @@ In production: replace WEBHOOK_URL with your real endpoint.
 """
 import os
 import httpx
-from agentauth import AgentAuthApp, validate, scope_is_subset
+from agentwrit import AgentWritApp, validate, scope_is_subset
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 WEBHOOK_URL = "http://webhook-receiver.internal/hooks/deliver"
@@ -689,7 +689,7 @@ agent = app.create_agent(
 def dispatch_webhook(token: str, url: str, payload: dict) -> dict:
     required_scope = ["send:webhooks:order-confirmation"]
 
-    result = validate(os.environ["AGENTAUTH_BROKER_URL"], token)
+    result = validate(os.environ["AGENTWRIT_BROKER_URL"], token)
     if not result.valid:
         return {"sent": False, "reason": "token invalid"}
 
@@ -752,13 +752,13 @@ This app shows the error, its type, and why it's correct behavior.
 WARNING: This app intentionally triggers errors to demonstrate error handling.
 """
 import os
-from agentauth import AgentAuthApp
-from agentauth.errors import AuthorizationError
+from agentwrit import AgentWritApp
+from agentwrit.errors import AuthorizationError
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 
@@ -835,13 +835,13 @@ while remaining responsive to revocation commands.
 """
 import os
 import time
-from agentauth import AgentAuthApp, validate
-from agentauth.errors import AgentAuthError
+from agentwrit import AgentWritApp, validate
+from agentwrit.errors import AgentWritError
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 
@@ -863,7 +863,7 @@ def run_agent_loop(task_id: str, ttl: int = 300):
     renewal_interval = agent.expires_in * 0.8
 
     while iteration < max_iterations:
-        result = validate(os.environ["AGENTAUTH_BROKER_URL"], agent.access_token)
+        result = validate(os.environ["AGENTWRIT_BROKER_URL"], agent.access_token)
 
         if not result.valid:
             print(f"[ITER {iteration}] Token invalid: {result.error}")
@@ -879,7 +879,7 @@ def run_agent_loop(task_id: str, ttl: int = 300):
                 last_renewal = time.time()
                 renewal_interval = agent.expires_in * 0.8
                 print(f"[ITER {iteration}] renewed | new TTL={agent.expires_in}s")
-            except AgentAuthError as e:
+            except AgentWritError as e:
                 print(f"[ITER {iteration}] renew() failed: {e} — stopping")
                 return "error"
 
@@ -902,7 +902,7 @@ In a second terminal, while the loop is running, revoke the agent:
 ```bash
 export AACTL_BROKER_URL="http://localhost:8080"
 export AACTL_ADMIN_SECRET="your-admin-secret"
-aactl revoke --level agent --target "spiffe://agentauth.local/agent/monitoring-service/continuous-monitor-001/..."
+aactl revoke --level agent --target "spiffe://agentwrit.local/agent/monitoring-service/continuous-monitor-001/..."
 ```
 
 The loop will detect the dead token, print `"Token invalid: token_revoked"`, and stop.

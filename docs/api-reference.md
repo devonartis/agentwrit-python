@@ -1,13 +1,13 @@
 # API Reference
 
-Complete reference for the AgentAuth Python SDK public API.
+Complete reference for the AgentWrit Python SDK public API.
 
 ---
 
-## AgentAuthApp
+## AgentWritApp
 
 ```python
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 ```
 
 The application container. Authenticates your app with the broker and creates agents.
@@ -15,7 +15,7 @@ The application container. Authenticates your app with the broker and creates ag
 ### Constructor
 
 ```python
-AgentAuthApp(
+AgentWritApp(
     broker_url: str,
     client_id: str,
     client_secret: str,
@@ -28,7 +28,7 @@ Creates an app instance. Authentication is lazy — the SDK does not contact the
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `broker_url` | `str` | required | Base URL of the AgentAuth broker (e.g., `http://localhost:8080`) |
+| `broker_url` | `str` | required | Base URL of the AgentWrit broker (e.g., `http://localhost:8080`) |
 | `client_id` | `str` | required | Application identifier from broker registration |
 | `client_secret` | `str` | required | Application secret. Never logged, printed, or included in any SDK output. |
 | `timeout` | `float` | `30.0` | HTTP request timeout in seconds |
@@ -85,7 +85,7 @@ Checks broker health. No authentication required.
 app.validate(token: str) -> ValidateResult
 ```
 
-Shortcut for `agentauth.validate(app.broker_url, token)`.
+Shortcut for `agentwrit.validate(app.broker_url, token)`.
 
 **Returns:** `ValidateResult`
 
@@ -94,16 +94,16 @@ Shortcut for `agentauth.validate(app.broker_url, token)`.
 ## Agent
 
 ```python
-from agentauth import Agent
+from agentwrit import Agent
 ```
 
-An ephemeral agent created by `AgentAuthApp.create_agent()`. Holds the agent JWT and lifecycle methods.
+An ephemeral agent created by `AgentWritApp.create_agent()`. Holds the agent JWT and lifecycle methods.
 
 ### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `agent_id` | `str` | SPIFFE URI (e.g., `spiffe://agentauth.local/agent/orch/task/instance`) |
+| `agent_id` | `str` | SPIFFE URI (e.g., `spiffe://agentwrit.local/agent/orch/task/instance`) |
 | `access_token` | `str` | JWT string (EdDSA-signed) |
 | `expires_in` | `int` | Token TTL in seconds (snapshot from creation or last renewal) |
 | `scope` | `list[str]` | Granted scope list |
@@ -125,7 +125,7 @@ After calling `renew()`:
 - `agent.agent_id` is unchanged
 - The old token is revoked at the broker
 
-**Raises:** `AgentAuthError` if the agent has been released.
+**Raises:** `AgentWritError` if the agent has been released.
 
 ### release()
 
@@ -162,7 +162,7 @@ Creates a scope-attenuated delegation token for another registered agent.
 
 | Exception | When |
 |-----------|------|
-| `AgentAuthError` | Agent has been released |
+| `AgentWritError` | Agent has been released |
 | `AuthorizationError` | Scope exceeds delegator's scope (403) |
 
 ---
@@ -172,7 +172,7 @@ Creates a scope-attenuated delegation token for another registered agent.
 ### validate()
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 validate(
     broker_url: str,
@@ -182,7 +182,7 @@ validate(
 ) -> ValidateResult
 ```
 
-Validates a token with the broker. Any service can call this without having an `AgentAuthApp`.
+Validates a token with the broker. Any service can call this without having an `AgentWritApp`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -195,7 +195,7 @@ Validates a token with the broker. Any service can call this without having an `
 ### scope_is_subset()
 
 ```python
-from agentauth import scope_is_subset
+from agentwrit import scope_is_subset
 
 scope_is_subset(
     requested: list[str],
@@ -217,12 +217,12 @@ Rules:
 
 ## Data Classes
 
-All data classes are frozen (immutable) and importable from `agentauth` or `agentauth.models`.
+All data classes are frozen (immutable) and importable from `agentwrit` or `agentwrit.models`.
 
 ### ValidateResult
 
 ```python
-from agentauth import ValidateResult
+from agentwrit import ValidateResult
 ```
 
 | Field | Type | Description |
@@ -234,12 +234,12 @@ from agentauth import ValidateResult
 ### AgentClaims
 
 ```python
-from agentauth import AgentClaims
+from agentwrit import AgentClaims
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `iss` | `str` | Issuer (always `"agentauth"`) |
+| `iss` | `str` | Issuer (always `"agentwrit"`) |
 | `sub` | `str` | Subject — SPIFFE URI of the agent |
 | `aud` | `list[str]` | Audience (may be empty) |
 | `exp` | `int` | Expiration (Unix timestamp) |
@@ -256,7 +256,7 @@ from agentauth import AgentClaims
 ### DelegatedToken
 
 ```python
-from agentauth import DelegatedToken
+from agentwrit import DelegatedToken
 ```
 
 | Field | Type | Description |
@@ -268,7 +268,7 @@ from agentauth import DelegatedToken
 ### DelegationRecord
 
 ```python
-from agentauth import DelegationRecord
+from agentwrit import DelegationRecord
 ```
 
 | Field | Type | Description |
@@ -280,7 +280,7 @@ from agentauth import DelegationRecord
 ### HealthStatus
 
 ```python
-from agentauth import HealthStatus
+from agentwrit import HealthStatus
 ```
 
 | Field | Type | Description |
@@ -294,14 +294,14 @@ from agentauth import HealthStatus
 ### ProblemDetail
 
 ```python
-from agentauth import ProblemDetail
+from agentwrit import ProblemDetail
 ```
 
 RFC 7807 structured error from the broker.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | `str` | Error type URI (e.g., `urn:agentauth:error:scope_violation`) |
+| `type` | `str` | Error type URI (e.g., `urn:agentwrit:error:scope_violation`) |
 | `title` | `str` | Human-readable title (e.g., `"Forbidden"`) |
 | `detail` | `str` | Human-readable explanation |
 | `instance` | `str` | The API endpoint that returned the error |
@@ -313,7 +313,7 @@ RFC 7807 structured error from the broker.
 ### RegisterResult
 
 ```python
-from agentauth import RegisterResult
+from agentwrit import RegisterResult
 ```
 
 | Field | Type | Description |
@@ -326,12 +326,12 @@ from agentauth import RegisterResult
 
 ## Exceptions
 
-All exceptions are importable from `agentauth` or `agentauth.errors`.
+All exceptions are importable from `agentwrit` or `agentwrit.errors`.
 
 ### Hierarchy
 
 ```
-AgentAuthError
+AgentWritError
 ├── ProblemResponseError      (broker returned RFC 7807 error)
 │   ├── AuthenticationError   (401 — invalid credentials)
 │   ├── AuthorizationError    (403 — scope violation, delegation rejected)
@@ -371,7 +371,7 @@ Network failure — DNS resolution, connection refused, timeout.
 
 Ed25519 key generation or nonce signing failure. Client-side error.
 
-### AgentAuthError
+### AgentWritError
 
 Base exception. Catch this to handle any SDK error. Also raised directly when calling `renew()` or `delegate()` on a released agent.
 
@@ -381,7 +381,7 @@ Base exception. Catch this to handle any SDK error. Also raised directly when ca
 
 | SDK Method | HTTP | Endpoint | Auth |
 |-----------|------|----------|------|
-| `AgentAuthApp()` (lazy) | `POST` | `/v1/app/auth` | `client_id` + `client_secret` in body |
+| `AgentWritApp()` (lazy) | `POST` | `/v1/app/auth` | `client_id` + `client_secret` in body |
 | `create_agent()` | `POST` | `/v1/app/launch-tokens` | `Bearer {app_token}` |
 | `create_agent()` | `GET` | `/v1/challenge` | None |
 | `create_agent()` | `POST` | `/v1/register` | `launch_token` in body |

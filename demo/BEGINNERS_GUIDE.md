@@ -1,14 +1,14 @@
 # MedAssist AI demo — beginner’s guide
 
-This document is for **anyone new to AgentAuth** who wants to run the demo and understand **what is happening under the hood**. For a **live presentation script**, see [PRESENTERS_GUIDE.md](PRESENTERS_GUIDE.md).
+This document is for **anyone new to AgentWrit** who wants to run the demo and understand **what is happening under the hood**. For a **live presentation script**, see [PRESENTERS_GUIDE.md](PRESENTERS_GUIDE.md).
 
 ---
 
-## 1. What problem does AgentAuth solve?
+## 1. What problem does AgentWrit solve?
 
 Traditional setups often give every service (or every “agent”) the **same long-lived API key** with **broad access**. If one component is compromised, attackers can reach far more data than that component should ever see.
 
-**AgentAuth** issues **short-lived credentials** tied to:
+**AgentWrit** issues **short-lived credentials** tied to:
 
 - **Who** is acting (a SPIFFE-style agent identity),
 - **What task** they are doing,
@@ -45,7 +45,7 @@ flowchart LR
         LLM[LLM tool-calling]
         Gate[scope_is_subset + tools]
     end
-    subgraph broker [AgentAuth broker]
+    subgraph broker [AgentWrit broker]
         Reg[Register agents]
         Tok[Issue JWTs]
         Val[Validate tokens]
@@ -168,7 +168,7 @@ flowchart LR
 
 ## 9. How to run (minimal)
 
-1. **Start the broker** (from repo root): `./broker/scripts/stack_up.sh`
+1. **Start the broker** (from repo root): `docker compose up -d`
 2. **Register the app** (once): `uv run python demo/setup.py` — copy `client_id` / `client_secret` into `demo/.env`
 3. **Configure `demo/.env`**: broker URL, app credentials, admin secret for audit/revoke pages, and LLM (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`)
 4. **Run the app:** `uv run uvicorn demo.app:app --reload --port 5000`

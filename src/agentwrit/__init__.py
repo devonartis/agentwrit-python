@@ -1,6 +1,6 @@
-"""AgentAuth Python SDK — ephemeral, task-scoped credentials for AI agents.
+"""AgentWrit Python SDK — ephemeral, task-scoped credentials for AI agents.
 
-Implements the App-as-Container model: AgentAuthApp is the developer's
+Implements the App-as-Container model: AgentWritApp is the developer's
 entry point, Agent is an ephemeral per-task principal created by the app.
 All agent authority flows from the app's scope ceiling set by the operator.
 
@@ -10,10 +10,10 @@ ADRs: .plans/specs/SPEC_ADR.md (SDK-001 through SDK-012)
 
 from __future__ import annotations
 
-from agentauth.agent import Agent
-from agentauth.app import AgentAuthApp
-from agentauth.errors import (
-    AgentAuthError,
+from agentwrit.agent import Agent
+from agentwrit.app import AgentWritApp
+from agentwrit.errors import (
+    AgentWritError,
     AuthenticationError,
     AuthorizationError,
     CryptoError,
@@ -21,7 +21,7 @@ from agentauth.errors import (
     RateLimitError,
     TransportError,
 )
-from agentauth.models import (
+from agentwrit.models import (
     AgentClaims,
     DelegatedToken,
     DelegationRecord,
@@ -30,14 +30,14 @@ from agentauth.models import (
     RegisterResult,
     ValidateResult,
 )
-from agentauth.scope import scope_is_subset, validate
+from agentwrit.scope import scope_is_subset, validate
 
 __version__ = "0.3.0"
 
 __all__ = [
     "Agent",
-    "AgentAuthApp",
-    "AgentAuthError",
+    "AgentWritApp",
+    "AgentWritError",
     "AgentClaims",
     "AuthenticationError",
     "AuthorizationError",

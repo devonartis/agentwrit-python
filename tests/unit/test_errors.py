@@ -1,4 +1,4 @@
-"""Unit tests for agentauth.errors — exception hierarchy.
+"""Unit tests for agentwrit.errors — exception hierarchy.
 
 Verifies inheritance, ProblemResponseError construction with ProblemDetail,
 and that each subclass maps to the correct HTTP status code semantics.
@@ -7,8 +7,8 @@ Spec: Section 9 (Error Model)
 """
 from __future__ import annotations
 
-from agentauth.errors import (
-    AgentAuthError,
+from agentwrit.errors import (
+    AgentWritError,
     AuthenticationError,
     AuthorizationError,
     CryptoError,
@@ -16,19 +16,19 @@ from agentauth.errors import (
     RateLimitError,
     TransportError,
 )
-from agentauth.models import ProblemDetail
+from agentwrit.models import ProblemDetail
 
 # --- Hierarchy ---
 
 
 class TestExceptionHierarchy:
-    """All custom errors inherit from AgentAuthError → Exception."""
+    """All custom errors inherit from AgentWritError → Exception."""
 
     def test_base_inherits_from_exception(self):
-        assert issubclass(AgentAuthError, Exception)
+        assert issubclass(AgentWritError, Exception)
 
     def test_problem_response_inherits_from_base(self):
-        assert issubclass(ProblemResponseError, AgentAuthError)
+        assert issubclass(ProblemResponseError, AgentWritError)
 
     def test_authentication_error_inherits(self):
         assert issubclass(AuthenticationError, ProblemResponseError)
@@ -40,15 +40,15 @@ class TestExceptionHierarchy:
         assert issubclass(RateLimitError, ProblemResponseError)
 
     def test_transport_error_is_not_problem_response(self):
-        assert issubclass(TransportError, AgentAuthError)
+        assert issubclass(TransportError, AgentWritError)
         assert not issubclass(TransportError, ProblemResponseError)
 
     def test_crypto_error_is_not_problem_response(self):
-        assert issubclass(CryptoError, AgentAuthError)
+        assert issubclass(CryptoError, AgentWritError)
         assert not issubclass(CryptoError, ProblemResponseError)
 
     def test_all_catchable_via_base(self):
-        """A single except AgentAuthError catches every SDK exception."""
+        """A single except AgentWritError catches every SDK exception."""
         problem = ProblemDetail(type="t", title="T", detail="d", instance="/")
         errors = [
             ProblemResponseError(problem, 400),
@@ -59,7 +59,7 @@ class TestExceptionHierarchy:
             CryptoError("fail"),
         ]
         for err in errors:
-            assert isinstance(err, AgentAuthError)
+            assert isinstance(err, AgentWritError)
 
 
 # --- ProblemResponseError ---
@@ -68,7 +68,7 @@ class TestExceptionHierarchy:
 class TestProblemResponseError:
     def test_stores_problem_and_status(self):
         problem = ProblemDetail(
-            type="urn:agentauth:error:forbidden",
+            type="urn:agentwrit:error:forbidden",
             title="Forbidden",
             detail="scope exceeds ceiling",
             instance="/v1/app/launch-tokens",

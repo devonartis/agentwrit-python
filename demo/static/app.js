@@ -1,4 +1,4 @@
-/* MedAssist AI — Interactive AgentAuth Demo */
+/* MedAssist AI — Interactive AgentWrit Demo */
 
 function syncPatientInput() {
     const sel = document.getElementById('patient-select');

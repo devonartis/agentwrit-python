@@ -1,6 +1,6 @@
 """API routes — LLM-driven request processing with dynamic agent spawning.
 
-The LLM decides which tools to call. AgentAuth agents are spawned
+The LLM decides which tools to call. AgentWrit agents are spawned
 dynamically based on the tools the LLM selects. scope_is_subset gates
 every tool call. The full execution trace is returned to the UI.
 """
@@ -17,14 +17,14 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from openai import OpenAI
 
-from agentauth import (
+from agentwrit import (
     Agent,
-    AgentAuthApp,
+    AgentWritApp,
     DelegatedToken,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AgentAuthError, AuthorizationError
+from agentwrit.errors import AgentWritError, AuthorizationError
 from demo.config import DemoConfig
 from demo.data.patients import get_patient, list_patients
 from demo.pipeline.tools import TOOLS, execute_tool, scopes_for_tools
@@ -94,7 +94,7 @@ async def process_request(request: Request) -> JSONResponse:
     cfg = DemoConfig.from_env()
     trace: list[TraceStep] = []
     agents: dict[str, Agent] = {}  # category -> Agent
-    aa_app: AgentAuthApp | None = None
+    aa_app: AgentWritApp | None = None
 
     try:
         # ── Validate input ─────────────────────────────────────
@@ -123,7 +123,7 @@ async def process_request(request: Request) -> JSONResponse:
                                    "warning"))
 
         # ── Connect to broker ──────────────────────────────────
-        aa_app = AgentAuthApp(
+        aa_app = AgentWritApp(
             broker_url=cfg.broker_url,
             client_id=cfg.client_id,
             client_secret=cfg.client_secret,
@@ -246,7 +246,7 @@ async def process_request(request: Request) -> JSONResponse:
                                                     "task_id": val.claims.task_id,
                                                     "category": category}, "info"))
 
-                    except AgentAuthError as e:
+                    except AgentWritError as e:
                         trace.append(TraceStep("agent_error",
                                                f"Failed to create {category} agent: {e}",
                                                {"error": str(e), "category": category}, "error"))
@@ -350,7 +350,7 @@ async def process_request(request: Request) -> JSONResponse:
                                        {"valid": old_val.valid, "error": old_val.error,
                                         "context": "old_token_after_renewal"},
                                        "success" if not old_val.valid else "warning"))
-            except AgentAuthError:
+            except AgentWritError:
                 pass
 
             # Release
@@ -363,7 +363,7 @@ async def process_request(request: Request) -> JSONResponse:
                                         "spiffe_id": agent.agent_id,
                                         "task_id": agent.task_id,
                                         "category": category}, "info"))
-            except AgentAuthError as e:
+            except AgentWritError as e:
                 trace.append(TraceStep("release_error",
                                        f"Release failed: {e}",
                                        {"error": str(e), "agent_id": agent.agent_id}, "error"))

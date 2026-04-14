@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from agentauth.models import ProblemDetail
+from agentwrit.models import ProblemDetail
 
 
-class AgentAuthError(Exception):
+class AgentWritError(Exception):
     """Base exception for all SDK errors.
 
     All errors raised by the SDK inherit from this base class to allow
-    users to catch any AgentAuth-related failure.
+    users to catch any AgentWrit-related failure.
     """
 
-class ProblemResponseError(AgentAuthError):
+class ProblemResponseError(AgentWritError):
     """Broker returned an RFC 7807 error response.
 
     This error maps directly to the `application/problem+json` content type
-    used by the AgentAuth broker. It provides structured error information
+    used by the AgentWrit broker. It provides structured error information
     about why a request failed (e.g., invalid scope, expired nonce).
 
     The presence of this error indicates that the broker received the
@@ -35,7 +35,7 @@ class AuthenticationError(ProblemResponseError):
 
     Business Logic: The broker rejected the application's identity.
     This usually means the `client_id` or `client_secret` provided to
-    `AgentAuthApp` are incorrect or have been rotated by the operator.
+    `AgentWritApp` are incorrect or have been rotated by the operator.
     """
 
 class AuthorizationError(ProblemResponseError):
@@ -59,7 +59,7 @@ class RateLimitError(ProblemResponseError):
     availability for all registered applications.
     """
 
-class TransportError(AgentAuthError):
+class TransportError(AgentWritError):
     """Network, DNS, timeout, or connection failure.
 
     Business Logic: The SDK was unable to reach the broker. This is a
@@ -68,7 +68,7 @@ class TransportError(AgentAuthError):
     broker itself.
     """
 
-class CryptoError(AgentAuthError):
+class CryptoError(AgentWritError):
     """Ed25519 key generation, signing, or encoding failure.
 
     Business Logic: A failure in the cryptographic ceremony required to

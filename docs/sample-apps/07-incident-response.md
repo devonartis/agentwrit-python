@@ -61,7 +61,7 @@ import sys
 
 import httpx
 
-from agentauth import AgentAuthApp, Agent, validate
+from agentwrit import AgentWritApp, Agent, validate
 
 
 def admin_auth(broker_url: str, admin_secret: str) -> str:
@@ -101,13 +101,13 @@ def check_token(broker_url: str, token: str, label: str) -> bool:
 
 
 def main() -> None:
-    broker_url = os.environ["AGENTAUTH_BROKER_URL"]
+    broker_url = os.environ["AGENTWRIT_BROKER_URL"]
     admin_secret = os.environ.get("AA_ADMIN_SECRET", "dev-secret")
 
-    app = AgentAuthApp(
+    app = AgentWritApp(
         broker_url=broker_url,
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Incident Response — Revocation Demo")
@@ -304,9 +304,9 @@ uv add httpx
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 export AA_ADMIN_SECRET="dev-secret"
 
 uv run python incident_response.py
@@ -322,13 +322,13 @@ Incident Response — Revocation Demo
 
 Phase 1: Creating agents (simulating a running system)
 
-  reader     → spiffe://agentauth.local/agent/incident-response/incident-demo/a1b2...
+  reader     → spiffe://agentwrit.local/agent/incident-response/incident-demo/a1b2...
              task: incident-demo, scope: ['read:data:partition-1']
-  writer     → spiffe://agentauth.local/agent/incident-response/incident-demo/c3d4...
+  writer     → spiffe://agentwrit.local/agent/incident-response/incident-demo/c3d4...
              task: incident-demo, scope: ['write:data:partition-1']
-  analyzer   → spiffe://agentauth.local/agent/incident-response/incident-demo/e5f6...
+  analyzer   → spiffe://agentwrit.local/agent/incident-response/incident-demo/e5f6...
              task: incident-demo, scope: ['read:data:partition-2']
-  archiver   → spiffe://agentauth.local/agent/incident-response/other-task/g7h8...
+  archiver   → spiffe://agentwrit.local/agent/incident-response/other-task/g7h8...
              task: other-task, scope: ['write:data:partition-3']
 
   Initial state (all alive):

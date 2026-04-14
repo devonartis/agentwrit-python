@@ -38,7 +38,7 @@ Always check insurance coverage before filing a claim.
 # NOTE: get_patient_records is intentionally included in the tool list.
 # The LLM will try to call it, but the agent's scope does NOT include
 # read:records:{pid} — so scope_is_subset() will block it. This is
-# the billing isolation demo: the LLM wants the data, AgentAuth says no.
+# the billing isolation demo: the LLM wants the data, AgentWrit says no.
 TOOL_NAMES: list[str] = [
     "get_billing_history",
     "get_insurance_coverage",

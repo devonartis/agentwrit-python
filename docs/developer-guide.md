@@ -1,6 +1,6 @@
 # Developer Guide
 
-Patterns for building real applications with the AgentAuth SDK. This guide assumes you've read [Getting Started](getting-started.md) and [Concepts](concepts.md).
+Patterns for building real applications with the AgentWrit SDK. This guide assumes you've read [Getting Started](getting-started.md) and [Concepts](concepts.md).
 
 ---
 
@@ -12,12 +12,12 @@ Every agent follows the same lifecycle: create, use, release. The pattern looks 
 
 ```python
 import os
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 
-app = AgentAuthApp(
-    broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-    client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-    client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+app = AgentWritApp(
+    broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
 # Create the agent for a specific task
@@ -135,7 +135,7 @@ delegated = agent_a.delegate(
 Always validate the delegated token to confirm the broker actually narrowed it:
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 result = validate(broker_url, delegated.access_token)
 assert result.valid
@@ -196,7 +196,7 @@ delegated_bc = resp.json()
 If an agent tries to delegate scope it doesn't have:
 
 ```python
-from agentauth.errors import AuthorizationError
+from agentwrit.errors import AuthorizationError
 
 try:
     agent_a.delegate(
@@ -228,7 +228,7 @@ The app is responsible for checking scope before allowing agent actions. The bro
 ### The Pattern
 
 ```python
-from agentauth import scope_is_subset
+from agentwrit import scope_is_subset
 
 agent = app.create_agent(
     orch_id="customer-service",
@@ -257,7 +257,7 @@ handle_action(["write:data:customer-artis"])   # False
 For zero-trust enforcement, validate the token with the broker AND check scope:
 
 ```python
-from agentauth import validate, scope_is_subset
+from agentwrit import validate, scope_is_subset
 
 result = validate(broker_url, agent.access_token)
 if result.valid and result.claims:
@@ -280,8 +280,8 @@ else:
 ### Catching Specific Errors
 
 ```python
-from agentauth.errors import (
-    AgentAuthError,
+from agentwrit.errors import (
+    AgentWritError,
     AuthenticationError,
     AuthorizationError,
     RateLimitError,
@@ -317,30 +317,30 @@ except TransportError as e:
 ### Catching Everything
 
 ```python
-from agentauth.errors import AgentAuthError
+from agentwrit.errors import AgentWritError
 
 try:
     agent = app.create_agent(...)
-except AgentAuthError as e:
+except AgentWritError as e:
     # Catches any SDK error
-    print(f"AgentAuth error: {e}")
+    print(f"AgentWrit error: {e}")
 ```
 
 ### Released Agent Errors
 
-Calling `renew()` or `delegate()` on a released agent raises `AgentAuthError` immediately — the SDK catches this locally without hitting the broker:
+Calling `renew()` or `delegate()` on a released agent raises `AgentWritError` immediately — the SDK catches this locally without hitting the broker:
 
 ```python
 agent.release()
 
 try:
     agent.renew()
-except AgentAuthError as e:
+except AgentWritError as e:
     print(e)  # "agent has been released and cannot be renewed"
 
 try:
     agent.delegate(delegate_to="...", scope=["..."])
-except AgentAuthError as e:
+except AgentWritError as e:
     print(e)  # "agent has been released and cannot delegate"
 ```
 
@@ -349,7 +349,7 @@ except AgentAuthError as e:
 If someone sends a fake token to your app, `validate()` handles it gracefully:
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 result = validate(broker_url, "completely-fake-not-a-jwt")
 print(result.valid)  # False
@@ -383,10 +383,10 @@ print(health.audit_events_count)  # total audit events recorded
 
 ### Module-Level Function
 
-Any service can validate a token without having an `AgentAuthApp`:
+Any service can validate a token without having an `AgentWritApp`:
 
 ```python
-from agentauth import validate
+from agentwrit import validate
 
 result = validate("http://broker:8080", token)
 ```
@@ -395,7 +395,7 @@ This is how downstream services (the ones receiving agent tokens) verify them. T
 
 ### App Shortcut
 
-If you already have an `AgentAuthApp`, use the shortcut:
+If you already have an `AgentWritApp`, use the shortcut:
 
 ```python
 result = app.validate(token)
@@ -409,7 +409,7 @@ Same behavior, but uses the app's broker URL and timeout.
 result = validate(broker_url, agent.access_token)
 
 if result.valid:
-    print(result.claims.iss)       # "agentauth"
+    print(result.claims.iss)       # "agentwrit"
     print(result.claims.sub)       # SPIFFE ID
     print(result.claims.scope)     # granted scope list
     print(result.claims.orch_id)   # orchestrator ID

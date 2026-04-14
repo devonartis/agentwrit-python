@@ -28,7 +28,7 @@ class AgentClaims:
     The `sub` field is a SPIFFE URI, ensuring the agent is a first-class
     identity in the trust domain.
     """
-    iss: str              # always "agentauth"
+    iss: str              # always "agentwrit"
     sub: str              # SPIFFE URI
     aud: list[str]
     exp: int              # Unix timestamp

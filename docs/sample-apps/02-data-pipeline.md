@@ -12,7 +12,7 @@ This app creates three agents — one per tenant — each with scopes limited to
 
 | Concept | Why It Matters |
 |---------|---------------|
-| **Multiple agents from one `AgentAuthApp`** | A single app can create many agents — each with different scopes |
+| **Multiple agents from one `AgentWritApp`** | A single app can create many agents — each with different scopes |
 | **Scope isolation between agents** | Agents with different scopes cannot access each other's data |
 | **`scope_is_subset()` for multi-tenant boundaries** | How to enforce tenant isolation at the application layer |
 | **Batch agent lifecycle** | Create → use → release for each agent in a loop |
@@ -57,8 +57,8 @@ import os
 import sys
 import time
 
-from agentauth import AgentAuthApp, Agent, scope_is_subset, validate
-from agentauth.errors import AgentAuthError
+from agentwrit import AgentWritApp, Agent, scope_is_subset, validate
+from agentwrit.errors import AgentWritError
 
 
 # ── Tenant Definitions ──────────────────────────────────────────
@@ -94,7 +94,7 @@ MOCK_DATA: dict[str, dict[str, str]] = {
 }
 
 
-def run_pipeline_for_tenant(app: AgentAuthApp, tenant_id: str) -> None:
+def run_pipeline_for_tenant(app: AgentWritApp, tenant_id: str) -> None:
     """Run the full ETL pipeline for one tenant using a scoped agent."""
 
     tenant = TENANTS[tenant_id]
@@ -147,7 +147,7 @@ def run_pipeline_for_tenant(app: AgentAuthApp, tenant_id: str) -> None:
     print()
 
 
-def run_cross_tenant_check(app: AgentAuthApp) -> None:
+def run_cross_tenant_check(app: AgentWritApp) -> None:
     """Prove that a tenant agent cannot access another tenant's data."""
 
     print("── Cross-Tenant Isolation Test ──")
@@ -200,10 +200,10 @@ def run_cross_tenant_check(app: AgentAuthApp) -> None:
 
 
 def main() -> None:
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Nightly Analytics Pipeline")
@@ -245,7 +245,7 @@ The ceiling uses wildcards so the app can create agents for **any** tenant. Each
 ### Quick Registration (if not done yet)
 
 ```bash
-./broker/scripts/stack_up.sh
+docker compose up -d
 ```
 
 Then follow the [One-Time Setup](README.md#one-time-setup-for-all-sample-apps) in the README.
@@ -253,9 +253,9 @@ Then follow the [One-Time Setup](README.md#one-time-setup-for-all-sample-apps) i
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python data_pipeline.py
 ```
@@ -270,7 +270,7 @@ Nightly Analytics Pipeline
 
 ── Metro Health System (hospital) ──
    Data type: patient analytics
-   Agent:    spiffe://agentauth.local/agent/nightly-pipeline/etl-hospital-.../a1b2...
+   Agent:    spiffe://agentwrit.local/agent/nightly-pipeline/etl-hospital-.../a1b2...
    Scope:    ['read:analytics:hospital', 'write:reports:hospital']
    Expires:  300s
    [EXTRACT] Pulled patient analytics: {'patient_visits': '12,847', ...}
@@ -280,7 +280,7 @@ Nightly Analytics Pipeline
 
 ── First National Bank (bank) ──
    Data type: financial analytics
-   Agent:    spiffe://agentauth.local/agent/nightly-pipeline/etl-bank-.../c3d4...
+   Agent:    spiffe://agentwrit.local/agent/nightly-pipeline/etl-bank-.../c3d4...
    Scope:    ['read:analytics:bank', 'write:reports:bank']
    Expires:  300s
    [EXTRACT] Pulled financial analytics: {'transactions': '2.4M', ...}
@@ -313,7 +313,7 @@ Pipeline complete. All tenants processed with isolated scopes.
 
 ## Key Takeaways
 
-1. **One app, many agents.** A single `AgentAuthApp` instance creates as many agents as you need. Each agent has its own scope, identity, and token. The app's scope ceiling limits what any agent can request.
+1. **One app, many agents.** A single `AgentWritApp` instance creates as many agents as you need. Each agent has its own scope, identity, and token. The app's scope ceiling limits what any agent can request.
 
 2. **Scope segments are your tenant boundary.** The identifier segment of the scope (`read:analytics:hospital` vs `read:analytics:bank`) is what enforces tenant isolation. This works because wildcards only apply in the identifier position — `read:analytics:*` would match all tenants, but a specific identifier matches only that tenant.
 

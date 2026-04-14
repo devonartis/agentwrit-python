@@ -1,7 +1,7 @@
 """Healthcare tools with scope-gated execution.
 
 Each tool is an OpenAI function definition that an LLM agent can call.
-Every tool maps to a required AgentAuth scope parameterized by patient_id.
+Every tool maps to a required AgentWrit scope parameterized by patient_id.
 Before execution, the pipeline checks scope_is_subset() — the agent must
 hold the exact scope for the specific patient and action.
 

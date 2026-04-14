@@ -4,21 +4,21 @@ Encapsulates the full create_agent() flow: app auth → launch token →
 challenge → Ed25519 sign → register → wrap into Agent. Maps to the
 broker's Path B (App-Driven) sequence in api.md.
 
-This module is internal. End users call AgentAuthApp.create_agent().
+This module is internal. End users call AgentWritApp.create_agent().
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agentauth.agent import Agent
+from agentwrit.agent import Agent
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    from agentauth.app import AgentAuthApp
+    from agentwrit.app import AgentWritApp
 
-# This module will be used by AgentAuthApp to orchestrate the creation of agents.
+# This module will be used by AgentWritApp to orchestrate the creation of agents.
 # It implements the multi-step handshake required by the broker.
 
 class AgentCreationOrchestrator:
@@ -40,7 +40,7 @@ class AgentCreationOrchestrator:
     This class encapsulates this complexity so the user only sees `app.create_agent()`.
     """
 
-    def __init__(self, app: AgentAuthApp) -> None:
+    def __init__(self, app: AgentWritApp) -> None:
         self._app = app
         self._transport = app._transport
 
@@ -103,7 +103,7 @@ class AgentCreationOrchestrator:
 
         # 4. Cryptographic Signing
         # If no key provided, generate one for this ephemeral agent.
-        from agentauth.crypto import (
+        from agentwrit.crypto import (
             encode_signature_b64,
             export_public_key_b64,
             generate_keypair,

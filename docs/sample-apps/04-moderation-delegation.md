@@ -64,21 +64,21 @@ from __future__ import annotations
 import os
 import sys
 
-from agentauth import (
+from agentwrit import (
     Agent,
-    AgentAuthApp,
+    AgentWritApp,
     DelegatedToken,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AuthorizationError
+from agentwrit.errors import AuthorizationError
 
 
 def main() -> None:
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Content Moderation Queue — Delegation Demo")
@@ -260,9 +260,9 @@ This app uses the **universal sample app** registered in the [README setup](READ
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python moderation_queue.py
 ```
@@ -276,7 +276,7 @@ Content Moderation Queue — Delegation Demo
 =======================================================
 
 Reviewer agent created
-  ID:    spiffe://agentauth.local/agent/content-moderation/review-queue-001/a1b2...
+  ID:    spiffe://agentwrit.local/agent/content-moderation/review-queue-001/a1b2...
   Scope: ['read:posts:*', 'read:users:*']
 
 Reviewer found violating post: post-91827 by usr-482 — harassment
@@ -284,23 +284,23 @@ Reviewer found violating post: post-91827 by usr-482 — harassment
   Reviewer cannot delete posts (correct — read-only)
 
 Moderator agent created
-  ID:    spiffe://agentauth.local/agent/content-moderation/moderate-queue-001/c3d4...
+  ID:    spiffe://agentwrit.local/agent/content-moderation/moderate-queue-001/c3d4...
   Scope: ['read:posts:*']  (base scope — no delete/suspend yet)
 
 Reviewer delegating to moderator:
-  Target:  spiffe://agentauth.local/agent/content-moderation/moderate-queue-001/c3d4...
+  Target:  spiffe://agentwrit.local/agent/content-moderation/moderate-queue-001/c3d4...
   Scope:   ['delete:posts:usr-482', 'write:users:usr-482']
 
 Delegation successful
   Token:    eyJhbGciOiJFZERTQSIsInR5cCI6...
   TTL:      60s
   Chain:    1 entries
-    [0] spiffe://agentauth.local/agent/content-moderation/review-queue-001/a1b2...
+    [0] spiffe://agentwrit.local/agent/content-moderation/review-queue-001/a1b2...
         scope: ['read:posts:*', 'read:users:*']
         at:    2026-04-09T10:30:00Z
 
 Delegated token validated:
-  Subject: spiffe://agentauth.local/agent/content-moderation/moderate-queue-001/c3d4...
+  Subject: spiffe://agentwrit.local/agent/content-moderation/moderate-queue-001/c3d4...
   Scope:   ['delete:posts:usr-482', 'write:users:usr-482']
   Chain:   1 entries
 

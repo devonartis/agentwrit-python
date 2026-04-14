@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 
-from agentauth.models import ValidateResult
+from agentwrit.models import ValidateResult
 
 
 def scope_is_subset(requested: list[str], allowed: list[str]) -> bool:
@@ -65,7 +65,7 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
     `valid` boolean in the response body discriminates success from failure.
 
     Args:
-        broker_url: Base URL of the AgentAuth broker.
+        broker_url: Base URL of the AgentWrit broker.
         token: The JWT access token to validate.
         timeout: HTTP request timeout in seconds.
 
@@ -93,7 +93,7 @@ def validate(broker_url: str, token: str, *, timeout: float = 10.0) -> ValidateR
 
         # If valid, we need to parse the claims into the AgentClaims model.
         # This is a simplified implementation for the MVP.
-        from agentauth.models import AgentClaims, DelegationRecord
+        from agentwrit.models import AgentClaims, DelegationRecord
 
         claims_data = data.get("claims")
         if not claims_data:

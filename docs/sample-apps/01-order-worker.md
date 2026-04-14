@@ -4,9 +4,9 @@
 
 You run an e-commerce platform. When a customer places an order, a background worker picks it up and processes it: reading the customer's profile, checking inventory, and writing the order confirmation. This worker needs database access — but only for that specific customer, only for the duration of that order, and only with the permissions (read customer data, write order records) that order processing requires.
 
-Without AgentAuth, that worker would use a shared database credential stored in an environment variable. Every worker shares the same key. If one worker is compromised, every customer's data is exposed. The key lives forever because rotating it breaks all running workers.
+Without AgentWrit, that worker would use a shared database credential stored in an environment variable. Every worker shares the same key. If one worker is compromised, every customer's data is exposed. The key lives forever because rotating it breaks all running workers.
 
-With AgentAuth, the worker gets an ephemeral identity scoped to exactly one customer and one task. The credential lasts minutes, not months. When the order is done, the worker releases the credential immediately — even if the token was leaked, it's already dead.
+With AgentWrit, the worker gets an ephemeral identity scoped to exactly one customer and one task. The credential lasts minutes, not months. When the order is done, the worker releases the credential immediately — even if the token was leaked, it's already dead.
 
 ---
 
@@ -14,7 +14,7 @@ With AgentAuth, the worker gets an ephemeral identity scoped to exactly one cust
 
 | Concept | Why It Matters |
 |---------|---------------|
-| **Agent lifecycle** — create → validate → use → release | The fundamental pattern you'll use in every AgentAuth app |
+| **Agent lifecycle** — create → validate → use → release | The fundamental pattern you'll use in every AgentWrit app |
 | **`create_agent()`** with task-specific scope | How to bind a credential to one unit of work |
 | **`validate()`** for token inspection | How downstream services verify agent credentials |
 | **`release()`** in a `finally` block | Why explicit cleanup shrinks your attack window |
@@ -28,7 +28,7 @@ With AgentAuth, the worker gets an ephemeral identity scoped to exactly one cust
 ┌─────────────────────────────────────────────┐
 │  Order Worker Script                         │
 │                                              │
-│  1. Connect to broker (AgentAuthApp)         │
+│  1. Connect to broker (AgentWritApp)         │
 │  2. Create agent scoped to one customer      │
 │  3. Validate the token → inspect claims      │
 │  4. Simulate: read customer profile          │
@@ -63,17 +63,17 @@ from __future__ import annotations
 import argparse
 import sys
 
-from agentauth import (
+from agentwrit import (
     Agent,
-    AgentAuthApp,
+    AgentWritApp,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import AgentAuthError
+from agentwrit.errors import AgentWritError
 
 
 def process_order(
-    app: AgentAuthApp,
+    app: AgentWritApp,
     customer_id: str,
     order_id: str,
 ) -> None:
@@ -178,10 +178,10 @@ def main() -> None:
 
     import os
 
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print(f"Processing order {args.order} for customer {args.customer}")
@@ -215,7 +215,7 @@ The ceiling uses wildcards (`*`) so the app can create agents for **any** custom
 ### Quick Registration (if not done yet)
 
 ```bash
-./broker/scripts/stack_up.sh
+docker compose up -d
 ```
 
 Then follow the [One-Time Setup](README.md#one-time-setup-for-all-sample-apps) in the README.
@@ -223,9 +223,9 @@ Then follow the [One-Time Setup](README.md#one-time-setup-for-all-sample-apps) i
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python order_worker.py --customer cust-7291 --order ord-4823
 ```
@@ -238,14 +238,14 @@ uv run python order_worker.py --customer cust-7291 --order ord-4823
 Processing order ord-4823 for customer cust-7291
 =======================================================
 
-Agent created: spiffe://agentauth.local/agent/order-worker/process-ord-4823/a3f7...
+Agent created: spiffe://agentwrit.local/agent/order-worker/process-ord-4823/a3f7...
   Scope:   ['read:data:customer-cust-7291', 'write:data:order-ord-4823']
   Expires: 300s
   Token:   eyJhbGciOiJFZERTQSIsInR5cCI6...
 
 Token is valid. Claims:
-  Issuer:  agentauth
-  Subject: spiffe://agentauth.local/agent/order-worker/process-ord-4823/a3f7...
+  Issuer:  agentwrit
+  Subject: spiffe://agentwrit.local/agent/order-worker/process-ord-4823/a3f7...
   Scope:   ['read:data:customer-cust-7291', 'write:data:order-ord-4823']
   Task:    process-ord-4823
   Orch:    order-worker

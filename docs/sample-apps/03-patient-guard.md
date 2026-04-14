@@ -4,7 +4,7 @@
 
 You're building the backend for a patient portal. A patient logs in, and the system creates an agent scoped to that patient's records only. The agent can read medical records, read lab results, and view billing — but only for that specific patient. If the patient (or a compromised session) tries to access another patient's data, the scope check blocks it immediately.
 
-This app teaches the most important scope pattern in AgentAuth: **the request determines the scope, the scope determines the agent's authority**. Every web request gets its own agent with its own narrow scope derived from the authenticated user.
+This app teaches the most important scope pattern in AgentWrit: **the request determines the scope, the scope determines the agent's authority**. Every web request gets its own agent with its own narrow scope derived from the authenticated user.
 
 ---
 
@@ -62,7 +62,7 @@ from __future__ import annotations
 import os
 import sys
 
-from agentauth import AgentAuthApp, scope_is_subset, validate
+from agentwrit import AgentWritApp, scope_is_subset, validate
 
 
 # ── Simulated Patient Sessions ────────────────────────────────
@@ -89,7 +89,7 @@ def build_patient_scope(patient_id: str) -> list[str]:
 
 
 def simulate_patient_session(
-    app: AgentAuthApp,
+    app: AgentWritApp,
     patient_id: str,
     patient_name: str,
 ) -> None:
@@ -169,10 +169,10 @@ def simulate_patient_session(
 
 
 def main() -> None:
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Patient Portal — Record Guard")
@@ -213,9 +213,9 @@ Note: The app does **not** request `write:records:*` — patients don't need it 
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python patient_guard.py
 ```
@@ -233,7 +233,7 @@ Cross-patient access and write operations are blocked.
 
 ── Patient Session: Maria Santos (P-1042) ──
 
-  Agent: spiffe://agentauth.local/agent/patient-portal/session-P-1042/a7c3...
+  Agent: spiffe://agentwrit.local/agent/patient-portal/session-P-1042/a7c3...
   Scope: ['read:records:P-1042', 'read:labs:P-1042', 'read:billing:P-1042']
 
   ✅ READ records for P-1042: BP 120/80, A1C 5.4%, no allergies
@@ -248,7 +248,7 @@ Cross-patient access and write operations are blocked.
 
 ── Patient Session: James O'Brien (P-2187) ──
 
-  Agent: spiffe://agentauth.local/agent/patient-portal/session-P-2187/b9d5...
+  Agent: spiffe://agentwrit.local/agent/patient-portal/session-P-2187/b9d5...
   Scope: ['read:records:P-2187', 'read:labs:P-2187', 'read:billing:P-2187']
 
   ✅ READ records for P-2187: BP 138/88, A1C 6.8%, allergic to penicillin

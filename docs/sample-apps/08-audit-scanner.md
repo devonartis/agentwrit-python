@@ -4,7 +4,7 @@
 
 You're a compliance auditor. Your job is to verify that every agent token in the system is still valid, check what scope each agent holds, and flag any anomalies — expired tokens, scope mismatches, or agents that were never released. You don't create agents or modify anything. You only **validate** and **inspect**.
 
-This app is a read-only scanner that demonstrates the validation API as an independent service. It doesn't need an `AgentAuthApp` for most operations — `validate()` is a module-level function that only needs the broker URL and a token. It also demonstrates the full error model by intentionally triggering every error type and showing how to catch each one.
+This app is a read-only scanner that demonstrates the validation API as an independent service. It doesn't need an `AgentWritApp` for most operations — `validate()` is a module-level function that only needs the broker URL and a token. It also demonstrates the full error model by intentionally triggering every error type and showing how to catch each one.
 
 ---
 
@@ -12,9 +12,9 @@ This app is a read-only scanner that demonstrates the validation API as an indep
 
 | Concept | Why It Matters |
 |---------|---------------|
-| **`validate()` as a module-level function** | Any service can validate tokens without being an AgentAuthApp |
+| **`validate()` as a module-level function** | Any service can validate tokens without being an AgentWritApp |
 | **`ValidateResult` and `AgentClaims`** | What you get back from validation — every field explained |
-| **The full error hierarchy** | `AgentAuthError` → `ProblemResponseError` → `AuthenticationError` / `AuthorizationError` / `RateLimitError` |
+| **The full error hierarchy** | `AgentWritError` → `ProblemResponseError` → `AuthenticationError` / `AuthorizationError` / `RateLimitError` |
 | **`ProblemDetail` (RFC 7807)** | Structured error info from the broker — type, title, detail, error_code, request_id |
 | **Garbage token handling** | `validate()` never throws — it returns `valid=False` for bad tokens |
 | **`app.health()` as a pre-flight check** | Verify the broker is up before scanning |
@@ -42,7 +42,7 @@ This app is a read-only scanner that demonstrates the validation API as an indep
 │  4. Error model walkthrough                               │
 │     - Trigger AuthenticationError (bad credentials)       │
 │     - Trigger AuthorizationError (scope exceeds ceiling)  │
-│     - Trigger AgentAuthError on released agent            │
+│     - Trigger AgentWritError on released agent            │
 │     - Show ProblemDetail fields for each                  │
 │                                                           │
 │  5. Garbage token test                                    │
@@ -64,20 +64,20 @@ import os
 import sys
 import time
 
-from agentauth import (
-    AgentAuthApp,
+from agentwrit import (
+    AgentWritApp,
     scope_is_subset,
     validate,
 )
-from agentauth.errors import (
-    AgentAuthError,
+from agentwrit.errors import (
+    AgentWritError,
     AuthenticationError,
     AuthorizationError,
     ProblemResponseError,
     RateLimitError,
     TransportError,
 )
-from agentauth.models import ValidateResult
+from agentwrit.models import ValidateResult
 
 
 def banner(text: str) -> None:
@@ -109,12 +109,12 @@ def inspect_claims(result: ValidateResult, label: str) -> None:
 
 
 def main() -> None:
-    broker_url = os.environ["AGENTAUTH_BROKER_URL"]
+    broker_url = os.environ["AGENTWRIT_BROKER_URL"]
 
-    app = AgentAuthApp(
+    app = AgentWritApp(
         broker_url=broker_url,
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Compliance Audit Scanner")
@@ -220,7 +220,7 @@ def main() -> None:
     # Error 1: AuthenticationError (bad credentials)
     print("  Test: Bad credentials → AuthenticationError")
     try:
-        bad_app = AgentAuthApp(
+        bad_app = AgentWritApp(
             broker_url=broker_url,
             client_id="fake-client-id",
             client_secret="fake-client-secret",
@@ -263,26 +263,26 @@ def main() -> None:
         print(f"    Unexpected: {type(e).__name__}: {e}")
     print()
 
-    # Error 3: AgentAuthError on released agent operations
-    print("  Test: Renew on released agent → AgentAuthError")
+    # Error 3: AgentWritError on released agent operations
+    print("  Test: Renew on released agent → AgentWritError")
     try:
         released.renew()
-        print("    ERROR: Should have thrown AgentAuthError!")
-    except AgentAuthError as e:
-        print(f"    Caught: AgentAuthError")
+        print("    ERROR: Should have thrown AgentWritError!")
+    except AgentWritError as e:
+        print(f"    Caught: AgentWritError")
         print(f"    Message: {e}")
     print()
 
     # Error 4: Delegate on released agent
-    print("  Test: Delegate on released agent → AgentAuthError")
+    print("  Test: Delegate on released agent → AgentWritError")
     try:
         released.delegate(
-            delegate_to="spiffe://agentauth.local/agent/fake/agent/test",
+            delegate_to="spiffe://agentwrit.local/agent/fake/agent/test",
             scope=["read:data:test"],
         )
-        print("    ERROR: Should have thrown AgentAuthError!")
-    except AgentAuthError as e:
-        print(f"    Caught: AgentAuthError")
+        print("    ERROR: Should have thrown AgentWritError!")
+    except AgentWritError as e:
+        print(f"    Caught: AgentWritError")
         print(f"    Message: {e}")
     print()
 
@@ -320,7 +320,7 @@ def main() -> None:
     print("  ✓ Garbage tokens handled gracefully")
     print()
     print("  Exception hierarchy reference:")
-    print("    AgentAuthError (catch-all)")
+    print("    AgentWritError (catch-all)")
     print("    ├── ProblemResponseError (broker returned RFC 7807 error)")
     print("    │   ├── AuthenticationError (401)")
     print("    │   ├── AuthorizationError (403)")
@@ -351,9 +351,9 @@ This app uses the **universal sample app** registered in the [README setup](READ
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python audit_scanner.py
 ```
@@ -379,18 +379,18 @@ Compliance Audit Scanner
 
 ── Phase 2: Creating Test Agents ──
 
-  Active agent: spiffe://agentauth.local/agent/audit-scan/active-agent-test/a1b2...
+  Active agent: spiffe://agentwrit.local/agent/audit-scan/active-agent-test/a1b2...
     Scope: ['read:data:resource-alpha', 'write:data:resource-alpha']
-  Released agent: spiffe://agentauth.local/agent/audit-scan/released-agent-test/c3d4... (already released)
-  Expiring agent: spiffe://agentauth.local/agent/audit-scan/expiring-agent-test/e5f6... (5s TTL)
+  Released agent: spiffe://agentwrit.local/agent/audit-scan/released-agent-test/c3d4... (already released)
+  Expiring agent: spiffe://agentwrit.local/agent/audit-scan/expiring-agent-test/e5f6... (5s TTL)
 
   Waiting 7s for expiring agent to die...
 
 ── Phase 3: Token Scan ──
 
   active: VALID
-    Subject:    spiffe://agentauth.local/agent/audit-scan/active-agent-test/a1b2...
-    Issuer:     agentauth
+    Subject:    spiffe://agentwrit.local/agent/audit-scan/active-agent-test/a1b2...
+    Issuer:     agentwrit
     Scope:      ['read:data:resource-alpha', 'write:data:resource-alpha']
     Task:       active-agent-test
     Orch:       audit-scan
@@ -415,7 +415,7 @@ Compliance Audit Scanner
   Test: Bad credentials → AuthenticationError
     Caught: AuthenticationError
     Status: 401
-    Type:   urn:agentauth:error:unauthorized
+    Type:   urn:agentwrit:error:unauthorized
     Title:  Unauthorized
     Detail: invalid client credentials
     Code:   unauthorized
@@ -423,17 +423,17 @@ Compliance Audit Scanner
   Test: Scope exceeds ceiling → AuthorizationError
     Caught: AuthorizationError
     Status: 403
-    Type:   urn:agentauth:error:scope_violation
+    Type:   urn:agentwrit:error:scope_violation
     Detail: requested scope exceeds app scope ceiling
     Code:   scope_violation
     Req ID: bd4b257e53efe7f2
 
-  Test: Renew on released agent → AgentAuthError
-    Caught: AgentAuthError
+  Test: Renew on released agent → AgentWritError
+    Caught: AgentWritError
     Message: agent has been released and cannot be renewed
 
-  Test: Delegate on released agent → AgentAuthError
-    Caught: AgentAuthError
+  Test: Delegate on released agent → AgentWritError
+    Caught: AgentWritError
     Message: agent has been released and cannot delegate
 
 ── Phase 5: Garbage Token Validation ──
@@ -457,7 +457,7 @@ Compliance Audit Scanner
   ✓ Garbage tokens handled gracefully
 
   Exception hierarchy reference:
-    AgentAuthError (catch-all)
+    AgentWritError (catch-all)
     ├── ProblemResponseError (broker returned RFC 7807 error)
     │   ├── AuthenticationError (401)
     │   ├── AuthorizationError (403)
@@ -470,11 +470,11 @@ Compliance Audit Scanner
 
 ## Key Takeaways
 
-1. **`validate()` is a module-level function — no `AgentAuthApp` needed.** Any service in your architecture can validate tokens by calling `validate(broker_url, token)`. This is how downstream resource servers verify agent credentials without being registered as apps themselves.
+1. **`validate()` is a module-level function — no `AgentWritApp` needed.** Any service in your architecture can validate tokens by calling `validate(broker_url, token)`. This is how downstream resource servers verify agent credentials without being registered as apps themselves.
 
 2. **`validate()` never throws.** It always returns a `ValidateResult`. If the token is bad, `result.valid` is `False` and `result.error` has a generic message. No `try/except` needed for validation itself — only for network failures.
 
-3. **The error hierarchy lets you catch at the right granularity.** Catch `AgentAuthError` for "anything went wrong." Catch `AuthenticationError` specifically for "bad credentials." Catch `AuthorizationError` specifically for "scope violation." The `ProblemDetail` on each error gives you structured info for logging and alerting.
+3. **The error hierarchy lets you catch at the right granularity.** Catch `AgentWritError` for "anything went wrong." Catch `AuthenticationError` specifically for "bad credentials." Catch `AuthorizationError` specifically for "scope violation." The `ProblemDetail` on each error gives you structured info for logging and alerting.
 
 4. **`ProblemDetail.request_id` links to broker logs.** When you get an `AuthorizationError`, the `request_id` field matches the broker's `X-Request-ID` header. You can cross-reference with broker logs to trace the exact request.
 

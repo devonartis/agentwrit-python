@@ -1,4 +1,4 @@
-"""Unit tests for agentauth.app — AgentAuthApp container.
+"""Unit tests for agentwrit.app — AgentWritApp container.
 
 Tests lazy authentication, re-auth on expiry, health(), validate()
 shortcut, create_agent() orchestration, and secret redaction.
@@ -12,10 +12,10 @@ from __future__ import annotations
 import pytest
 from pytest_httpx import HTTPXMock
 
-from agentauth.agent import Agent
-from agentauth.app import AgentAuthApp
-from agentauth.errors import AuthenticationError, AuthorizationError
-from agentauth.models import HealthStatus, ValidateResult
+from agentwrit.agent import Agent
+from agentwrit.app import AgentWritApp
+from agentwrit.errors import AuthenticationError, AuthorizationError
+from agentwrit.models import HealthStatus, ValidateResult
 
 # --- Fixtures ---
 
@@ -47,16 +47,16 @@ CHALLENGE_RESPONSE = {
 }
 
 REGISTER_RESPONSE = {
-    "agent_id": "spiffe://agentauth.local/agent/orch-1/task-1/abc123",
+    "agent_id": "spiffe://agentwrit.local/agent/orch-1/task-1/abc123",
     "access_token": "eyJ.agent.jwt",
     "expires_in": 300,
 }
 
 
 @pytest.fixture()
-def app(httpx_mock: HTTPXMock) -> AgentAuthApp:
-    """Create an AgentAuthApp. No HTTP on construction (lazy auth)."""
-    return AgentAuthApp(
+def app(httpx_mock: HTTPXMock) -> AgentWritApp:
+    """Create an AgentWritApp. No HTTP on construction (lazy auth)."""
+    return AgentWritApp(
         broker_url="http://broker.test",
         client_id="app-123",
         client_secret="secret-456",
@@ -93,8 +93,8 @@ def _mock_full_create_agent(httpx_mock: HTTPXMock) -> None:
 
 class TestLazyAuth:
     def test_no_http_on_construction(self, httpx_mock: HTTPXMock):
-        """AgentAuthApp.__init__ must NOT call the broker."""
-        AgentAuthApp(
+        """AgentWritApp.__init__ must NOT call the broker."""
+        AgentWritApp(
             broker_url="http://broker.test",
             client_id="app-123",
             client_secret="secret-456",
@@ -102,7 +102,7 @@ class TestLazyAuth:
         assert len(httpx_mock.get_requests()) == 0
 
     def test_authenticates_on_first_create_agent(
-        self, app: AgentAuthApp, httpx_mock: HTTPXMock,
+        self, app: AgentWritApp, httpx_mock: HTTPXMock,
     ):
         """First create_agent triggers POST /v1/app/auth."""
         _mock_full_create_agent(httpx_mock)
@@ -111,7 +111,7 @@ class TestLazyAuth:
         requests = httpx_mock.get_requests()
         assert any("/v1/app/auth" in str(r.url) for r in requests)
 
-    def test_reuses_valid_session(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_reuses_valid_session(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """Second create_agent reuses the existing app JWT, no second auth call."""
         _mock_full_create_agent(httpx_mock)
         app.create_agent(orch_id="o", task_id="t1", requested_scope=["read:data:*"])
@@ -136,13 +136,13 @@ class TestLazyAuth:
         assert len(auth_requests) == 1, "Should only auth once"
 
     def test_bad_credentials_raise_authentication_error(
-        self, app: AgentAuthApp, httpx_mock: HTTPXMock,
+        self, app: AgentWritApp, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/auth",
             status_code=401,
             json={
-                "type": "urn:agentauth:error:unauthorized",
+                "type": "urn:agentwrit:error:unauthorized",
                 "title": "Unauthorized",
                 "detail": "invalid credentials",
                 "instance": "/v1/app/auth",
@@ -157,7 +157,7 @@ class TestLazyAuth:
 
 
 class TestHealth:
-    def test_returns_health_status(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_returns_health_status(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/health",
             json=HEALTH_RESPONSE,
@@ -168,7 +168,7 @@ class TestHealth:
         assert result.version == "2.0.0"
         assert result.db_connected is True
 
-    def test_health_no_auth_required(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_health_no_auth_required(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """GET /v1/health is a public endpoint — no app auth needed."""
         httpx_mock.add_response(
             url="http://broker.test/v1/health",
@@ -186,15 +186,15 @@ class TestHealth:
 
 
 class TestValidate:
-    def test_valid_token(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_valid_token(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/token/validate",
             json={
                 "valid": True,
                 "claims": {
-                    "iss": "agentauth",
-                    "sub": "spiffe://agentauth.local/agent/o/t/i",
-                    "aud": ["agentauth"],
+                    "iss": "agentwrit",
+                    "sub": "spiffe://agentwrit.local/agent/o/t/i",
+                    "aud": ["agentwrit"],
                     "exp": 9999999999,
                     "nbf": 1000000000,
                     "iat": 1000000000,
@@ -211,7 +211,7 @@ class TestValidate:
         assert result.claims is not None
         assert result.claims.sub.startswith("spiffe://")
 
-    def test_invalid_token(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_invalid_token(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/token/validate",
             json={"valid": False, "error": "token is invalid or expired"},
@@ -225,7 +225,7 @@ class TestValidate:
 
 
 class TestCreateAgent:
-    def test_returns_agent_object(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_returns_agent_object(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         _mock_full_create_agent(httpx_mock)
         agent = app.create_agent(
             orch_id="orch-1",
@@ -233,14 +233,14 @@ class TestCreateAgent:
             requested_scope=["read:data:*"],
         )
         assert isinstance(agent, Agent)
-        assert agent.agent_id == "spiffe://agentauth.local/agent/orch-1/task-1/abc123"
+        assert agent.agent_id == "spiffe://agentwrit.local/agent/orch-1/task-1/abc123"
         assert agent.access_token == "eyJ.agent.jwt"
         assert agent.expires_in == 300
         assert agent.scope == ["read:data:*"]
         assert agent.task_id == "task-1"
         assert agent.orch_id == "orch-1"
 
-    def test_orchestration_sequence(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_orchestration_sequence(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """create_agent calls: app/auth → launch-tokens → challenge → register."""
         _mock_full_create_agent(httpx_mock)
         app.create_agent(orch_id="o", task_id="t", requested_scope=["read:data:*"])
@@ -252,7 +252,7 @@ class TestCreateAgent:
         assert any("/v1/challenge" in u for u in urls)
         assert any("/v1/register" in u for u in urls)
 
-    def test_launch_token_sends_bearer_auth(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_launch_token_sends_bearer_auth(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         _mock_full_create_agent(httpx_mock)
         app.create_agent(orch_id="o", task_id="t", requested_scope=["read:data:*"])
 
@@ -260,7 +260,7 @@ class TestCreateAgent:
                       if "/v1/app/launch-tokens" in str(r.url)][0]
         assert lt_request.headers["Authorization"] == "Bearer eyJ.app.jwt"
 
-    def test_register_sends_no_bearer(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_register_sends_no_bearer(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """POST /v1/register authenticates via launch_token in body, not Bearer."""
         _mock_full_create_agent(httpx_mock)
         app.create_agent(orch_id="o", task_id="t", requested_scope=["read:data:*"])
@@ -271,14 +271,14 @@ class TestCreateAgent:
         auth_header = reg_request.headers.get("Authorization", "")
         assert "eyJ.app.jwt" not in auth_header
 
-    def test_scope_ceiling_violation(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_scope_ceiling_violation(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """403 on launch-token creation raises AuthorizationError."""
         _mock_app_auth(httpx_mock)
         httpx_mock.add_response(
             url="http://broker.test/v1/app/launch-tokens",
             status_code=403,
             json={
-                "type": "urn:agentauth:error:forbidden",
+                "type": "urn:agentwrit:error:forbidden",
                 "title": "Forbidden",
                 "detail": "scope exceeds app ceiling",
                 "instance": "/v1/app/launch-tokens",
@@ -291,7 +291,7 @@ class TestCreateAgent:
                 requested_scope=["admin:everything:*"],
             )
 
-    def test_auto_generates_agent_name(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_auto_generates_agent_name(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         """agent_name on launch token defaults to orch_id/task_id (ADR SDK-005)."""
         _mock_full_create_agent(httpx_mock)
         app.create_agent(orch_id="my-orch", task_id="my-task", requested_scope=["read:data:*"])
@@ -303,7 +303,7 @@ class TestCreateAgent:
         assert body["agent_name"] == "my-orch/my-task"
 
     def test_custom_label_overrides_agent_name(
-        self, app: AgentAuthApp, httpx_mock: HTTPXMock,
+        self, app: AgentWritApp, httpx_mock: HTTPXMock,
     ):
         _mock_full_create_agent(httpx_mock)
         app.create_agent(
@@ -323,8 +323,8 @@ class TestCreateAgent:
 
 
 class TestSecretRedaction:
-    def test_secret_not_in_repr(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_secret_not_in_repr(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         assert "secret-456" not in repr(app)
 
-    def test_secret_not_in_str(self, app: AgentAuthApp, httpx_mock: HTTPXMock):
+    def test_secret_not_in_str(self, app: AgentWritApp, httpx_mock: HTTPXMock):
         assert "secret-456" not in str(app)

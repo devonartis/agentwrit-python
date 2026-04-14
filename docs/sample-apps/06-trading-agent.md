@@ -60,11 +60,11 @@ from __future__ import annotations
 import os
 import time
 
-from agentauth import AgentAuthApp, scope_is_subset, validate
-from agentauth.errors import AgentAuthError
+from agentwrit import AgentWritApp, scope_is_subset, validate
+from agentwrit.errors import AgentWritError
 
 
-def run_swing_trade_session(app: AgentAuthApp) -> None:
+def run_swing_trade_session(app: AgentWritApp) -> None:
     """Long-running trading session with periodic token renewal.
 
     Simulates a swing trading strategy that monitors the market
@@ -140,7 +140,7 @@ def run_swing_trade_session(app: AgentAuthApp) -> None:
     print()
 
 
-def run_scalp_trade_session(app: AgentAuthApp) -> None:
+def run_scalp_trade_session(app: AgentWritApp) -> None:
     """High-frequency trade with very short TTL.
 
     For trades that execute in seconds, use a short TTL. If anything
@@ -182,7 +182,7 @@ def run_scalp_trade_session(app: AgentAuthApp) -> None:
     print()
 
 
-def run_expired_session(app: AgentAuthApp) -> None:
+def run_expired_session(app: AgentWritApp) -> None:
     """Demonstrate natural token expiry.
 
     Creates an agent with a 5-second TTL, does NOT release it,
@@ -223,10 +223,10 @@ def run_expired_session(app: AgentAuthApp) -> None:
 
 
 def main() -> None:
-    app = AgentAuthApp(
-        broker_url=os.environ["AGENTAUTH_BROKER_URL"],
-        client_id=os.environ["AGENTAUTH_CLIENT_ID"],
-        client_secret=os.environ["AGENTAUTH_CLIENT_SECRET"],
+    app = AgentWritApp(
+        broker_url=os.environ["AGENTWRIT_BROKER_URL"],
+        client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+        client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
     )
 
     print("Financial Trading Agent — Renewal & TTL Demo")
@@ -263,9 +263,9 @@ The ceiling uses `*` so the trading engine can create agents for any stock symbo
 ## Running It
 
 ```bash
-export AGENTAUTH_BROKER_URL="http://127.0.0.1:8080"
-export AGENTAUTH_CLIENT_ID="<from registration>"
-export AGENTAUTH_CLIENT_SECRET="<from registration>"
+export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
+export AGENTWRIT_CLIENT_ID="<from registration>"
+export AGENTWRIT_CLIENT_SECRET="<from registration>"
 
 uv run python trading_agent.py
 ```
@@ -283,7 +283,7 @@ Financial Trading Agent — Renewal & TTL Demo
 ── Session 1: Swing Trade (Long-Running with Renewal) ──
 
 Agent created for AAPL swing trade
-  ID:    spiffe://agentauth.local/agent/trading-engine/swing-trade-20260409/a1b2...
+  ID:    spiffe://agentwrit.local/agent/trading-engine/swing-trade-20260409/a1b2...
   Scope: ['read:trades:AAPL', 'write:trades:AAPL']
   TTL:   300s
 
@@ -292,14 +292,14 @@ Agent created for AAPL swing trade
     Renewed: new token eyJhbGciOiJFZERTQSIsInR5cCI6...
     New TTL: 300s
     Old token: dead ✓
-    Identity: spiffe://agentauth.local/agent/trading-engine/swing-trade-20260409/a1b2...
+    Identity: spiffe://agentwrit.local/agent/trading-engine/swing-trade-20260409/a1b2...
 
   Cycle 2/3:
     Market: AAPL @ $187.95 — Signal: HOLD
     Renewed: new token eyJhbGciOiJFZERTQSIsInR5cCI6...
     New TTL: 300s
     Old token: dead ✓
-    Identity: spiffe://agentauth.local/agent/trading-engine/swing-trade-20260409/a1b2...
+    Identity: spiffe://agentwrit.local/agent/trading-engine/swing-trade-20260409/a1b2...
 
   Cycle 3/3:
     Market: AAPL @ $188.48 — Signal: SELL
@@ -307,7 +307,7 @@ Agent created for AAPL swing trade
     Renewed: new token eyJhbGciOiJFZERTQSIsInR5cCI6...
     New TTL: 300s
     Old token: dead ✓
-    Identity: spiffe://agentauth.local/agent/trading-engine/swing-trade-20260409/a1b2...
+    Identity: spiffe://agentwrit.local/agent/trading-engine/swing-trade-20260409/a1b2...
 
   Session ended. Agent released.
   Final token state: dead
@@ -315,7 +315,7 @@ Agent created for AAPL swing trade
 ── Session 2: Scalp Trade (Short TTL, No Renewal) ──
 
 Agent created for TSLA scalp trade
-  ID:    spiffe://agentauth.local/agent/trading-engine/scalp-trade-20260409/c3d4...
+  ID:    spiffe://agentwrit.local/agent/trading-engine/scalp-trade-20260409/c3d4...
   Scope: ['read:trades:TSLA', 'write:trades:TSLA']
   TTL:   10s (very short — auto-expires if anything hangs)
 
