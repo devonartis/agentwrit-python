@@ -185,7 +185,7 @@ delegated = agent_a.delegate(
 )
 
 # Validate: delegated token has only partition-7
-result = validate(broker_url, delegated.access_token)
+result = validate(app.broker_url, delegated.access_token)
 print(result.claims.scope)  # ['read:data:partition-7']
 ```
 

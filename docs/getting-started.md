@@ -115,7 +115,7 @@ Before trusting a token, ask the broker if it's still valid:
 ```python
 from agentwrit import validate
 
-result = validate(broker_url, agent.access_token)
+result = validate(app.broker_url, agent.access_token)
 
 if result.valid:
     print(f"Subject: {result.claims.sub}")     # SPIFFE ID
