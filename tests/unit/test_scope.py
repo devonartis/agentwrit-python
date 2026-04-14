@@ -1,4 +1,4 @@
-from agentauth.scope import scope_is_subset
+from agentwrit.scope import scope_is_subset
 
 
 def test_scope_is_subset_exact_match():

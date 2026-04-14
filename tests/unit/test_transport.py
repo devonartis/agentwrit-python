@@ -1,4 +1,4 @@
-"""Unit tests for agentauth._transport — HTTP transport + RFC 7807 error dispatch.
+"""Unit tests for agentwrit._transport — HTTP transport + RFC 7807 error dispatch.
 
 Uses pytest-httpx to mock httpx.Client responses. Tests verify that:
 - Successful responses are returned as-is
@@ -12,8 +12,8 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from agentauth._transport import AgentAuthTransport
-from agentauth.errors import (
+from agentwrit._transport import AgentWritTransport
+from agentwrit.errors import (
     AuthenticationError,
     AuthorizationError,
     ProblemResponseError,
@@ -23,15 +23,15 @@ from agentauth.errors import (
 
 
 @pytest.fixture()
-def transport() -> AgentAuthTransport:
-    return AgentAuthTransport(broker_url="http://broker.test", timeout=5.0)
+def transport() -> AgentWritTransport:
+    return AgentWritTransport(broker_url="http://broker.test", timeout=5.0)
 
 
 # --- Success path ---
 
 
 class TestSuccessResponse:
-    def test_returns_response_on_200(self, transport: AgentAuthTransport, httpx_mock: HTTPXMock):
+    def test_returns_response_on_200(self, transport: AgentWritTransport, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/health",
             json={"status": "ok", "version": "2.0.0", "uptime": 42,
@@ -41,7 +41,7 @@ class TestSuccessResponse:
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
 
-    def test_returns_response_on_201(self, transport: AgentAuthTransport, httpx_mock: HTTPXMock):
+    def test_returns_response_on_201(self, transport: AgentWritTransport, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/launch-tokens",
             status_code=201,
@@ -50,7 +50,7 @@ class TestSuccessResponse:
         resp = transport.request("POST", "/v1/app/launch-tokens", json={"agent_name": "a"})
         assert resp.status_code == 201
 
-    def test_returns_response_on_204(self, transport: AgentAuthTransport, httpx_mock: HTTPXMock):
+    def test_returns_response_on_204(self, transport: AgentWritTransport, httpx_mock: HTTPXMock):
         httpx_mock.add_response(
             url="http://broker.test/v1/token/release",
             status_code=204,
@@ -65,7 +65,7 @@ class TestSuccessResponse:
 class TestErrorDispatch:
     def _problem_json(self, status: int, error_code: str, detail: str) -> dict[str, object]:
         return {
-            "type": f"urn:agentauth:error:{error_code}",
+            "type": f"urn:agentwrit:error:{error_code}",
             "title": "Error",
             "status": status,
             "detail": detail,
@@ -74,7 +74,7 @@ class TestErrorDispatch:
         }
 
     def test_401_raises_authentication_error(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/auth",
@@ -87,7 +87,7 @@ class TestErrorDispatch:
         assert exc_info.value.problem.error_code == "unauthorized"
 
     def test_403_raises_authorization_error(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/launch-tokens",
@@ -100,7 +100,7 @@ class TestErrorDispatch:
         assert "scope exceeds ceiling" in exc_info.value.problem.detail
 
     def test_429_raises_rate_limit_error(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/auth",
@@ -112,7 +112,7 @@ class TestErrorDispatch:
         assert exc_info.value.status_code == 429
 
     def test_400_raises_problem_response_error(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/register",
@@ -124,7 +124,7 @@ class TestErrorDispatch:
         assert exc_info.value.status_code == 400
 
     def test_500_raises_problem_response_error(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/register",
@@ -141,13 +141,13 @@ class TestErrorDispatch:
 
 class TestProblemDetailParsing:
     def test_parses_all_rfc7807_fields(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/auth",
             status_code=401,
             json={
-                "type": "urn:agentauth:error:unauthorized",
+                "type": "urn:agentwrit:error:unauthorized",
                 "title": "Unauthorized",
                 "status": 401,
                 "detail": "invalid client credentials",
@@ -160,7 +160,7 @@ class TestProblemDetailParsing:
         with pytest.raises(AuthenticationError) as exc_info:
             transport.request("POST", "/v1/app/auth")
         problem = exc_info.value.problem
-        assert problem.type == "urn:agentauth:error:unauthorized"
+        assert problem.type == "urn:agentwrit:error:unauthorized"
         assert problem.title == "Unauthorized"
         assert problem.detail == "invalid client credentials"
         assert problem.instance == "/v1/app/auth"
@@ -169,7 +169,7 @@ class TestProblemDetailParsing:
         assert problem.hint == "check your client_secret"
 
     def test_handles_non_json_error_body(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
             url="http://broker.test/v1/app/auth",
@@ -189,7 +189,7 @@ class TestTransportErrors:
     def test_connection_refused_raises_transport_error(
         self, httpx_mock: HTTPXMock,
     ):
-        transport = AgentAuthTransport(broker_url="http://unreachable.test:9999", timeout=0.1)
+        transport = AgentWritTransport(broker_url="http://unreachable.test:9999", timeout=0.1)
         httpx_mock.add_exception(
             httpx.ConnectError("Connection refused"),
             url="http://unreachable.test:9999/v1/health",
@@ -201,7 +201,7 @@ class TestTransportErrors:
     def test_timeout_raises_transport_error(
         self, httpx_mock: HTTPXMock,
     ):
-        transport = AgentAuthTransport(broker_url="http://slow.test", timeout=0.1)
+        transport = AgentWritTransport(broker_url="http://slow.test", timeout=0.1)
         httpx_mock.add_exception(
             httpx.ReadTimeout("Read timed out"),
             url="http://slow.test/v1/health",
@@ -215,7 +215,7 @@ class TestTransportErrors:
 
 class TestHeaders:
     def test_passes_custom_headers(
-        self, transport: AgentAuthTransport, httpx_mock: HTTPXMock,
+        self, transport: AgentWritTransport, httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(url="http://broker.test/v1/token/renew", json={})
         transport.request(

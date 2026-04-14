@@ -1,4 +1,4 @@
-"""Shared test fixtures for AgentAuth SDK integration tests.
+"""Shared test fixtures for AgentWrit SDK integration tests.
 
 Integration tests use a single broker app called "sdk-integration" registered
 with scope ceiling: ["read:data:*", "write:data:*"].
@@ -6,15 +6,15 @@ with scope ceiling: ["read:data:*", "write:data:*"].
 Setup (run once before integration tests):
 
 1. Start the broker:
-   ./broker/scripts/stack_up.sh
+   docker compose up -d
 
 2. Register the test app via aactl or admin API.
 
 3. Export environment variables:
-   export AGENTAUTH_BROKER_URL=http://127.0.0.1:8080
-   export AGENTAUTH_ADMIN_SECRET=<your-secret>
-   export AGENTAUTH_CLIENT_ID=<client_id>
-   export AGENTAUTH_CLIENT_SECRET=<client_secret>
+   export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
+   export AGENTWRIT_ADMIN_SECRET=<your-secret>
+   export AGENTWRIT_CLIENT_ID=<client_id>
+   export AGENTWRIT_CLIENT_SECRET=<client_secret>
 
 4. Run integration tests:
    uv run pytest tests/integration/ -v -m integration
@@ -27,24 +27,24 @@ import os
 import httpx
 import pytest
 
-from agentauth import AgentAuthApp
+from agentwrit import AgentWritApp
 
 
 @pytest.fixture(scope="session")
 def broker_url() -> str:
-    """Base URL of the AgentAuth broker."""
-    return os.environ.get("AGENTAUTH_BROKER_URL", "http://127.0.0.1:8080")
+    """Base URL of the AgentWrit broker."""
+    return os.environ.get("AGENTWRIT_BROKER_URL", "http://127.0.0.1:8080")
 
 
 @pytest.fixture(scope="session")
 def app_credentials() -> dict[str, str]:
     """Credentials for the sdk-integration test app."""
-    client_id: str | None = os.environ.get("AGENTAUTH_CLIENT_ID")
-    client_secret: str | None = os.environ.get("AGENTAUTH_CLIENT_SECRET")
+    client_id: str | None = os.environ.get("AGENTWRIT_CLIENT_ID")
+    client_secret: str | None = os.environ.get("AGENTWRIT_CLIENT_SECRET")
     if not client_id or not client_secret:
         pytest.skip(
-            "Integration tests require AGENTAUTH_CLIENT_ID and "
-            "AGENTAUTH_CLIENT_SECRET -- see tests/conftest.py"
+            "Integration tests require AGENTWRIT_CLIENT_ID and "
+            "AGENTWRIT_CLIENT_SECRET -- see tests/conftest.py"
         )
     return {"client_id": client_id, "client_secret": client_secret}
 
@@ -52,9 +52,9 @@ def app_credentials() -> dict[str, str]:
 @pytest.fixture(scope="session")
 def admin_token(broker_url: str) -> str:
     """Admin JWT for audit queries in tests."""
-    secret: str | None = os.environ.get("AGENTAUTH_ADMIN_SECRET")
+    secret: str | None = os.environ.get("AGENTWRIT_ADMIN_SECRET")
     if not secret:
-        pytest.skip("AGENTAUTH_ADMIN_SECRET required for admin tests")
+        pytest.skip("AGENTWRIT_ADMIN_SECRET required for admin tests")
     resp = httpx.post(
         f"{broker_url}/v1/admin/auth",
         json={"secret": secret},
@@ -66,12 +66,12 @@ def admin_token(broker_url: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def client(broker_url: str, app_credentials: dict[str, str]) -> AgentAuthApp:
-    """Initialized AgentAuthApp for integration tests.
+def client(broker_url: str, app_credentials: dict[str, str]) -> AgentWritApp:
+    """Initialized AgentWritApp for integration tests.
 
     Session-scoped to avoid rate limit (10 req/min per client_id, burst 3).
     """
-    return AgentAuthApp(
+    return AgentWritApp(
         broker_url=broker_url,
         client_id=app_credentials["client_id"],
         client_secret=app_credentials["client_secret"],
