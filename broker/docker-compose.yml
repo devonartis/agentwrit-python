@@ -1,0 +1,32 @@
+services:
+  broker:
+    image: devonartis/agentwrit:latest
+    ports:
+      - "${AA_HOST_PORT:-8080}:8080"
+    environment:
+      - AA_PORT=8080
+      - AA_BIND_ADDRESS=${AA_BIND_ADDRESS:-0.0.0.0}
+      - AA_ADMIN_SECRET=${AA_ADMIN_SECRET:-}
+      - AA_SEED_TOKENS=${AA_SEED_TOKENS:-false}
+      - AA_LOG_LEVEL=${AA_LOG_LEVEL:-standard}
+      - AA_DB_PATH=${AA_DB_PATH:-/data/agentauth.db}
+      - AA_SIGNING_KEY_PATH=${AA_SIGNING_KEY_PATH:-/data/signing.key}
+      - AA_CONFIG_PATH=${AA_CONFIG_PATH:-}
+      - AA_AUDIENCE=${AA_AUDIENCE:-}
+      - AA_APP_TOKEN_TTL=${AA_APP_TOKEN_TTL:-}
+    volumes:
+      - broker-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    networks:
+      - agentauth-net
+
+volumes:
+  broker-data:
+
+networks:
+  agentauth-net:
+    driver: bridge

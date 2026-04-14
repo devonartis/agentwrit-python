@@ -38,5 +38,5 @@ uv run pytest tests/unit/              # unit tests
 - **Read `~/proj/devflow/agentwrit-python/MEMORY.md` first** every session — it has current state and lessons.
 - **Read `~/proj/devflow/agentwrit-python/FLOW.md`** for decision history and what's next.
 - **Use `devflow-client`** skill for all development work.
-- **API source of truth:** `broker/docs/api.md` (vendored, frozen) — always verify SDK calls against it.
-- **Live broker for verification:** Stand up broker via `./broker/scripts/stack_up.sh` before running integration tests. See `broker/VENDOR.md` for provenance.
+- **API source of truth:** `broker/docs/api.md` — always verify SDK calls against it.
+- **Live broker for verification:** Stand up broker via `./broker/scripts/stack_up.sh` (pulls `devonartis/agentwrit` from Docker Hub).
