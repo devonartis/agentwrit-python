@@ -35,16 +35,6 @@ htmlcov/
 .playwright-mcp/
 .claude/settings.local.json
 
-# Broker — only track docker-compose, scripts, and API contract
-# Go source, data volumes, and build artifacts are never committed
-broker/*
-!broker/docker-compose.yml
-!broker/scripts/
-!broker/docs/
-broker/docs/*
-!broker/docs/api.md
-!broker/docs/api/
-
 # Local archive (historical artifacts, not for repo)
 archive/
 
