@@ -20,7 +20,8 @@ AgentWritApp(
     client_id: str,
     client_secret: str,
     *,
-    timeout: float = 30.0,
+    timeout: float = 10.0,
+    user_agent: str | None = None,
 )
 ```
 
@@ -31,7 +32,8 @@ Creates an app instance. Authentication is lazy — the SDK does not contact the
 | `broker_url` | `str` | required | Base URL of the AgentWrit broker (e.g., `http://localhost:8080`) |
 | `client_id` | `str` | required | Application identifier from broker registration |
 | `client_secret` | `str` | required | Application secret. Never logged, printed, or included in any SDK output. |
-| `timeout` | `float` | `30.0` | HTTP request timeout in seconds |
+| `timeout` | `float` | `10.0` | HTTP request timeout in seconds |
+| `user_agent` | `str \| None` | `None` | Custom User-Agent header. If `None`, uses the SDK default. |
 
 ### create_agent()
 
@@ -88,6 +90,14 @@ app.validate(token: str) -> ValidateResult
 Shortcut for `agentwrit.validate(app.broker_url, token)`.
 
 **Returns:** `ValidateResult`
+
+### close()
+
+```python
+app.close() -> None
+```
+
+Closes the underlying HTTP transport. Call this when you're done with the app to release connections.
 
 ---
 
@@ -239,7 +249,7 @@ from agentwrit import AgentClaims
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `iss` | `str` | Issuer (always `"agentwrit"`) |
+| `iss` | `str` | Issuer — identifies the broker that issued the token |
 | `sub` | `str` | Subject — SPIFFE URI of the agent |
 | `aud` | `list[str]` | Audience (may be empty) |
 | `exp` | `int` | Expiration (Unix timestamp) |
