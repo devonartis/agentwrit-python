@@ -3,8 +3,8 @@
 ## Rules
 
 **At session start, ALWAYS read these files before doing anything else:**
-- `MEMORY.md` — current state, standing rules, known issues
-- `FLOW.md` — decision log + **welcome note on first visit** (delete after reading)
+- `~/proj/devflow/agentwrit-python/MEMORY.md` — current state, standing rules, known issues
+- `~/proj/devflow/agentwrit-python/FLOW.md` — decision log + **welcome note on first visit** (delete after reading)
 - Use `devflow-client` skill for all development work
 
 ## Rules — Non-Negotiable
@@ -35,8 +35,8 @@ uv run pytest tests/unit/              # unit tests
 
 ## Defaults
 
-- **Read `MEMORY.md` first** every session — it has current state and lessons.
-- **Read `FLOW.md`** for decision history and what's next.
+- **Read `~/proj/devflow/agentwrit-python/MEMORY.md` first** every session — it has current state and lessons.
+- **Read `~/proj/devflow/agentwrit-python/FLOW.md`** for decision history and what's next.
 - **Use `devflow-client`** skill for all development work.
 - **API source of truth:** `broker/docs/api.md` (vendored, frozen) — always verify SDK calls against it.
 - **Live broker for verification:** Stand up broker via `./broker/scripts/stack_up.sh` before running integration tests. See `broker/VENDOR.md` for provenance.

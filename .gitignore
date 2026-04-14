@@ -40,3 +40,11 @@ broker/
 
 # Local archive (historical artifacts, not for repo)
 archive/
+
+# Dev-internal artifacts (live in ~/proj/devflow/agentwrit-python/ per Decision 019)
+MEMORY.md
+FLOW.md
+AGENTS.md
+.plans/
+.agents/
+.claude/skills/

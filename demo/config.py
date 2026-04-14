@@ -25,9 +25,9 @@ class DemoConfig:
             client_id=os.environ.get("AGENTAUTH_CLIENT_ID", ""),
             client_secret=os.environ.get("AGENTAUTH_CLIENT_SECRET", ""),
             admin_secret=os.environ.get("AGENTAUTH_ADMIN_SECRET", ""),
-            llm_base_url=os.environ.get("LLM_BASE_URL", "http://spark-3171/vllm/v1"),
-            llm_api_key=os.environ.get("LLM_API_KEY", "EMPTY"),
-            llm_model=os.environ.get("LLM_MODEL", "google/gemma-4-26B-A4B-it"),
+            llm_base_url=os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1"),
+            llm_api_key=os.environ.get("LLM_API_KEY", ""),
+            llm_model=os.environ.get("LLM_MODEL", "gpt-4o-mini"),
         )
 
 
