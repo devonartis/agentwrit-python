@@ -60,7 +60,7 @@ def main() -> None:
     print("Admin authenticated.")
 
     # Register the demo app
-    print(f"\nRegistering support ticket demo app with scope ceiling:")
+    print("\nRegistering support ticket demo app with scope ceiling:")
     for scope in APP_SCOPE_CEILING:
         print(f"  - {scope}")
 
@@ -81,7 +81,7 @@ def main() -> None:
 
     app_data = app_resp.json()
 
-    print(f"\nApp registered successfully!")
+    print("\nApp registered successfully!")
     print(f"  app_id:        {app_data['app_id']}")
     print(f"  client_id:     {app_data['client_id']}")
     print(f"  client_secret: {app_data['client_secret']}")
@@ -94,9 +94,9 @@ def main() -> None:
     print(f"AGENTAUTH_CLIENT_ID={app_data['client_id']}")
     print(f"AGENTAUTH_CLIENT_SECRET={app_data['client_secret']}")
     print(f"AGENTAUTH_ADMIN_SECRET={ADMIN_SECRET}")
-    print(f"LLM_BASE_URL=<your-llm-base-url>")
-    print(f"LLM_API_KEY=<your-api-key>")
-    print(f"LLM_MODEL=<your-model>")
+    print("LLM_BASE_URL=<your-llm-base-url>")
+    print("LLM_API_KEY=<your-api-key>")
+    print("LLM_MODEL=<your-model>")
     print(f"{'='*60}")
 
 

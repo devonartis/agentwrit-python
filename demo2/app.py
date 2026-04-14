@@ -6,7 +6,6 @@ tickets under broker-issued scoped credentials.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,7 +13,6 @@ from flask import Flask, Response, render_template, request, stream_with_context
 from openai import OpenAI
 
 from agentauth import AgentAuthApp
-
 from demo2.config import APP_SCOPE_CEILING, DemoConfig
 from demo2.data import QUICK_FILLS
 from demo2.pipeline import run_pipeline

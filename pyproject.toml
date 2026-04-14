@@ -29,7 +29,7 @@ packages = ["src/agentauth"]
 [tool.ruff]
 target-version = "py310"
 line-length = 100
-exclude = ["tests/sdk-core"]
+exclude = ["tests/sdk-core", "tests/integration", "demo", "demo2"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

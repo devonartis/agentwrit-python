@@ -20,13 +20,11 @@ from typing import Any
 from openai import OpenAI
 
 from agentauth import (
-    Agent,
     AgentAuthApp,
     scope_is_subset,
     validate,
 )
 from agentauth.errors import AgentAuthError
-
 from demo2 import data
 from demo2.tools import TOOLS, execute_tool, scopes_for_tools
 

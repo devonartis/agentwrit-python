@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -34,11 +33,9 @@ from agentauth import (
     validate,
 )
 from agentauth.errors import AgentAuthError, AuthorizationError
-
 from demo.pipeline.agents import billing, clinical, prescription
 from demo.pipeline.tools import (
     TOOLS,
-    ToolResult,
     execute_tool,
     get_tools_for_role,
     scopes_for_tools,

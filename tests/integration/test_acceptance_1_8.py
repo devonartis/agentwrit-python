@@ -398,7 +398,7 @@ class TestStory5:
             delegate_to=agent_b.agent_id,
             scope=["read:data:partition-7"],
         )
-        output.append(f"  delegate() returned:")
+        output.append("  delegate() returned:")
         output.append(f"    access_token: {delegated.access_token[:30]}...")
         output.append(f"    expires_in:   {delegated.expires_in}s")
         output.append(f"    chain_length: {len(delegated.delegation_chain)}")
@@ -582,7 +582,7 @@ class TestStory7:
             delegate_to=agent_b.agent_id,
             scope=["read:data:partition-7", "read:data:partition-8"],
         )
-        output.append(f"  delegate() A→B returned:")
+        output.append("  delegate() A→B returned:")
         output.append(f"    access_token: {delegated_ab.access_token[:30]}...")
         output.append(f"    expires_in:   {delegated_ab.expires_in}s")
         output.append(f"    chain_length: {len(delegated_ab.delegation_chain)}")
@@ -615,7 +615,7 @@ class TestStory7:
             hop2_data = hop2_resp.json()
             delegated_bc_token = hop2_data["access_token"]
             delegated_bc_chain = hop2_data.get("delegation_chain", [])
-            output.append(f"  Hop 2 returned:")
+            output.append("  Hop 2 returned:")
             output.append(f"    access_token: {delegated_bc_token[:30]}...")
             output.append(f"    expires_in:   {hop2_data['expires_in']}s")
             output.append(f"    chain_length: {len(delegated_bc_chain)}")
@@ -743,7 +743,7 @@ class TestStory8:
             )
             broker_accepts = True
             output.append("  RESULT: Broker ACCEPTED full-scope delegation")
-            output.append(f"  delegate() returned:")
+            output.append("  delegate() returned:")
             output.append(f"    access_token: {delegated.access_token[:30]}...")
             output.append(f"    expires_in:   {delegated.expires_in}s")
             output.append(f"    chain_length: {len(delegated.delegation_chain)}")
@@ -829,7 +829,7 @@ class TestStory9:
         # Action 1: Read customer-artis (authorized)
         action_1 = ["read:data:customer-artis"]
         allowed_1 = scope_is_subset(action_1, agent.scope)
-        output.append(f"  Action: read customer-artis")
+        output.append("  Action: read customer-artis")
         output.append(f"  Scope check: {allowed_1}")
         if allowed_1:
             output.append("  PASS: Authorized action allowed")
@@ -842,7 +842,7 @@ class TestStory9:
         # Action 2: Read ALL customers (NOT authorized)
         action_2 = ["read:data:all-customers"]
         allowed_2 = scope_is_subset(action_2, agent.scope)
-        output.append(f"  Action: read all-customers")
+        output.append("  Action: read all-customers")
         output.append(f"  Scope check: {allowed_2}")
         if not allowed_2:
             output.append("  PASS: Unauthorized action blocked by scope check")
@@ -855,7 +855,7 @@ class TestStory9:
         # Action 3: Write to customer-artis (NOT authorized — agent has read only)
         action_3 = ["write:data:customer-artis"]
         allowed_3 = scope_is_subset(action_3, agent.scope)
-        output.append(f"  Action: write customer-artis")
+        output.append("  Action: write customer-artis")
         output.append(f"  Scope check: {allowed_3}")
         if not allowed_3:
             output.append("  PASS: Write blocked — agent has read-only scope")
@@ -1158,7 +1158,7 @@ class TestStory12:
                 output.append(f"      sub:   {result.claims.sub}")
                 output.append(f"      scope: {result.claims.scope}")
                 if result.claims.scope != agent.scope:
-                    output.append(f"      FAIL: Claims scope doesn't match agent scope")
+                    output.append("      FAIL: Claims scope doesn't match agent scope")
                     passed = False
             else:
                 output.append(f"      FAIL: Token invalid — error={result.error}")
@@ -1313,7 +1313,7 @@ class TestStory14:
                     output.append("  FAIL: Broker accepted a garbage token")
                     passed = False
             except Exception as e:
-                output.append(f"  FAIL: SDK threw exception instead of returning ValidateResult")
+                output.append("  FAIL: SDK threw exception instead of returning ValidateResult")
                 output.append(f"  Exception: {type(e).__name__}: {e}")
                 passed = False
 
@@ -1357,7 +1357,7 @@ class TestStory15:
         passed = True
 
         health = client.health()
-        output.append(f"  health() returned:")
+        output.append("  health() returned:")
         output.append(f"    status:              {health.status}")
         output.append(f"    version:             {health.version}")
         output.append(f"    uptime:              {health.uptime}s")

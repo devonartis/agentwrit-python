@@ -25,7 +25,6 @@ from agentauth import (
     validate,
 )
 from agentauth.errors import AgentAuthError, AuthorizationError
-
 from demo.config import DemoConfig
 from demo.data.patients import get_patient, list_patients
 from demo.pipeline.tools import TOOLS, execute_tool, scopes_for_tools
@@ -349,7 +348,7 @@ async def process_request(request: Request) -> JSONResponse:
                 trace.append(TraceStep("token_validated",
                                        f"Old {category} token confirmed dead",
                                        {"valid": old_val.valid, "error": old_val.error,
-                                        "context": "old_token_after_renewal"}, 
+                                        "context": "old_token_after_renewal"},
                                        "success" if not old_val.valid else "warning"))
             except AgentAuthError:
                 pass
