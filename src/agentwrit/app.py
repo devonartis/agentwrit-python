@@ -3,18 +3,18 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from agentauth._transport import AgentAuthTransport
-from agentauth.app_types import _AppSession
-from agentauth.models import HealthStatus, ValidateResult
-from agentauth.scope import validate as module_validate
+from agentwrit._transport import AgentWritTransport
+from agentwrit.app_types import _AppSession
+from agentwrit.models import HealthStatus, ValidateResult
+from agentwrit.scope import validate as module_validate
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric import ed25519
 
-    from agentauth.agent import Agent
+    from agentwrit.agent import Agent
 
 
-class AgentAuthApp:
+class AgentWritApp:
     """The developer's app container. Manages authentication internally,
     creates agents, validates tokens, and gates tool access.
 
@@ -30,10 +30,10 @@ class AgentAuthApp:
         timeout: float = 10.0,
         user_agent: str | None = None,
     ) -> None:
-        """Initialize the AgentAuthApp.
+        """Initialize the AgentWritApp.
 
         Args:
-            broker_url: Base URL of the AgentAuth broker.
+            broker_url: Base URL of the AgentWrit broker.
             client_id: App client ID from operator.
             client_secret: App client secret from operator.
             timeout: HTTP request timeout in seconds.
@@ -45,7 +45,7 @@ class AgentAuthApp:
         self.timeout = timeout
         self.user_agent = user_agent
 
-        self._transport = AgentAuthTransport(
+        self._transport = AgentWritTransport(
             broker_url=self.broker_url,
             timeout=self.timeout,
             user_agent=self.user_agent
@@ -120,7 +120,7 @@ class AgentAuthApp:
         Uses the `AgentCreationOrchestrator` to perform the multi-step
         challenge-response registration ceremony.
         """
-        from agentauth.orchestrator import AgentCreationOrchestrator
+        from agentwrit.orchestrator import AgentCreationOrchestrator
         orchestrator = AgentCreationOrchestrator(self)
         return orchestrator.orchestrate(
             orch_id=orch_id,
@@ -134,7 +134,7 @@ class AgentAuthApp:
     def validate(self, token: str) -> ValidateResult:
         """POST /v1/token/validate -- verify any token via the broker.
 
-        Convenience shortcut for `agentauth.validate(self.broker_url, token)`.
+        Convenience shortcut for `agentwrit.validate(self.broker_url, token)`.
         """
         return module_validate(self.broker_url, token, timeout=self.timeout)
 

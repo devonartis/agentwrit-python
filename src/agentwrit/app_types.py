@@ -8,7 +8,7 @@ class _AppSession:
     """Internal representation of an authenticated application session.
 
     Business Logic:
-    Tracks the app's JWT and its expiry time. This is used by `AgentAuthApp`
+    Tracks the app's JWT and its expiry time. This is used by `AgentWritApp`
     to implement lazy authentication and automatic re-authentication
     before the token expires.
     """
