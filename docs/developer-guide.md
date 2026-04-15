@@ -430,6 +430,63 @@ else:
 
 ---
 
+## Thread Safety
+
+`AgentWritApp` is **not thread-safe for mutations**. The app performs lazy one-time authentication on first use, and `app.close()` mutates internal state. Do not share the same `AgentWritApp` instance across threads or `asyncio` event loops without synchronization.
+
+The underlying `httpx.Client` **is thread-safe for concurrent requests** once the app is authenticated. This means multiple threads can safely call `app.create_agent()` or `agent.validate()` on the *same* authenticated instance, provided no thread calls `close()` while others are using it.
+
+### Recommended Patterns
+
+- **One app per thread** (safest):
+  ```python
+  import threading
+  from agentwrit import AgentWritApp
+
+  def worker():
+      app = AgentWritApp(...)
+      agent = app.create_agent(...)
+      # ... use agent ...
+      app.close()
+
+  threads = [threading.Thread(target=worker) for _ in range(4)]
+  for t in threads:
+      t.start()
+  ```
+
+- **Shared app with explicit lifecycle**:
+  Create one `AgentWritApp`, use it from many threads, and call `close()` only after all threads have finished.
+
+- **Always call `app.close()`** when you're done to avoid connection leaks.
+
+---
+
+## Async / Await Support
+
+The AgentWrit SDK is **synchronous only** in v0.3.0 (it uses `httpx`'s sync client). There is no native `async`/`await` support planned for this release.
+
+If you are building on an async framework such as FastAPI, Starlette, or Sanic, wrap SDK calls with `asyncio.to_thread()` so they do not block the event loop:
+
+```python
+import asyncio
+from agentwrit import AgentWritApp
+
+app = AgentWritApp(...)
+
+async def handle_request():
+    agent = await asyncio.to_thread(
+        app.create_agent,
+        orch_id="api-gateway",
+        task_id="request-123",
+        requested_scope=["read:data:customer-123"],
+        ttl=300,
+    )
+    # ... use agent ...
+    await asyncio.to_thread(agent.release)
+```
+
+---
+
 ## Next Steps
 
 | Guide | What You'll Learn |

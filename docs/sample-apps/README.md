@@ -72,11 +72,11 @@ docker compose up -d
 ### Step 2: Register the Universal Sample App
 
 ```bash
-export AA_ADMIN_SECRET="dev-secret"  # change if your broker uses a different secret
+export AGENTWRIT_ADMIN_SECRET="dev-secret"  # change if your broker uses a different secret
 
 ADMIN_TOKEN=$(curl -s -X POST http://127.0.0.1:8080/v1/admin/auth \
   -H "Content-Type: application/json" \
-  -d "{\"secret\": \"$AA_ADMIN_SECRET\"}" \
+  -d "{\"secret\": \"$AGENTWRIT_ADMIN_SECRET\"}" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 curl -s -X POST http://127.0.0.1:8080/v1/admin/apps \

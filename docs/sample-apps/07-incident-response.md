@@ -102,7 +102,7 @@ def check_token(broker_url: str, token: str, label: str) -> bool:
 
 def main() -> None:
     broker_url = os.environ["AGENTWRIT_BROKER_URL"]
-    admin_secret = os.environ.get("AA_ADMIN_SECRET", "dev-secret")
+    admin_secret = os.environ.get("AGENTWRIT_ADMIN_SECRET", "dev-secret")
 
     app = AgentWritApp(
         broker_url=broker_url,
@@ -292,7 +292,7 @@ This app uses the **universal sample app** registered in the [README setup](READ
 This app revokes tokens using the admin API, which requires the **operator's admin secret**. This is the same secret used to start the broker:
 
 ```bash
-export AA_ADMIN_SECRET="dev-secret"  # match your broker's admin secret
+export AGENTWRIT_ADMIN_SECRET="dev-secret"  # match your broker's admin secret
 ```
 
 ### Additional Dependency
@@ -307,7 +307,7 @@ uv add httpx
 export AGENTWRIT_BROKER_URL="http://127.0.0.1:8080"
 export AGENTWRIT_CLIENT_ID="<from registration>"
 export AGENTWRIT_CLIENT_SECRET="<from registration>"
-export AA_ADMIN_SECRET="dev-secret"
+export AGENTWRIT_ADMIN_SECRET="dev-secret"
 
 uv run python incident_response.py
 ```
