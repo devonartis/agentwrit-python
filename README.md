@@ -15,6 +15,20 @@
   Built on Ed25519 challenge-response and the <a href="https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.3.md">Ephemeral Agent Credentialing v1.3</a> pattern.
 </p>
 
+<p align="center">
+  <a href="#why-agentwrit">Why</a> ·
+  <a href="#installation">Install</a> ·
+  <a href="#prerequisites">Prerequisites</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#agent-lifecycle">Lifecycle</a> ·
+  <a href="#medassist-ai-demo">Demo</a> ·
+  <a href="#scope-format">Scopes</a> ·
+  <a href="#delegation">Delegation</a> ·
+  <a href="#error-handling">Errors</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#documentation">Docs</a>
+</p>
+
 ---
 
 ## Why AgentWrit?
@@ -26,7 +40,7 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 - **Short-lived by default** — tokens expire in minutes, not hours or days
 - **Delegation chains** — agents can delegate narrower permissions to other agents, enforced at every hop
 
-This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit). The broker is the credential authority; this SDK makes it easy to integrate from Python.
+This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit) — the broker is the credential authority, and this SDK is how your Python code talks to it.
 
 ## Installation
 
@@ -50,9 +64,43 @@ cd agentwrit-python
 uv sync --all-extras
 ```
 
-**Requirements:** Python 3.10+ and a running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance.
+**Requirements:** Python 3.10+. The SDK also needs a broker and credentials — see [Prerequisites](#prerequisites).
+
+## Prerequisites
+
+The SDK is a client. It does **not** run the broker, and it does **not** mint its own credentials. Before any code in [Quick Start](#quick-start) will work, you need three things:
+
+**1. A reachable AgentWrit broker.**
+The broker is a separate service that issues and validates tokens.
+
+- *Have a platform team running one?* Ask them for the broker URL.
+- *Running it yourself?* Stand one up locally — the [broker repo](https://github.com/devonartis/agentwrit) ships a `docker compose` setup. From this repo:
+  ```bash
+  docker compose up -d   # pulls devonartis/agentwrit from Docker Hub
+  ```
+
+**2. App credentials (`client_id` + `client_secret`).**
+These are issued by the **broker operator/admin** when they register your app and set its scope ceiling. The SDK cannot create them for you.
+
+- *Have a broker admin?* Ask them to register your app and send you the `client_id` and `client_secret`.
+- *You are the admin?* Use the included setup script (it registers an app and prints both values):
+  ```bash
+  export AGENTWRIT_ADMIN_SECRET="<your-broker-admin-secret>"
+  uv run python demo/setup.py
+  ```
+
+**3. Environment variables set** on the process that uses the SDK:
+```bash
+export AGENTWRIT_BROKER_URL="http://localhost:8080"   # from step 1
+export AGENTWRIT_CLIENT_ID="<from step 2>"
+export AGENTWRIT_CLIENT_SECRET="<from step 2>"
+```
+
+> Auth is lazy — the SDK doesn't talk to the broker until your first `create_agent()` call. If that call raises `AuthenticationError`, your `client_id` or `client_secret` is wrong (or the operator rotated them). If it raises `TransportError`, the broker URL is unreachable.
 
 ## Quick Start
+
+> Assumes [Prerequisites](#prerequisites) are met — broker reachable, app registered, env vars set.
 
 ```python
 import os
@@ -61,8 +109,8 @@ from agentwrit import AgentWritApp, validate
 # Connect to the broker (lazy — no auth until first create_agent)
 app = AgentWritApp(
     broker_url=os.environ["AGENTWRIT_BROKER_URL"],
-    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
-    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],          # from broker admin
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],  # from broker admin
 )
 
 # Create an agent with specific scope
@@ -112,7 +160,7 @@ agent.release()
 
 The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive healthcare demo that showcases every AgentWrit capability against a live broker.
 
-**What it does:** A FastAPI web app where you enter a patient ID and a plain-language request. A local LLM (OpenAI-compatible) chooses which tools to call. The app dynamically creates broker agents with only the scopes those tools need, for that specific patient. You see scope enforcement, cross-patient denial, delegation, token renewal, and release — all in a real-time execution trace.
+**What it does:** A FastAPI web app where you enter a patient ID and a plain-language request. A local LLM (OpenAI-compatible) chooses which tools to call, and the app dynamically creates broker agents with only the scopes those tools need for that specific patient. Every step — scope enforcement, cross-patient denial, delegation, token renewal, release — appears in a real-time execution trace.
 
 **What it demonstrates:**
 
