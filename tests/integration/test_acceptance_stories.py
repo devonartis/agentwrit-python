@@ -10,7 +10,7 @@ Usage:
     export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
     export AGENTWRIT_CLIENT_ID=<id>
     export AGENTWRIT_CLIENT_SECRET=<secret>
-    uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
+    uv run pytest tests/integration/test_acceptance_stories.py -v -s -m integration
 """
 from __future__ import annotations
 

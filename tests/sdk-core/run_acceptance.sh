@@ -12,8 +12,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 export AGENTWRIT_BROKER_URL="${AGENTWRIT_BROKER_URL:-http://127.0.0.1:8080}"
-export AGENTWRIT_CLIENT_ID="${AGENTWRIT_CLIENT_ID:-sit-d1eeee10a81e}"
-export AGENTWRIT_CLIENT_SECRET="${AGENTWRIT_CLIENT_SECRET:-08f1b60f93e6eeb5f7bbe4791981d0c338188d38e117ad70d90797a96a90173a}"
+
+if [[ -z "${AGENTWRIT_CLIENT_ID:-}" || -z "${AGENTWRIT_CLIENT_SECRET:-}" ]]; then
+    echo "Error: AGENTWRIT_CLIENT_ID and AGENTWRIT_CLIENT_SECRET must be set." >&2
+    echo "Register a test app via the broker admin API, or export them before running this script." >&2
+    exit 1
+fi
 
 # Check if broker is running
 broker_up() {
@@ -78,7 +82,7 @@ mkdir -p "${SCRIPT_DIR}/evidence"
 # Run acceptance tests with pytest
 # Session-scoped fixture ensures single app auth (avoids 429 rate limit)
 cd "${REPO_ROOT}"
-uv run pytest tests/integration/test_acceptance_1_8.py \
+uv run pytest tests/integration/test_acceptance_stories.py \
     -v \
     -s \
     -m integration \
