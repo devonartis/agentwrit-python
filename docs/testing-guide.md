@@ -43,12 +43,10 @@ Acceptance tests run against a live broker. They exercise every SDK operation en
 With env vars set from the Prerequisites step, run the suite directly with pytest:
 
 ```bash
-uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
+uv run pytest tests/integration/test_acceptance_stories.py -v -s -m integration
 ```
 
 The `-s` flag is important — it shows the banners in the console.
-
-> **Note on the file name:** `test_acceptance_1_8.py` contains all 15 stories. The name is historical — the suite grew past eight without a rename. A follow-up PR will rename it; until then, `grep "STORY 9"` finds it in the same file.
 
 You can also use the wrapper script, which starts the broker if needed:
 
