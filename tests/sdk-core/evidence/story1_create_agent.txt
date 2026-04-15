@@ -8,7 +8,7 @@ WHY:      Every agent must have a verifiable identity and scope
 EXPECTED: Agent has a SPIFFE ID containing the orch_id,
           and scope matches exactly what was requested
 =================================================================
-  agent_id:   spiffe://agentauth.local/agent/data-service/lookup-artis/0162615af9783c2c
+  agent_id:   spiffe://agentwrit.local/agent/data-service/lookup-artis/8d345a20521992c8
   scope:      ['read:data:customer-artis']
   token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
   expires_in: 300s

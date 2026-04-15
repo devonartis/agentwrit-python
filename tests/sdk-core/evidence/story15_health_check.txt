@@ -11,13 +11,13 @@ EXPECTED: HealthStatus with status='ok', version, uptime,
   health() returned:
     status:              ok
     version:             2.0.0
-    uptime:              153912s
+    uptime:              146s
     db_connected:        True
-    audit_events_count:  3046
+    audit_events_count:  96
 
   PASS: Broker status is 'ok'
   PASS: Version reported: 2.0.0
-  PASS: Uptime is 153912s (broker is running)
+  PASS: Uptime is 146s (broker is running)
   PASS: Database is connected
 
 ═══ STORY 15: PASS ═══

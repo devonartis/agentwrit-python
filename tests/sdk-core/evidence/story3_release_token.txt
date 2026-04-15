@@ -7,7 +7,7 @@ WHAT:     Agent calls release() to revoke its own token
 WHY:      Dead tokens cannot be misused if leaked
 EXPECTED: Token revoked at broker, second release() is safe
 =================================================================
-  agent_id:   spiffe://agentauth.local/agent/cleanup-service/cleanup-job-001/f5046a50e548fc1c
+  agent_id:   spiffe://agentwrit.local/agent/cleanup-service/cleanup-job-001/1e5a9b06e79c23dc
   token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
   expires_in: 300s
 

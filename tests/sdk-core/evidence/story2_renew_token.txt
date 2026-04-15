@@ -8,7 +8,7 @@ WHY:      Tokens expire — renewal keeps the agent alive
 EXPECTED: New token issued, old token revoked,
           agent identity (SPIFFE ID) unchanged
 =================================================================
-  agent_id:      spiffe://agentauth.local/agent/export-service/export-job-001/afe74b0eb9deb34d
+  agent_id:      spiffe://agentwrit.local/agent/export-service/export-job-001/115c91bed2324aa0
   old token:     eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
   old expires_in: 300s
 

@@ -8,15 +8,15 @@ WHY:      Compromised agent A cannot access agent B's data
 EXPECTED: 3 unique SPIFFE IDs, 3 non-overlapping scopes,
           scope_is_subset confirms no cross-access
 =================================================================
-  Agent: spiffe://agentauth.local/agent/multi-agent-service/read-customers/0c1591e7c0c444dd
+  Agent: spiffe://agentwrit.local/agent/multi-agent-service/read-customers/2fe3952df998df75
     task_id: read-customers
     scope:   ['read:data:customers-west']
     token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
-  Agent: spiffe://agentauth.local/agent/multi-agent-service/read-inventory/1544cfa5533fbe1c
+  Agent: spiffe://agentwrit.local/agent/multi-agent-service/read-inventory/a4533026580f7a0f
     task_id: read-inventory
     scope:   ['read:data:inventory-warehouse-3']
     token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
-  Agent: spiffe://agentauth.local/agent/multi-agent-service/write-reports/c3f99bc97cde4bb1
+  Agent: spiffe://agentwrit.local/agent/multi-agent-service/write-reports/f9af4372b1008b83
     task_id: write-reports
     scope:   ['write:data:quarterly-report-q3']
     token:   eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
@@ -34,13 +34,13 @@ EXPECTED: 3 unique SPIFFE IDs, 3 non-overlapping scopes,
 
   Validating each agent's token:
     agent[0] (read-customers): valid=True
-      sub:   spiffe://agentauth.local/agent/multi-agent-service/read-customers/0c1591e7c0c444dd
+      sub:   spiffe://agentwrit.local/agent/multi-agent-service/read-customers/2fe3952df998df75
       scope: ['read:data:customers-west']
     agent[1] (read-inventory): valid=True
-      sub:   spiffe://agentauth.local/agent/multi-agent-service/read-inventory/1544cfa5533fbe1c
+      sub:   spiffe://agentwrit.local/agent/multi-agent-service/read-inventory/a4533026580f7a0f
       scope: ['read:data:inventory-warehouse-3']
     agent[2] (write-reports): valid=True
-      sub:   spiffe://agentauth.local/agent/multi-agent-service/write-reports/c3f99bc97cde4bb1
+      sub:   spiffe://agentwrit.local/agent/multi-agent-service/write-reports/f9af4372b1008b83
       scope: ['write:data:quarterly-report-q3']
 
 ═══ STORY 12: PASS ═══

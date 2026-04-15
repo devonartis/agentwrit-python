@@ -7,9 +7,9 @@ WHAT:     Agent A has partition-7, tries to delegate partition-8
 WHY:      Agents cannot grant authority they don't possess
 EXPECTED: Broker rejects with 403, SDK raises AuthorizationError
 =================================================================
-  Agent A: spiffe://agentauth.local/agent/pipeline/worker-only-p7/87527d0b8cbb3ba0
+  Agent A: spiffe://agentwrit.local/agent/pipeline/worker-only-p7/0ee132f1b87e0216
   Agent A scope: ['read:data:partition-7']
-  Agent B: spiffe://agentauth.local/agent/pipeline/target-agent/bb913562f97215eb
+  Agent B: spiffe://agentwrit.local/agent/pipeline/target-agent/582767614b890892
   Agent B scope: ['read:data:partition-7']
 
   A tries to delegate [read:data:partition-8] to B...

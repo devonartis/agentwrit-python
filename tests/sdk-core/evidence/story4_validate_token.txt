@@ -8,18 +8,18 @@ WHY:      Zero-trust — never assume a token is valid
 EXPECTED: Broker returns valid=true with claims that
           match the agent's scope, identity, and task
 =================================================================
-  agent_id: spiffe://agentauth.local/agent/reporting-service/quarterly-report/d100ed335e95cd8a
+  agent_id: spiffe://agentwrit.local/agent/reporting-service/quarterly-report/f49ff998df436800
   scope:    ['read:data:report-q3', 'write:data:summary-q3']
 
   validate() returned: valid=True
-    iss:     agentauth
-    sub:     spiffe://agentauth.local/agent/reporting-service/quarterly-report/d100ed335e95cd8a
+    iss:     
+    sub:     spiffe://agentwrit.local/agent/reporting-service/quarterly-report/f49ff998df436800
     scope:   ['read:data:report-q3', 'write:data:summary-q3']
     orch_id: reporting-service
     task_id: quarterly-report
-    jti:     fa81df2f42570e0eff9ad5c9b9488993
-    exp:     1775583493
-    iat:     1775583193
+    jti:     de250a1c0bfb2123c3b0cc52d7da360f
+    exp:     1776198669
+    iat:     1776198369
 
   PASS: Claims scope matches requested ['read:data:report-q3', 'write:data:summary-q3']
   PASS: Claims sub matches agent_id
