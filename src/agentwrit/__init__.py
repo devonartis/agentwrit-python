@@ -4,8 +4,6 @@ Implements the App-as-Container model: AgentWritApp is the developer's
 entry point, Agent is an ephemeral per-task principal created by the app.
 All agent authority flows from the app's scope ceiling set by the operator.
 
-Spec: .plans/specs/NEW_SPECS_TO_USED.md
-ADRs: .plans/specs/SPEC_ADR.md (SDK-001 through SDK-012)
 """
 
 from __future__ import annotations

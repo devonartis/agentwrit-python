@@ -8,9 +8,9 @@ WHY:      Delegation is supposed to narrow authority. Does the
           broker require strict narrowing, or accept equal scope?
 EXPECTED: This test discovers and documents the broker's behavior
 =================================================================
-  Agent A: spiffe://agentauth.local/agent/no-narrow-test/delegator/edd89b4625969450
+  Agent A: spiffe://agentwrit.local/agent/no-narrow-test/delegator/96399da8ea1759fc
   Agent A scope: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
-  Agent B: spiffe://agentauth.local/agent/no-narrow-test/receiver/b2d66979d9499b7a
+  Agent B: spiffe://agentwrit.local/agent/no-narrow-test/receiver/57162dbebad703ff
   Agent B scope: ['read:data:partition-7']
 
   A delegates ALL 3 scopes to B: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
@@ -19,11 +19,11 @@ EXPECTED: This test discovers and documents the broker's behavior
     access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
     expires_in:   60s
     chain_length: 1
-    chain[0]: agent=spiffe://agentauth.local/agent/no-narrow-test/delegator/edd89b4625969450 scope=['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results'] at=2026-04-07T17:33:37.564256586Z
+    chain[0]: agent=spiffe://agentwrit.local/agent/no-narrow-test/delegator/96399da8ea1759fc scope=['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results'] at=2026-04-14T20:26:33.36095847Z
 
   Validating delegated token with broker...
   validate() returned: valid=True
-    sub:   spiffe://agentauth.local/agent/no-narrow-test/receiver/b2d66979d9499b7a
+    sub:   spiffe://agentwrit.local/agent/no-narrow-test/receiver/57162dbebad703ff
     scope: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
 
   PASS: B received all 3 scopes (no narrowing accepted)

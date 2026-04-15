@@ -8,9 +8,9 @@ WHY:      Delegation must narrow authority, never expand it
 EXPECTED: Delegated token has ONLY the narrow scope,
           not A's full scope. Broker validates this.
 =================================================================
-  Agent A: spiffe://agentauth.local/agent/pipeline/orchestrator-001/080468548378e992
+  Agent A: spiffe://agentwrit.local/agent/pipeline/orchestrator-001/4d520273839c0f45
   Agent A scope: ['read:data:partition-7', 'read:data:partition-8']
-  Agent B: spiffe://agentauth.local/agent/pipeline/worker-partition-7/27d776c18f7c222a
+  Agent B: spiffe://agentwrit.local/agent/pipeline/worker-partition-7/c352ffc831e30798
   Agent B scope: ['read:data:partition-7']
 
   A delegates [read:data:partition-7] to B...
@@ -18,11 +18,11 @@ EXPECTED: Delegated token has ONLY the narrow scope,
     access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
     expires_in:   60s
     chain_length: 1
-    chain[0]: agent=ator-001/080468548378e992 scope=['read:data:partition-7', 'read:data:partition-8'] at=2026-04-07T17:33:19.323295884Z
+    chain[0]: agent=ator-001/4d520273839c0f45 scope=['read:data:partition-7', 'read:data:partition-8'] at=2026-04-14T20:26:15.130922919Z
 
   Validating delegated token with broker...
   validate() returned: valid=True
-    sub:     spiffe://agentauth.local/agent/pipeline/worker-partition-7/27d776c18f7c222a
+    sub:     spiffe://agentwrit.local/agent/pipeline/worker-partition-7/c352ffc831e30798
     scope:   ['read:data:partition-7']
     orch_id: pipeline
     task_id: orchestrator-001
