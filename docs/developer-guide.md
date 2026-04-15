@@ -137,7 +137,7 @@ Always validate the delegated token to confirm the broker actually narrowed it:
 ```python
 from agentwrit import validate
 
-result = validate(broker_url, delegated.access_token)
+result = validate(app.broker_url, delegated.access_token)
 assert result.valid
 assert result.claims.scope == ["read:data:partition-7"]
 # partition-8 is NOT in the delegated token
@@ -179,7 +179,7 @@ delegated_ab = agent_a.delegate(
 
 # Hop 2: Use the delegated token to delegate further (raw HTTP)
 resp = httpx.post(
-    f"{broker_url}/v1/delegate",
+    f"{app.broker_url}/v1/delegate",
     json={
         "delegate_to": agent_c.agent_id,
         "scope": ["read:data:partition-7"],
@@ -259,7 +259,7 @@ For zero-trust enforcement, validate the token with the broker AND check scope:
 ```python
 from agentwrit import validate, scope_is_subset
 
-result = validate(broker_url, agent.access_token)
+result = validate(app.broker_url, agent.access_token)
 if result.valid and result.claims:
     # Token is live — now check scope
     if scope_is_subset(required_scope, result.claims.scope):
@@ -351,7 +351,7 @@ If someone sends a fake token to your app, `validate()` handles it gracefully:
 ```python
 from agentwrit import validate
 
-result = validate(broker_url, "completely-fake-not-a-jwt")
+result = validate(app.broker_url, "completely-fake-not-a-jwt")
 print(result.valid)  # False
 print(result.error)  # "token is invalid or expired"
 ```
@@ -406,7 +406,7 @@ Same behavior, but uses the app's broker URL and timeout.
 ### ValidateResult Fields
 
 ```python
-result = validate(broker_url, agent.access_token)
+result = validate(app.broker_url, agent.access_token)
 
 if result.valid:
     print(result.claims.iss)       # "agentwrit"
