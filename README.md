@@ -38,7 +38,7 @@ AI agents need credentials to access databases, APIs, and file systems. Most tea
 - **Ephemeral identities** — every agent gets a unique Ed25519 keypair, generated in memory and never persisted to disk
 - **Task-scoped tokens** — credentials are limited to exactly what the agent needs (`read:data:customers`, not `read:*:*`)
 - **Short-lived by default** — tokens expire in minutes, not hours or days
-- **Delegation chains** — agents can delegate narrower permissions to other agents, enforced at every hop
+- **Delegation chains** — agents can delegate a subset of their permissions to other agents; the broker rejects any attempt to widen
 
 This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit) — the broker is the credential authority, and this SDK is how your Python code talks to it.
 
@@ -149,7 +149,7 @@ print(agent.expires_in)    # 300 (seconds)
 # Renew — new token, same identity, old token revoked
 agent.renew()
 
-# Delegate — give narrower scope to another agent
+# Delegate — pass a subset of scope to another agent (equal or narrower)
 delegated = agent.delegate(delegate_to=other.agent_id, scope=["read:data:x"])
 
 # Release — self-revoke, idempotent
@@ -217,7 +217,7 @@ scope_is_subset(["read:logs:customers"], ["read:data:*"])     # False (logs != d
 
 ## Delegation
 
-Agents delegate narrower scope to other agents. Authority can only narrow, never widen.
+Agents delegate a subset of their scope to other agents. Delegation cannot widen authority — equal or narrower scope is accepted; any scope the delegator doesn't hold is rejected.
 
 ```python
 # A has broad scope
@@ -291,7 +291,7 @@ Application (your code — AgentWritApp)
   │  creates agents within ceiling
   ▼
 Agent (ephemeral SPIFFE identity + scoped JWT)
-  │  scope can only narrow on delegation
+  │  delegation cannot widen scope (equal or narrower allowed)
   ▼
 Delegated Agent (sub-agent, max 5 hops)
 ```

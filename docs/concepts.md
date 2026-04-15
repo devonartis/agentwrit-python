@@ -79,12 +79,12 @@ Application (your code)
   │  creates agents within ceiling
   ▼
 Agent (ephemeral worker)
-  │  scope can only narrow on delegation
+  │  delegation cannot widen scope (equal or narrower allowed)
   ▼
 Delegated Agent (sub-worker, max 5 hops)
 ```
 
-At every step, authority can only narrow. The operator defines what apps can do. Apps define what agents can do. Agents define what sub-agents can do. No step can exceed the step above it.
+At every step, authority cannot widen. Equal or narrower is accepted; no step can exceed the step above it. The operator defines what apps can do. Apps define what agents can do. Agents define what sub-agents can do — and a delegator can pass along its full scope unchanged if the task calls for it.
 
 ---
 
@@ -310,7 +310,7 @@ agent = app.create_agent(
 While active, the agent can:
 - Use its `access_token` as a Bearer credential
 - Call `renew()` to get a fresh token (same identity, old token revoked)
-- Call `delegate()` to give narrower scope to another agent
+- Call `delegate()` to pass a subset of its scope to another agent (equal or narrower)
 - Be validated by any service via `validate(app.broker_url, token)`
 
 ### Released
@@ -335,7 +335,7 @@ If the agent doesn't release and doesn't renew, the token expires naturally afte
 
 ## Delegation
 
-Delegation is how one agent gives a subset of its authority to another agent. The broker issues a new token for the delegate with narrowed scope.
+Delegation is how one agent passes a subset of its authority to another agent. The broker issues a new token for the delegate scoped to what was requested — equal to or narrower than the delegator's own scope. Delegation cannot widen authority; any scope the delegator doesn't hold is rejected.
 
 ### How It Works
 

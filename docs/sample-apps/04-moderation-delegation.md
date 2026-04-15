@@ -16,9 +16,9 @@ This is the most common delegation pattern in production: a read-only agent iden
 |---------|---------------|
 | **Single-hop delegation** | Agent A gives a subset of its authority to Agent B |
 | **`agent.delegate()`** | The SDK method for creating scope-attenuated tokens |
-| **`DelegatedToken`** | What you get back from delegation — a new JWT with narrowed scope |
+| **`DelegatedToken`** | What you get back from delegation — a new JWT scoped to a subset of the delegator's authority |
 | **Delegation chain inspection** | How to verify who delegated what to whom |
-| **Validating delegated tokens** | Confirming the broker actually narrowed the scope |
+| **Validating delegated tokens** | Confirming the broker issued the scope you requested |
 
 ---
 
@@ -174,7 +174,7 @@ def main() -> None:
     print()
 
     # ── Step 5: Validate the delegated token ────────────────────
-    # Confirm the broker actually issued a token with the narrowed scope.
+    # Confirm the broker issued a token with the scope we requested.
     result = validate(app.broker_url, delegated.access_token)
     if result.valid and result.claims is not None:
         print(f"Delegated token validated:")
@@ -320,7 +320,7 @@ Both agents released.
 
 ## Key Takeaways
 
-1. **Delegation is authority narrowing, not sharing.** The reviewer has `read:posts:*` (all posts). It delegates `delete:posts:usr-482` (one user's posts). The moderator never sees the reviewer's full scope — it only gets what was delegated.
+1. **Delegation is bounded authority transfer, not sharing.** The delegate only receives what was explicitly delegated. In this example the reviewer has `read:posts:*` (all posts) and delegates `delete:posts:usr-482` (one user's posts) — the broker enforces that the delegated scope cannot widen past the reviewer's. Equal-scope delegation is also valid; narrowing is a pattern this example chose, not a rule the broker imposes.
 
 2. **Both agents must be registered before delegation.** `delegate()` takes a `delegate_to` SPIFFE ID — that agent must already exist in the broker. You can't delegate to an agent that hasn't been registered.
 

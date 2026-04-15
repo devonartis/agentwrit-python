@@ -10,8 +10,9 @@ class DelegationRecord:
     Business Logic: This represents one step in the 'chain of trust'.
     When an agent delegates authority, it creates a new token that carries
     the identity of the delegator. The broker uses these records to
-    enforce the maximum delegation depth (5) and to ensure that
-    authority is only ever attenuated (narrowed), never expanded.
+    enforce the maximum delegation depth (5) and to ensure that authority
+    cannot widen across hops — equal or narrower scope is accepted; any
+    scope the delegator doesn't hold is rejected.
     """
     agent: str            # SPIFFE ID of delegator
     scope: list[str]

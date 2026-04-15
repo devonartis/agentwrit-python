@@ -106,11 +106,11 @@ writer = app.create_agent(
 
 ## Delegation
 
-Delegation is how one agent gives a subset of its authority to another agent. The broker issues a new token for the delegate with narrowed scope.
+Delegation is how one agent passes a subset of its authority to another agent. The broker issues a new token for the delegate scoped to what was requested — equal to or narrower than the delegator's own scope. Delegation cannot widen authority; any scope the delegator doesn't hold is rejected.
 
 ### Single-Hop Delegation
 
-Agent A has broad scope, delegates narrow scope to Agent B:
+Agent A has broad scope and delegates a subset to Agent B:
 
 ```python
 agent_a = app.create_agent(
@@ -137,7 +137,7 @@ delegated = agent_a.delegate(
 
 Pass `ttl=N` to override the delegation lifetime: `agent_a.delegate(delegate_to=..., scope=..., ttl=300)`. Omit it to take the broker's default (60s).
 
-Always validate the delegated token to confirm the broker actually narrowed it:
+Always validate the delegated token to confirm the broker issued the scope you requested:
 
 ```python
 from agentwrit import validate
@@ -152,7 +152,7 @@ assert result.claims.scope == ["read:data:partition-7"]
 
 > **SDK limitation:** `agent.delegate()` only signs with the agent's own *registration* token. To extend a chain — i.e., delegate from a token you *received* — you currently have to call `POST /v1/delegate` directly, as shown below. A future release may add `DelegatedToken.delegate()` to remove this escape hatch.
 
-To build a real chain where each hop narrows further, the second hop has to bypass the SDK and hit the broker endpoint with the delegated token:
+To build a real chain where each hop narrows further (a common pattern — delegation doesn't require narrowing, but most chain designs choose to), the second hop has to bypass the SDK and hit the broker endpoint with the delegated token:
 
 ```python
 import httpx
