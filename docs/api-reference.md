@@ -1,6 +1,8 @@
 # API Reference
 
-Complete reference for the AgentWrit Python SDK public API.
+Complete reference for the AgentWrit Python SDK public API. Companion to [Getting Started](getting-started.md) and [Developer Guide](developer-guide.md).
+
+[AgentWritApp](#agentwritapp) · [Agent](#agent) · [Module Functions](#module-level-functions) · [Data Classes](#data-classes) · [Exceptions](#exceptions) · [Broker Endpoints](#broker-endpoint-mapping)
 
 ---
 
@@ -97,7 +99,18 @@ Shortcut for `agentwrit.validate(app.broker_url, token)`.
 app.close() -> None
 ```
 
-Closes the underlying HTTP transport. Call this when you're done with the app to release connections.
+Closes the underlying HTTP transport. Call this when you're done with the app to release the connection pool.
+
+> `AgentWritApp` is **not** a context manager — `with AgentWritApp(...) as app:` will raise `AttributeError`. Use a `try/finally` instead:
+>
+> ```python
+> app = AgentWritApp(...)
+> try:
+>     agent = app.create_agent(...)
+>     # ... use agent ...
+> finally:
+>     app.close()
+> ```
 
 ---
 
@@ -255,7 +268,7 @@ from agentwrit import AgentClaims
 | `exp` | `int` | Expiration (Unix timestamp) |
 | `nbf` | `int` | Not before (Unix timestamp) |
 | `iat` | `int` | Issued at (Unix timestamp) |
-| `jti` | `str` | Unique token ID (32 hex chars) |
+| `jti` | `str` | Unique token ID (broker-assigned; format is broker-defined, do not assume a fixed length) |
 | `scope` | `list[str]` | Granted scope |
 | `task_id` | `str` | Task identifier |
 | `orch_id` | `str` | Orchestrator identifier |
@@ -320,6 +333,25 @@ RFC 7807 structured error from the broker.
 | `request_id` | `str \| None` | Broker-generated trace ID |
 | `hint` | `str \| None` | Optional guidance for resolution |
 
+#### Known `error_code` values
+
+> Observed broker behavior at the time of writing. The broker's [api.md](https://github.com/devonartis/agentwrit/blob/main/docs/api.md) is the authoritative source — consult it for additions or renames.
+
+| `error_code` | HTTP | Fires when |
+|--------------|------|------------|
+| `invalid_request` | 400 | Malformed JSON, missing required field, invalid format |
+| `invalid_ttl` | 400 | Requested `token_ttl` outside the broker's allowed range |
+| `unauthorized` | 401 | Missing / invalid / expired credentials; failed token verification; Bearer header missing or malformed |
+| `forbidden` | 403 | Admin-side app-not-found or scope-ceiling check during admin launch-token creation |
+| `insufficient_scope` | 403 | Caller's token is valid but lacks the scope required for this endpoint (emitted by the validation middleware) — **or** the token has been revoked |
+| `scope_violation` | 403 | `/v1/register` or `/v1/delegate` rejected the requested scope as exceeding the caller's authority |
+| `not_found` | 404 | App or delegate agent does not exist |
+| `payload_too_large` | 413 | Request body exceeded 1 MB |
+| `rate_limited` | 429 | Rate limit hit on the auth endpoints |
+| `internal_error` | 500 | Server-side failure (launch-token creation, registration, delegation, etc.) |
+
+> **Watch the 403 split.** Both `scope_violation` and `insufficient_scope` surface as `AuthorizationError` in the SDK. If you switch on `error_code`, handle both: `scope_violation` covers "your request exceeded your authority"; `insufficient_scope` covers "your token doesn't have the scope this endpoint needs, or the token was revoked."
+
 ### RegisterResult
 
 ```python
@@ -365,9 +397,11 @@ Raised on HTTP 401. App credentials are invalid.
 
 ### AuthorizationError
 
-Raised on HTTP 403. Scope violation — either:
-- Requested scope exceeds app ceiling (during `create_agent()`)
-- Delegated scope exceeds delegator's scope (during `delegate()`)
+Raised on HTTP 403. Three distinct sub-cases, all surface through this class — inspect `e.problem.error_code` to differentiate:
+
+- **Scope ceiling violation** — requested scope exceeds the app's ceiling during `create_agent()` (`error_code: scope_violation`)
+- **Delegation violation** — delegated scope exceeds delegator's scope, or exceeds broker-enforced delegation depth, during `delegate()` (`error_code: scope_violation`)
+- **Token revocation or insufficient scope at the endpoint** — caller's token was revoked, or lacks the scope the endpoint requires (`error_code: insufficient_scope`)
 
 ### RateLimitError
 

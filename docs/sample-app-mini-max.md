@@ -802,7 +802,7 @@ else:
 print("\n=== Ceiling enforcement summary ===")
 print("The broker enforces the ceiling BEFORE consuming the launch token.")
 print("A scope violation does NOT waste a single-use launch token.")
-print("The operator's ceiling is the root of trust — apps can only narrow from it.")
+print("The operator's ceiling is the root of trust — apps cannot widen beyond it.")
 ```
 
 **The real-world pattern this teaches:**

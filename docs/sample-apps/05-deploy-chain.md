@@ -14,10 +14,10 @@ This app demonstrates the SDK's multi-hop delegation limitation: `agent.delegate
 
 | Concept | Why It Matters |
 |---------|---------------|
-| **Multi-hop delegation (A→B→C)** | Authority narrowing across three agents |
+| **Multi-hop delegation (A→B→C)** | Attenuating scope across three agents — each hop in this example narrows further |
 | **Raw HTTP for second delegation hop** | The SDK's `delegate()` uses the registration token; multi-hop needs the delegated token |
 | **Delegation chain depth** | The chain records every hop — depth is limited to 5 |
-| **Validating at each hop** | Confirming scope actually narrowed at each step |
+| **Validating at each hop** | Confirming the broker issued the scope you requested at each step |
 | **`AuthorizationError` on scope violation** | What happens when a delegation tries to escalate scope |
 
 ---
@@ -332,6 +332,6 @@ All agents released.
 
 3. **Maximum depth is 5 hops.** The broker enforces a depth limit. A→B→C→D→E→F is the deepest chain allowed. If you try a 6th hop, the broker returns 403.
 
-4. **Each hop can only narrow scope.** The orchestrator has `read:config:*`. It delegates `read:config:production` (narrower). The analyst cannot re-delegate `read:config:staging` — it doesn't have that scope. The broker would reject it.
+4. **No hop can widen scope.** The orchestrator has `read:config:*` and delegates `read:config:production` (narrower) — a design choice this example makes. The analyst cannot re-delegate `read:config:staging`: it doesn't hold that scope, so the broker rejects the delegation. Equal-scope delegation is accepted (narrowing is a pattern, not a rule); any widening is rejected.
 
 5. **All three agents must be registered first.** Delegation targets a SPIFFE ID that already exists in the broker. You can't delegate to an agent you haven't created yet.

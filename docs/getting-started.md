@@ -1,12 +1,31 @@
 # Getting Started
 
-Create your first agent credential in 5 minutes.
+Create your first agent credential. Roughly 5 minutes once [Prerequisites](#prerequisites) are met — longer if you also need to stand up a broker.
 
 ## Prerequisites
 
-- **Python 3.10+**
-- A running [AgentWrit broker](https://github.com/devonartis/agentwrit) instance
-- App credentials (`client_id` and `client_secret`) from your broker operator
+You need three things before any code below will work. The SDK is a client — it does **not** run the broker, and it does **not** mint its own credentials.
+
+**1. Python 3.10+** in your environment.
+
+**2. A reachable AgentWrit broker.** The broker is a separate service that issues and validates tokens.
+
+- *Have a platform team running one?* Ask them for the broker URL.
+- *Running it yourself?* Stand one up locally — the [broker repo](https://github.com/devonartis/agentwrit) ships a `docker compose` setup. From the agentwrit-python repo:
+  ```bash
+  docker compose up -d   # pulls devonartis/agentwrit from Docker Hub
+  ```
+
+**3. App credentials (`client_id` + `client_secret`).** These are issued by the **broker operator/admin** when they register your app and set its scope ceiling. The SDK cannot create them for you.
+
+- *Have a broker admin?* Ask them to register your app and send you the `client_id` and `client_secret`.
+- *You are the admin?* Use the included setup script (it registers an app and prints both values):
+  ```bash
+  export AGENTWRIT_ADMIN_SECRET="<your-broker-admin-secret>"
+  uv run python demo/setup.py
+  ```
+
+If you already have a broker URL and a `client_id`/`client_secret`, skip to [Step 2](#step-2-connect-to-the-broker).
 
 ## Installation
 
@@ -60,6 +79,8 @@ app = AgentWritApp(
 
 This creates your app instance. No broker call happens yet — the SDK authenticates lazily on the first `create_agent()` call.
 
+> **If your first `create_agent()` call raises:** `AuthenticationError` means the `client_id` or `client_secret` is wrong (or rotated). `TransportError` means the broker URL is unreachable.
+
 ---
 
 ## Step 3: Create an Agent
@@ -76,8 +97,8 @@ The SDK just did a lot of work behind the scenes:
 
 1. Authenticated your app with the broker (`POST /v1/app/auth`)
 2. Created a launch token with your requested scope (`POST /v1/app/launch-tokens`)
-3. Generated a fresh Ed25519 keypair in memory
-4. Got a challenge nonce from the broker (`GET /v1/challenge`)
+3. Got a challenge nonce from the broker (`GET /v1/challenge`)
+4. Generated a fresh Ed25519 keypair in memory
 5. Signed the nonce with the private key
 6. Registered the agent (`POST /v1/register`)
 
@@ -101,10 +122,12 @@ import httpx
 
 resp = httpx.get(
     "https://your-api/data/customers",
-    headers={"Authorization": f"Bearer {agent.access_token}"},
+    headers=agent.bearer_header,
 )
 print(resp.json())
 ```
+
+`agent.bearer_header` is a convenience property that returns `{"Authorization": "Bearer <token>"}`. If you need to set additional headers, merge it into your own dict.
 
 ---
 
@@ -154,7 +177,7 @@ Your App
             └─ Released when done
 ```
 
-The agent had exactly the scope it needed (`read:data:customers`), a unique cryptographic identity, and a short-lived token that was revoked the moment the task finished.
+Exactly the scope needed, a unique cryptographic identity, and a token revoked the moment the task finished.
 
 ---
 
@@ -165,3 +188,5 @@ The agent had exactly the scope it needed (`read:data:customers`), a unique cryp
 | [Concepts](concepts.md) | Why AgentWrit exists, the trust model, and how scopes work |
 | [Developer Guide](developer-guide.md) | Delegation, scope gating, error handling, and real patterns |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
+| [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
+| [MedAssist Demo](../demo/) | See every capability in a working healthcare app |

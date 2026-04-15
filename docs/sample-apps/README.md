@@ -13,7 +13,7 @@ Apps are ordered by complexity. Each one introduces new SDK concepts while build
 | 1 | [E-Commerce Order Worker](01-order-worker.md) | Agent lifecycle: create → validate → use → release | Retail order processing |
 | 2 | [Multi-Tenant Data Pipeline](02-data-pipeline.md) | Multiple isolated agents, `scope_is_subset()` gatekeeping | ETL data processing |
 | 3 | [Patient Record Guard](03-patient-guard.md) | Cross-scope denial, dynamic scope from request context | Healthcare HIPAA enforcement |
-| 4 | [Content Moderation Queue](04-moderation-delegation.md) | Single-hop delegation, authority narrowing | Trust & safety platform |
+| 4 | [Content Moderation Queue](04-moderation-delegation.md) | Single-hop delegation with scope attenuation | Trust & safety platform |
 | 5 | [CI/CD Deployment Runner](05-deploy-chain.md) | Multi-hop delegation (A→B→C), raw HTTP delegation hop | DevOps deployment |
 | 6 | [Financial Trading Agent](06-trading-agent.md) | Token renewal for long tasks, custom short TTL, renewal loops | Fintech trading |
 | 7 | [Incident Response System](07-incident-response.md) | Emergency revocation at 4 levels, post-revoke validation | Security operations |

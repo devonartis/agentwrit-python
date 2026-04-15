@@ -14,7 +14,7 @@ Traditional setups often give every service (or every “agent”) the **same lo
 - **What task** they are doing,
 - **Which scopes** they are allowed to use (often **per patient**, per action).
 
-The **broker** is the authority: it registers apps, mints tokens, validates them, supports **delegation** (narrowing authority), **renewal**, **release**, and **revocation**, and writes an **audit trail**.
+The **broker** is the authority: it registers apps, mints tokens, validates them, supports **delegation** (passing scope to another agent — equal or narrower, never widening), **renewal**, **release**, and **revocation**, and writes an **audit trail**.
 
 ---
 
@@ -144,7 +144,7 @@ flowchart LR
 
 ## 7. Diagram: delegation (prescription write)
 
-Delegation is **authority narrowing**: the clinical agent already has `write:prescriptions:{pid}`; it asks the broker to issue a **delegated token** for the prescription agent’s SPIFFE ID with **only** that scope (or a subset).
+Delegation is **bounded authority transfer** — the broker rejects any attempt to widen past the delegator's scope. In this demo, the clinical agent already has `write:prescriptions:{pid}` and asks the broker to issue a **delegated token** for the prescription agent's SPIFFE ID with that same scope (or a narrower subset). Equal-scope and narrower delegation are both valid; widening is rejected.
 
 ```mermaid
 flowchart LR

@@ -1,6 +1,6 @@
 # Developer Guide
 
-Patterns for building real applications with the AgentWrit SDK. This guide assumes you've read [Getting Started](getting-started.md) and [Concepts](concepts.md).
+Patterns for building real applications with the AgentWrit SDK. This guide assumes you've read [Getting Started](getting-started.md) and [Concepts](concepts.md), and that you've completed [Prerequisites](../README.md#prerequisites) — broker reachable, app credentials provisioned, env vars set.
 
 ---
 
@@ -28,8 +28,9 @@ agent = app.create_agent(
 )
 
 try:
-    # Do work with the agent's token
-    process_order(agent.access_token)
+    # Do work with the agent's token. For HTTP calls, agent.bearer_header
+    # gives you {"Authorization": "Bearer <token>"} in one shot:
+    httpx.post("https://orders/api/process", headers=agent.bearer_header, json=payload)
 finally:
     # Always release — even if the work failed
     agent.release()
@@ -63,6 +64,8 @@ After `renew()`:
 - `agent.agent_id` is unchanged (same SPIFFE identity)
 - The old token is revoked at the broker
 - `agent.expires_in` is reset
+
+> The broker may enforce a maximum total agent lifetime independent of per-token TTL. If `renew()` starts failing on long-running agents, check your broker's session policy.
 
 ### Short-Lived Tasks with Custom TTL
 
@@ -103,11 +106,11 @@ writer = app.create_agent(
 
 ## Delegation
 
-Delegation is how one agent gives a subset of its authority to another agent. The broker issues a new token for the delegate with narrowed scope.
+Delegation is how one agent passes a subset of its authority to another agent. The broker issues a new token for the delegate scoped to what was requested — equal to or narrower than the delegator's own scope. Delegation cannot widen authority; any scope the delegator doesn't hold is rejected.
 
 ### Single-Hop Delegation
 
-Agent A has broad scope, delegates narrow scope to Agent B:
+Agent A has broad scope and delegates a subset to Agent B:
 
 ```python
 agent_a = app.create_agent(
@@ -132,7 +135,9 @@ delegated = agent_a.delegate(
 # delegated.delegation_chain records the hop
 ```
 
-Always validate the delegated token to confirm the broker actually narrowed it:
+Pass `ttl=N` to override the delegation lifetime: `agent_a.delegate(delegate_to=..., scope=..., ttl=300)`. Omit it to take the broker's default (60s).
+
+Always validate the delegated token to confirm the broker issued the scope you requested:
 
 ```python
 from agentwrit import validate
@@ -145,7 +150,9 @@ assert result.claims.scope == ["read:data:partition-7"]
 
 ### Multi-Hop Delegation (A → B → C)
 
-To build a real chain where each hop narrows further, the second hop must use the delegated token directly. The SDK's `agent.delegate()` always uses the agent's registration token, not a received delegated token:
+> **SDK limitation:** `agent.delegate()` only signs with the agent's own *registration* token. To extend a chain — i.e., delegate from a token you *received* — you currently have to call `POST /v1/delegate` directly, as shown below. A future release may add `DelegatedToken.delegate()` to remove this escape hatch.
+
+To build a real chain where each hop narrows further (a common pattern — delegation doesn't require narrowing, but most chain designs choose to), the second hop has to bypass the SDK and hit the broker endpoint with the delegated token:
 
 ```python
 import httpx
@@ -209,9 +216,9 @@ except AuthorizationError as e:
     print(e.problem.detail)     # delegated scope exceeds delegator scope
 ```
 
-### What We Learned About Delegation
+### Delegation Behavior
 
-From acceptance testing against a live broker:
+Verified against a live broker via the acceptance suite:
 
 1. **Same-scope delegation is allowed.** The broker treats equal as a valid subset. If A has `["read:data:partition-7"]` and delegates `["read:data:partition-7"]` to B, the broker accepts it.
 
@@ -344,9 +351,9 @@ except AgentWritError as e:
     print(e)  # "agent has been released and cannot delegate"
 ```
 
-### Garbage Tokens
+### Invalid Tokens
 
-If someone sends a fake token to your app, `validate()` handles it gracefully:
+If someone sends a fake, malformed, or expired token to your app, `validate()` handles it gracefully — it returns a result instead of raising:
 
 ```python
 from agentwrit import validate
@@ -409,7 +416,7 @@ Same behavior, but uses the app's broker URL and timeout.
 result = validate(app.broker_url, agent.access_token)
 
 if result.valid:
-    print(result.claims.iss)       # "agentwrit"
+    print(result.claims.iss)       # broker-configured issuer (e.g., "agentwrit")
     print(result.claims.sub)       # SPIFFE ID
     print(result.claims.scope)     # granted scope list
     print(result.claims.orch_id)   # orchestrator ID
@@ -430,3 +437,5 @@ else:
 | [Getting Started](getting-started.md) | Install and create your first agent |
 | [Concepts](concepts.md) | Trust model, roles, scopes, and standards |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
+| [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
+| [MedAssist Demo](../demo/) | See every capability in a working healthcare app |

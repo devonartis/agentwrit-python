@@ -57,7 +57,7 @@ Do **4–6** runs in this order so the room sees escalation, not repetition.
 **What to point at:**  
 - **Clinical** agent, then **billing**, then **prescription** as the LLM calls tools.  
 - **Delegation** step when a prescription write is allowed: clinical delegates `write:prescriptions:{pid}` to the Rx agent.  
-- That is **authority narrowing**, not “same API key everywhere.”
+- That is **bounded authority transfer** — the broker rejects any widening past the delegator's scope — not “same API key everywhere.”
 
 ---
 

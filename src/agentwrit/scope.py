@@ -9,9 +9,10 @@ def scope_is_subset(requested: list[str], allowed: list[str]) -> bool:
     """Client-side mirror of the broker's ScopeIsSubset check.
 
     Business Logic:
-    Enforces the rule that authority can only narrow, never expand.
-    A requested scope is covered if every scope in `requested` is covered
-    by at least one scope in `allowed`.
+    Enforces the rule that authority cannot widen. Equal or narrower scope
+    is accepted — a requested scope is covered if every scope in `requested`
+    is covered by at least one scope in `allowed`. This mirrors the broker's
+    non-strict subset check in authz/scope.go.
 
     Coverage Rules:
     - Exact match: `read:data:customers` matches `read:data:customers`.

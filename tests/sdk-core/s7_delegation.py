@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""STORY-P3-S7: Agent Delegates Narrower Scope to Another Agent
+"""STORY-P3-S7: Agent Delegates a Subset of Its Scope to Another Agent
 
 A primary agent has read:data:user-42 and write:data:user-42. It needs
 a helper agent to read user-42's data but NOT write it. The primary
 delegates only read:data:user-42 to the helper. The helper can read
-but cannot write — authority only narrows, never expands.
+but cannot write — delegation cannot widen authority; the broker rejects
+any requested scope the delegator doesn't hold.
 """
 import os
 import sys
 
 print()
 print("╔══════════════════════════════════════════════════════════════════╗")
-print("║  Agent Delegates Narrower Scope to Helper (STORY-P3-S7)        ║")
+print("║  Agent Delegates a Subset of Scope to Helper (STORY-P3-S7)     ║")
 print("║                                                                  ║")
 print("║  A primary agent (read+write for user-42) delegates only read   ║")
 print("║  access to a helper agent. The helper cannot write.             ║")
-print("║  Authority only narrows — never expands.                        ║")
+print("║  Delegation cannot widen — broker rejects unheld scope.         ║")
 print("╚══════════════════════════════════════════════════════════════════╝")
 print()
 
@@ -72,7 +73,7 @@ else:
 can_write = scope_is_subset(["write:data:user-42"], helper.scope)
 print(f"  helper can write user-42 = {can_write}")
 if not can_write:
-    print("  PASS: helper cannot write user-42 (scope only narrows)")
+    print("  PASS: helper cannot write user-42 (delegated scope is read-only)")
 else:
     print("  FAIL: helper can write — delegation expanded scope")
     passed = False

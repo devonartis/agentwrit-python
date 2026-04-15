@@ -367,7 +367,7 @@ class TestStory5:
             "-" * 65,
             "WHO:      Agent A delegating one of its scopes to Agent B",
             "WHAT:     A has two scopes, delegates only one to B",
-            "WHY:      Delegation must narrow authority, never expand it",
+            "WHY:      Delegation cannot widen authority — the broker rejects any requested scope the delegator doesn't hold",
             "EXPECTED: Delegated token has ONLY the narrow scope,",
             "          not A's full scope. Broker validates this.",
             "=" * 65,

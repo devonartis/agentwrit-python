@@ -38,7 +38,7 @@
         <!-- Scope Ceiling -->
         <div class="panel">
             <h2>App Scope Ceiling</h2>
-            <p class="description">The maximum scopes this application can grant to agents. Set by the operator at app registration. Each agent gets a strict subset, scoped to a specific patient.</p>
+            <p class="description">The maximum scopes this application can grant to agents. Set by the operator at app registration. Each agent gets a subset of this ceiling, typically scoped to a specific patient.</p>
             <div class="scope-list">
                 {% for scope in scope_ceiling %}
                 <span class="scope-badge ceiling">{{ scope }}</span>

@@ -2,6 +2,8 @@
 
 How to run the AgentWrit SDK test suite. There are two levels: unit tests (no broker) and acceptance tests (live broker required).
 
+This guide assumes you've completed [Prerequisites](../README.md#prerequisites) — broker reachable, app credentials provisioned.
+
 ---
 
 ## Unit Tests
@@ -27,39 +29,35 @@ Acceptance tests run against a live broker. They exercise every SDK operation en
    docker compose up -d
    ```
 
-2. **A registered test app** with scope ceiling `["read:data:*", "write:data:*"]`. The test credentials are in the run script.
+2. **A registered test app** with scope ceiling `["read:data:*", "write:data:*"]`. Register one against your local broker using `demo/setup.py` or the broker admin API, and capture the printed `client_id` and `client_secret`.
 
-3. **Environment variables** (already set in the run script):
+3. **Environment variables** — set these from *your* broker before running the suite. Do not rely on any values hardcoded in the run script (they are from a prior local broker run and will not authenticate against a fresh broker):
    ```bash
    export AGENTWRIT_BROKER_URL=http://127.0.0.1:8080
-   export AGENTWRIT_CLIENT_ID=<your-client-id>
-   export AGENTWRIT_CLIENT_SECRET=<your-client-secret>
+   export AGENTWRIT_CLIENT_ID=<client_id from step 2>
+   export AGENTWRIT_CLIENT_SECRET=<client_secret from step 2>
    ```
 
 ### Running
 
-**Use the run script** (recommended — sets env vars automatically):
+With env vars set from the Prerequisites step, run the suite directly with pytest:
 
 ```bash
-./tests/sdk-core/run_acceptance.sh
-```
-
-Or start the broker automatically if it's not running:
-
-```bash
-./tests/sdk-core/run_acceptance.sh --up
-```
-
-**Or run directly with pytest:**
-
-```bash
-AGENTWRIT_BROKER_URL=http://127.0.0.1:8080 \
-AGENTWRIT_CLIENT_ID=<your-client-id> \
-AGENTWRIT_CLIENT_SECRET=<your-client-secret> \
 uv run pytest tests/integration/test_acceptance_1_8.py -v -s -m integration
 ```
 
 The `-s` flag is important — it shows the banners in the console.
+
+> **Note on the file name:** `test_acceptance_1_8.py` contains all 15 stories. The name is historical — the suite grew past eight without a rename. A follow-up PR will rename it; until then, `grep "STORY 9"` finds it in the same file.
+
+You can also use the wrapper script, which starts the broker if needed:
+
+```bash
+./tests/sdk-core/run_acceptance.sh          # broker must already be running
+./tests/sdk-core/run_acceptance.sh --up     # starts the broker first
+```
+
+> **Heads-up:** the run script currently hardcodes sample `AGENTWRIT_CLIENT_ID` / `AGENTWRIT_CLIENT_SECRET` values from a prior local broker run. They will not authenticate against a fresh broker. Either export your own values before invoking the script (they take precedence) or use the direct pytest command above.
 
 ### What the Tests Cover
 
@@ -97,6 +95,8 @@ The broker rate limits `POST /v1/app/auth` to 10 requests per minute per client_
 - Adding a 2-second delay between tests
 
 Story 10 (natural expiry) adds 7 seconds of wait time. Full suite runs in ~70 seconds.
+
+> **If you hit a 429 while developing manually** (outside the test fixtures), wait 60 seconds and retry — the broker resets the limit per minute, per `client_id`.
 
 ### Adding New Stories
 
@@ -151,3 +151,15 @@ uv run mypy --strict src/              # type check
 uv run pytest tests/unit/              # unit tests
 ./tests/sdk-core/run_acceptance.sh     # acceptance tests (broker must be running)
 ```
+
+---
+
+## Next Steps
+
+| Guide | What You'll Learn |
+|-------|-------------------|
+| [Getting Started](getting-started.md) | Install, connect, create your first agent |
+| [Developer Guide](developer-guide.md) | Real patterns: delegation, scope gating, error handling |
+| [API Reference](api-reference.md) | Every class, method, parameter, and exception |
+| [Concepts](concepts.md) | Trust model, roles, scopes, and standards |
+| [MedAssist Demo](../demo/) | See every capability in a working healthcare app |

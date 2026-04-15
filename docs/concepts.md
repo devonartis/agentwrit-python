@@ -2,6 +2,8 @@
 
 This document explains how AgentWrit works and what you need to understand before writing application code. Read this first — it will save you hours of debugging.
 
+Read [Getting Started](getting-started.md) first if you just want to run code. Come back here when you want to understand what you're doing.
+
 ---
 
 ## The Problem
@@ -33,7 +35,7 @@ The human or script that manages the broker. The operator:
 - Can revoke any token, kill any agent
 - Has the admin secret (root of trust)
 
-**You are NOT the operator** (unless you also run the broker). The operator gave you your `client_id` and `client_secret`.
+**Which role are you?** Most readers are the Application — your broker admin registered your app and handed you the `client_id` / `client_secret`. If you're running the broker locally (e.g., via `docker compose up -d` in this repo), you're wearing both the Operator and Application hats — `demo/setup.py` mints the app credentials as a one-shot Operator action.
 
 ### Application (This Is You)
 
@@ -77,12 +79,12 @@ Application (your code)
   │  creates agents within ceiling
   ▼
 Agent (ephemeral worker)
-  │  scope can only narrow on delegation
+  │  delegation cannot widen scope (equal or narrower allowed)
   ▼
 Delegated Agent (sub-worker, max 5 hops)
 ```
 
-At every step, authority can only narrow. The operator defines what apps can do. Apps define what agents can do. Agents define what sub-agents can do. No step can exceed the step above it.
+At every step, authority cannot widen. Equal or narrower is accepted; no step can exceed the step above it. The operator defines what apps can do. Apps define what agents can do. Agents define what sub-agents can do — and a delegator can pass along its full scope unchanged if the task calls for it.
 
 ---
 
@@ -156,7 +158,7 @@ scope_is_subset(["read:logs:customers"], ["read:data:customers"])  # False
 
 ### Common Scope Mistakes
 
-These are mistakes we discovered while building the acceptance test suite:
+These are patterns that trip up new users. All three are enforced by the broker's scope checks — verified against the acceptance test suite.
 
 **Mistake 1: Wrong resource segment**
 
@@ -308,8 +310,8 @@ agent = app.create_agent(
 While active, the agent can:
 - Use its `access_token` as a Bearer credential
 - Call `renew()` to get a fresh token (same identity, old token revoked)
-- Call `delegate()` to give narrower scope to another agent
-- Be validated by any service via `validate(broker_url, token)`
+- Call `delegate()` to pass a subset of its scope to another agent (equal or narrower)
+- Be validated by any service via `validate(app.broker_url, token)`
 
 ### Released
 
@@ -333,7 +335,7 @@ If the agent doesn't release and doesn't renew, the token expires naturally afte
 
 ## Delegation
 
-Delegation is how one agent gives a subset of its authority to another agent. The broker issues a new token for the delegate with narrowed scope.
+Delegation is how one agent passes a subset of its authority to another agent. The broker issues a new token for the delegate scoped to what was requested — equal to or narrower than the delegator's own scope. Delegation cannot widen authority; any scope the delegator doesn't hold is rejected.
 
 ### How It Works
 
@@ -366,6 +368,8 @@ delegated = agent_a.delegate(
 
 ### Delegation Rules
 
+All rules below are enforced by the broker and verified against the live broker via the acceptance suite.
+
 1. **Scope must be subset of delegator's scope.** Agent A has `["read:data:partition-7", "read:data:partition-8"]`. It can delegate `["read:data:partition-7"]` but NOT `["read:data:partition-9"]`.
 
 2. **The broker rejects escalation.** If agent A tries to delegate scope it doesn't have, the broker returns 403 and the SDK raises `AuthorizationError`.
@@ -374,13 +378,13 @@ delegated = agent_a.delegate(
 
 4. **Maximum depth is 5.** A→B→C→D→E→F is the deepest chain allowed.
 
-5. **Same-scope delegation is allowed.** The broker accepts delegation where the delegated scope equals the delegator's scope. Equal is a valid subset. (We confirmed this in acceptance testing.)
+5. **Same-scope delegation is allowed.** The broker treats equal as a valid subset. If A has `["read:data:partition-7"]` and delegates `["read:data:partition-7"]` to B, the broker accepts it.
 
-### What You Cannot Do with the SDK's delegate()
+### Multi-Hop Delegation Limit
 
-The SDK's `agent.delegate()` always uses the agent's **own registration token**. If agent B receives a delegated token from agent A and wants to re-delegate to agent C, `agent_b.delegate()` will use B's registration token — not the delegated token from A. This means the broker starts a fresh delegation chain from B, not a continuation of A's chain.
+> **SDK limitation:** `agent.delegate()` always signs with the agent's own *registration* token. If agent B receives a delegated token from A and calls `agent_b.delegate()`, the broker starts a fresh chain rooted at B — it does not continue A's chain. To extend a real chain (A→B→C), the second hop has to bypass the SDK and hit `/v1/delegate` directly with the delegated token. A future release may add `DelegatedToken.delegate()` to remove this workaround.
 
-To build a real multi-hop chain (A→B→C), the second hop must use the delegated token directly as the Bearer credential via raw HTTP:
+Example of the workaround:
 
 ```python
 import httpx
@@ -402,7 +406,7 @@ resp = httpx.post(
 )
 ```
 
-This is a known SDK limitation. Single-hop delegation works through the SDK. Multi-hop chains require the second hop to use the delegated token directly.
+Single-hop delegation works cleanly through the SDK. Multi-hop chains need the raw-HTTP escape hatch above until the SDK grows `DelegatedToken.delegate()`.
 
 ---
 
@@ -413,12 +417,12 @@ Any service can validate a token by asking the broker:
 ```python
 from agentwrit import validate
 
-result = validate(broker_url, agent.access_token)
+result = validate(app.broker_url, agent.access_token)
 ```
 
 `validate()` is a module-level function. It doesn't need an `AgentWritApp` — just the broker URL and the token. This is how downstream services verify agent tokens.
 
-The broker returns `valid=True` with claims, or `valid=False` with an error message. The broker intentionally returns the same generic error ("token is invalid or expired") for all failure cases — expired, revoked, malformed, or unknown — to prevent information leakage.
+The broker returns `valid=True` with claims, or `valid=False` with an error message. At the `validate()` endpoint specifically, the broker intentionally returns the same generic error ("token is invalid or expired") for every failure case — expired, revoked, malformed, or unknown — to prevent information leakage. Other endpoints (auth middleware, registration) return more specific messages by design.
 
 ---
 
@@ -503,3 +507,5 @@ The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devona
 | [Getting Started](getting-started.md) | Install, connect, create your first agent |
 | [Developer Guide](developer-guide.md) | Real patterns: delegation, scope gating, error handling |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
+| [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
+| [MedAssist Demo](../demo/) | The concepts above running in a working healthcare app |
