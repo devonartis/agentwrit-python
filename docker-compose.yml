@@ -38,5 +38,24 @@ services:
       broker:
         condition: service_healthy
 
+  support-tickets:
+    image: devonartis/agentwrit-support-tickets:latest
+    build:
+      context: .
+      dockerfile: demo2/Dockerfile
+    ports:
+      - "${AGENTWRIT_SUPPORT_PORT:-5001}:5001"
+    environment:
+      - AGENTWRIT_BROKER_URL=http://broker:8080
+      - AGENTWRIT_ADMIN_SECRET=${AGENTWRIT_ADMIN_SECRET:-}
+      - AGENTWRIT_CLIENT_ID=${AGENTWRIT_CLIENT_ID:-}
+      - AGENTWRIT_CLIENT_SECRET=${AGENTWRIT_CLIENT_SECRET:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+    depends_on:
+      broker:
+        condition: service_healthy
+
 volumes:
   broker-data:
