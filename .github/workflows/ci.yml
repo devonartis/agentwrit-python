@@ -59,7 +59,8 @@ jobs:
         env:
           AA_PORT: "8080"
           AA_BIND_ADDRESS: "0.0.0.0"
-          AA_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
+          # Broker binary uses AA_ prefix (devonartis/agentwrit#44)
+          AA_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
         options: >-
           --health-cmd "wget --spider -q http://localhost:8080/v1/health"
           --health-interval 2s
@@ -75,7 +76,7 @@ jobs:
         id: register-app
         env:
           AGENTWRIT_BROKER_URL: http://localhost:8080
-          AA_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
+          AA_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
         run: |
           # Authenticate as admin
           ADMIN_TOKEN=$(curl -sf -X POST "${AGENTWRIT_BROKER_URL}/v1/admin/auth" \
@@ -99,7 +100,7 @@ jobs:
       - name: Run integration tests (all 15 stories)
         env:
           AGENTWRIT_BROKER_URL: http://localhost:8080
-          AGENTWRIT_ADMIN_SECRET: ${{ secrets.AA_ADMIN_SECRET }}
+          AGENTWRIT_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
           AGENTWRIT_CLIENT_ID: ${{ steps.register-app.outputs.client_id }}
           AGENTWRIT_CLIENT_SECRET: ${{ steps.register-app.outputs.client_secret }}
         run: |
