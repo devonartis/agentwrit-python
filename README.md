@@ -173,27 +173,54 @@ The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive heal
 | **Token lifecycle** | Renewal and release shown at end of each encounter |
 | **Audit trail** | Dedicated audit tab showing hash-chained broker events |
 
-### Running the demo
+### Running with Docker (recommended)
 
 ```bash
-# 1. Start the AgentWrit broker
-docker compose up -d
+AGENTWRIT_ADMIN_SECRET="your-secret" \
+LLM_API_KEY="your-llm-key" \
+docker compose up -d broker medassist
+```
 
-# 2. Register the demo app with the broker (one-time setup)
+Open [http://localhost:5000](http://localhost:5000). The demo auto-registers with the broker on startup — no manual setup needed. You only need an OpenAI-compatible LLM endpoint (set `LLM_BASE_URL` and `LLM_MODEL` if not using OpenAI).
+
+### Running from source
+
+```bash
+# 1. Start the broker
+docker compose up -d broker
+
+# 2. Register the demo app (one-time)
 export AGENTWRIT_ADMIN_SECRET="your-admin-secret"
 uv run python demo/setup.py
-# → Prints client_id and client_secret
 
 # 3. Configure demo/.env (copy from demo/.env.example)
 cp demo/.env.example demo/.env
-# Fill in: broker URL, client_id, client_secret, LLM endpoint
 
 # 4. Run it
 uv run uvicorn demo.app:app --reload --port 5000
-# Open http://127.0.0.1:5000
 ```
 
-For architecture diagrams, step-by-step traces, and a live presentation script, see [`demo/BEGINNERS_GUIDE.md`](demo/BEGINNERS_GUIDE.md) and [`demo/PRESENTERS_GUIDE.md`](demo/PRESENTERS_GUIDE.md).
+For architecture diagrams and a live presentation script, see [`demo/BEGINNERS_GUIDE.md`](demo/BEGINNERS_GUIDE.md) and [`demo/PRESENTERS_GUIDE.md`](demo/PRESENTERS_GUIDE.md).
+
+## Support Ticket Demo
+
+The [`demo2/`](demo2/) directory contains **AgentWrit Live** — a support ticket pipeline where three LLM-driven agents (triage, knowledge, response) process customer requests under zero-trust scoped credentials.
+
+```bash
+AGENTWRIT_ADMIN_SECRET="your-secret" \
+LLM_API_KEY="your-llm-key" \
+docker compose up -d broker support-tickets
+```
+
+Open [http://localhost:5001](http://localhost:5001).
+
+| Capability | How the demo shows it |
+|------------|----------------------|
+| **Identity-gated pipeline** | Anonymous tickets halt at triage — no customer-scoped agents spawn |
+| **Per-customer scope isolation** | Each agent is scoped to the verified customer only |
+| **Cross-customer denial** | Asking about another customer's data → scope denied |
+| **Tool-level enforcement** | `delete_account` and `send_external_email` blocked by scope |
+| **Natural token expiry** | 5-second TTL credential expires on its own |
 
 ## Scope Format
 

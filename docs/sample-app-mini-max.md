@@ -385,7 +385,7 @@ run_pipeline("batch-102")
 **What you learn:** Admin auth is not part of the SDK — it uses raw HTTP or `aactl`. The SDK only handles app-level operations. This app does not use `AgentWritApp`.
 
 **Broker ceiling required:** N/A — no agent scopes, no SDK
-**What it uses:** `AACTL_ADMIN_SECRET` for admin auth. `GET /v1/audit/events` with an admin Bearer token.
+**What it uses:** `AGENTWRIT_ADMIN_SECRET` for admin auth. `GET /v1/audit/events` with an admin Bearer token.
 
 ```python
 # app5_audit_reader.py
@@ -393,13 +393,13 @@ run_pipeline("batch-102")
 Audit log reader — queries the broker's hash-chained audit trail.
 Shows who did what, when, and whether it succeeded.
 
-Requires admin credentials (AACTL_ADMIN_SECRET). The SDK does not handle admin auth.
+Requires admin credentials (AGENTWRIT_ADMIN_SECRET). The SDK does not handle admin auth.
 """
 import os
 import httpx
 
 BROKER_URL = os.environ["AGENTWRIT_BROKER_URL"]
-ADMIN_SECRET = os.environ["AACTL_ADMIN_SECRET"]
+ADMIN_SECRET = os.environ["AGENTWRIT_ADMIN_SECRET"]
 
 # Step 1: Authenticate as admin (raw HTTP — not part of the SDK)
 auth_resp = httpx.post(
@@ -449,7 +449,7 @@ else:
 
 **The real-world pattern this teaches:**
 - Operators and compliance teams need to query the audit trail programmatically
-- Admin auth uses `AACTL_ADMIN_SECRET` — not part of the SDK, done via raw HTTP or `aactl`
+- Admin auth uses `AGENTWRIT_ADMIN_SECRET` — not part of the SDK, done via raw HTTP or `aactl`
 - Filtering by event type, agent, and time range lets you find specific incidents
 - This is how you build automated compliance reporting
 
@@ -900,8 +900,8 @@ print(f"\nFinal outcome: {outcome}")
 In a second terminal, while the loop is running, revoke the agent:
 
 ```bash
-export AACTL_BROKER_URL="http://localhost:8080"
-export AACTL_ADMIN_SECRET="your-admin-secret"
+export AGENTWRIT_BROKER_URL="http://localhost:8080"
+export AGENTWRIT_ADMIN_SECRET="your-admin-secret"
 aactl revoke --level agent --target "spiffe://agentwrit.local/agent/monitoring-service/continuous-monitor-001/..."
 ```
 

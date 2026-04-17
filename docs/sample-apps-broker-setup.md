@@ -22,8 +22,8 @@ Register the app once. Replace the scopes with what your operator approved.
 ### Option A: Using aactl (recommended)
 
 ```bash
-export AACTL_BROKER_URL="http://localhost:8080"
-export AACTL_ADMIN_SECRET="your-admin-secret"
+export AGENTWRIT_BROKER_URL="http://localhost:8080"
+export AGENTWRIT_ADMIN_SECRET="your-admin-secret"
 
 aactl app register \
   --name sample-apps \
@@ -112,7 +112,7 @@ The pipeline reads from source partitions and writes to destination partitions. 
 ```
 Scope ceiling:            N/A — no agent scopes needed
 What it uses:            Admin auth only (aactl or raw HTTP admin API)
-                          POST /v1/admin/auth with AACTL_ADMIN_SECRET
+                          POST /v1/admin/auth with AGENTWRIT_ADMIN_SECRET
                           GET /v1/audit/events with admin Bearer token
 ```
 
@@ -196,6 +196,14 @@ curl -X POST "http://localhost:8080/v1/admin/apps/sample-apps" \
 
 ## Broker Start Command
 
+The recommended way to run the broker is with Docker:
+
+```bash
+AGENTWRIT_ADMIN_SECRET="your-admin-secret" docker compose up -d broker
+```
+
+If running the broker binary directly, set these environment variables. Note: the broker binary currently uses the `AA_` prefix for its env vars ([rename tracked in devonartis/agentwrit#44](https://github.com/devonartis/agentwrit/issues/44)):
+
 ```bash
 AA_ADMIN_SECRET="your-admin-secret" \
 AA_DB_PATH="/tmp/agentwrit.db" \
@@ -204,8 +212,8 @@ AA_MAX_TTL="600" \
 ./broker
 ```
 
-| Flag | Purpose |
-|------|---------|
+| Variable | Purpose |
+|----------|---------|
 | `AA_ADMIN_SECRET` | Admin password for operator tasks (app registration, revocation, audit) |
 | `AA_DB_PATH` | SQLite database path — audit log and revocation data |
 | `AA_DEFAULT_TTL` | Default agent token TTL in seconds (300 = 5 minutes) |
@@ -237,7 +245,7 @@ aactl app list
 |--------|-------|-----|
 | `401` on app auth | Wrong `client_id` or `client_secret` | Re-register the app and save the credentials |
 | `403` on agent creation | Requested scope outside app ceiling | Extend the app ceiling with `aactl app update`, or narrow the requested scope |
-| `403` on admin auth | Wrong `AACTL_ADMIN_SECRET` | Restart the broker with the correct secret |
+| `403` on admin auth | Wrong `AGENTWRIT_ADMIN_SECRET` | Restart the broker with the correct secret |
 | `Connection refused` | Broker not running | `./broker` or `docker compose up` |
 | App 5 returns empty events | Admin token expired | Re-run the aactl command or re-authenticate |
 | App 9 shows all `PASS` | Ceiling is too wide — all test scopes are allowed | Narrow the ceiling so `admin:revoke:*` and `read:logs:*` are outside it |
