@@ -113,6 +113,28 @@ jobs:
             exit 1
           fi
 
+  sast:
+    name: SAST (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run bandit -r src/ -q
+
+  dep-audit:
+    name: Dependency Audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run pip-audit
+
   secrets-scan:
     name: Secrets Scan
     runs-on: ubuntu-latest
