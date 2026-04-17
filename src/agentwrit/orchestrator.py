@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from agentwrit.agent import Agent
+from agentwrit.errors import AgentWritError
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -80,7 +81,8 @@ class AgentCreationOrchestrator:
         agent_name = label or f"{orch_id}/{task_id}"
 
         # The app JWT is required as Bearer auth for launch token creation.
-        assert self._app._session is not None
+        if self._app._session is None:
+            raise AgentWritError("App not authenticated — call authenticate() first")
         app_token = self._app._session.access_token
 
         lt_response = self._transport.request(
