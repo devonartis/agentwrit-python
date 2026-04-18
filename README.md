@@ -5,6 +5,9 @@
 <h1 align="center">AgentWrit Python SDK</h1>
 
 <p align="center">
+  <a href="https://pypi.org/project/agentwrit/"><img src="https://img.shields.io/pypi/v/agentwrit.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/agentwrit/"><img src="https://img.shields.io/pypi/dm/agentwrit.svg" alt="PyPI downloads"></a>
+  <a href="https://github.com/devonartis/agentwrit-python/actions/workflows/ci.yml"><img src="https://github.com/devonartis/agentwrit-python/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://mypy-lang.org/"><img src="https://img.shields.io/badge/type%20checked-mypy%20strict-blue.svg" alt="Type checked: mypy strict"></a>
@@ -21,7 +24,8 @@
   <a href="#prerequisites">Prerequisites</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#agent-lifecycle">Lifecycle</a> ·
-  <a href="#medassist-ai-demo">Demo</a> ·
+  <a href="#medassist-ai-demo">MedAssist Demo</a> ·
+  <a href="#support-ticket-demo">Tickets Demo</a> ·
   <a href="#scope-format">Scopes</a> ·
   <a href="#delegation">Delegation</a> ·
   <a href="#error-handling">Errors</a> ·
