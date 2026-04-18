@@ -1,396 +1,511 @@
 # Concepts
 
-This document explains why AgentAuth exists, how it works, and the security model behind the SDK. Read this before writing application code — it will save you time and help you make better design decisions.
+This document explains how AgentWrit works and what you need to understand before writing application code. Read this first — it will save you hours of debugging.
 
-## Table of Contents
-
-- [The Problem](#the-problem)
-- [The Solution: Ephemeral Agent Credentialing](#the-solution-ephemeral-agent-credentialing)
-- [Architecture Overview](#architecture-overview)
-- [The Credential Flow](#the-credential-flow)
-- [Why Use the SDK](#why-use-the-sdk)
-- [Key Concepts](#key-concepts)
-  - [Scopes](#scopes)
-
-  - [SPIFFE Identities](#spiffe-identities)
-  - [Delegation](#delegation)
-  - [Token Lifecycle](#token-lifecycle)
-- [Security Model](#security-model)
-- [Standards Alignment](#standards-alignment)
+Read [Getting Started](getting-started.md) first if you just want to run code. Come back here when you want to understand what you're doing.
 
 ---
 
 ## The Problem
 
-AI agents need credentials to access databases, APIs, and file systems. Most teams solve this one of three ways — all of them dangerous:
+AI agents need credentials to access databases, APIs, and file systems. Most teams solve this one of three ways:
 
-**Shared API keys.** Every agent uses the same key. If one agent is compromised, every agent's access is compromised. You cannot tell which agent did what in the audit log. The key never expires because rotating it breaks every running agent.
+**Shared API keys.** Every agent uses the same key. If one agent is compromised, every agent's access is compromised. You cannot tell which agent did what. The key never expires because rotating it breaks every running agent.
 
-**User identity inheritance.** The agent runs as the user who launched it. The agent can do everything the user can do — read anyone's data, write to any table, delete anything. The user "approved" by clicking a button, but they had no idea what the agent would actually do with their full permissions.
+**User identity inheritance.** The agent runs as the user who launched it. The agent can do everything the user can do — read anyone's data, write to any table, delete anything.
 
-**Service accounts with broad scope.** An ops team creates a service account for the agent framework. It has all the permissions any agent might ever need. Permissions cannot be narrowed for specific tasks. The service account sits unused 99% of the time but remains fully active.
+**Service accounts with broad scope.** An ops team creates a service account for the agent framework. It has all the permissions any agent might ever need. It sits unused 99% of the time but remains fully active.
 
 These approaches share three failures:
-
-1. **Credentials live too long.** Agent tasks take minutes. Credentials last hours or days. Every extra minute is attack surface.
-2. **Credentials are too broad.** An agent reading customer names has the same permissions as an agent processing payments.
-3. **No human oversight where it matters.** The human "approved" at launch time, not at the moment the agent requests dangerous access.
-
----
-
-## The Solution: Ephemeral Agent Credentialing
-
-AgentAuth implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md) pattern — a fundamentally different security model for AI agents:
-
-**Every agent instance gets a unique identity.** Not a shared service account — a cryptographically unique SPIFFE identity created through Ed25519 challenge-response. Agent A and Agent B are provably different principals, even if they run the same code.
-
-**Credentials are scoped to the specific task.** An agent analyzing customer data gets `read:data:customers` — not `read:*:*`. The scope format (`action:resource:identifier`) makes least-privilege natural rather than aspirational.
-
-**Credentials die with the task.** Token TTL is 5 minutes by default. When the agent finishes, it revokes its own credential. A stolen token is useless within minutes.
-
-**Delegation can only narrow, never widen.** When Agent A gives Agent B a subset of its permissions, the broker enforces that the scope strictly narrows. The delegation chain is signed at every hop.
+1. Credentials live too long
+2. Credentials are too broad
+3. No way to trace what each agent did
 
 ---
 
-## Architecture Overview
+## The Three Roles
 
-```mermaid
-graph TB
-    subgraph App["🔧 Your Application"]
-        direction TB
-        Client["<b>AgentAuthClient</b><br/>get_token() · delegate()<br/>revoke_token() · validate_token()"]
-        Cache["Token Cache<br/><i>Thread-safe · Auto-renewal at 80% TTL</i>"]
-        Client --- Cache
-    end
+AgentWrit has three distinct roles. Understanding them is critical because the SDK operates as one of them.
 
-    subgraph Broker["🔐 AgentAuth Broker"]
-        direction LR
-        AuthGroup["App Auth<br/>/v1/app/auth<br/>/v1/app/launch-tokens"]
-        CredGroup["Credentials<br/>/v1/challenge<br/>/v1/register"]
-        MgmtGroup["Management<br/>/v1/delegate<br/>/v1/token/validate<br/>/v1/token/release"]
-    end
+### Operator
 
-    Agents["🤖 Your AI Agents"]
-    APIs["🌐 Protected APIs"]
+The human or script that manages the broker. The operator:
+- Starts and configures the broker
+- Registers applications and sets their scope ceilings
+- Can revoke any token, kill any agent
+- Has the admin secret (root of trust)
 
-    Client ==>|"HTTPS"| Broker
-    Client -.->|"Issue JWT"| Agents
-    Agents ==>|"Bearer auth"| APIs
+**Which role are you?** Most readers are the Application — your broker admin registered your app and handed you the `client_id` / `client_secret`. If you're running the broker locally (e.g., via `docker compose up -d` in this repo), you're wearing both the Operator and Application hats — `demo/setup.py` mints the app credentials as a one-shot Operator action.
 
-    style App fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
-    style Broker fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
-    style Agents fill:#d1fae5,stroke:#10b981,stroke-width:2px
-    style APIs fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
-    style AuthGroup fill:#fef9c3,stroke:#eab308
-    style CredGroup fill:#fef9c3,stroke:#eab308
-    style MgmtGroup fill:#fef9c3,stroke:#eab308
+### Application (This Is You)
 
-```
+Your software that uses the SDK. The application:
+- Authenticates with `client_id` and `client_secret`
+- Creates agents within its scope ceiling
+- Cannot exceed the ceiling the operator set
+- Cannot revoke other apps' agents or read the audit trail
 
----
-
-
----
-
-## The Credential Flow
-
-Every call to `get_token()` executes an 8-step protocol. The SDK handles all of this internally — you call one function and get a JWT back.
-
-```mermaid
-sequenceDiagram
-    participant App as 🔧 Your App
-    participant SDK as 📦 AgentAuth SDK
-    participant Broker as 🔐 Broker
-
-    App->>SDK: client.get_token("analyst", ["read:data:*"])
-
-    rect rgb(219, 234, 254)
-        Note over SDK: Step 1 — Cache Check
-        SDK->>SDK: Cache miss (first call)
-        Note over SDK: Step 2 — App Auth
-        SDK->>SDK: Ensure app JWT valid
-    end
-
-    rect rgb(254, 243, 199)
-        Note over SDK,Broker: Step 3 — Launch Token
-        SDK->>Broker: POST /v1/app/launch-tokens
-        Broker-->>SDK: launch_token
-    end
-
-    rect rgb(209, 250, 229)
-        Note over SDK: Step 4 — Key Generation
-        SDK->>SDK: Generate Ed25519 keypair (in memory)
-    end
-
-    rect rgb(254, 243, 199)
-        Note over SDK,Broker: Step 5 — Challenge
-        SDK->>Broker: GET /v1/challenge
-        Broker-->>SDK: nonce (hex, 30s TTL)
-    end
-
-    rect rgb(219, 234, 254)
-        Note over SDK: Step 6 — Sign Nonce
-        SDK->>SDK: Sign nonce with ephemeral private key
-    end
-
-    rect rgb(254, 243, 199)
-        Note over SDK,Broker: Step 7 — Register
-        SDK->>Broker: POST /v1/register
-        Broker-->>SDK: Agent JWT + SPIFFE ID
-    end
-
-    rect rgb(209, 250, 229)
-        Note over SDK: Step 8 — Cache
-        SDK->>SDK: Store token in cache
-    end
-
-    SDK-->>App: JWT string
-```
-
-On subsequent calls with the same agent name and scope, step 1 returns the cached token immediately — no network calls.
-
----
-
-## Why Use the SDK
-
-The broker exposes a JSON HTTP API. You can call it directly with `requests`. Here is what that looks like:
-
-### Without the SDK (40+ lines, multiple failure modes)
+When you create an `AgentWritApp`, you are acting as the Application role:
 
 ```python
-import base64, requests
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-# Step 1: Authenticate your app
-app_resp = requests.post(f"{broker_url}/v1/app/auth", json={
-    "client_id": client_id, "client_secret": client_secret
-})
-app_token = app_resp.json()["access_token"]
-
-# Step 2: Create a launch token
-launch_resp = requests.post(f"{broker_url}/v1/app/launch-tokens",
-    headers={"Authorization": f"Bearer {app_token}"},
-    json={"agent_name": "reader", "allowed_scope": ["read:data:*"]})
-launch_token = launch_resp.json()["launch_token"]
-
-# Step 3: Generate Ed25519 keypair
-private_key = Ed25519PrivateKey.generate()
-# COMMON MISTAKE: Using .public_bytes() with DER encoding instead of .public_bytes_raw()
-# The broker expects raw 32-byte keys. DER gives you 44 bytes. Registration fails.
-pub_bytes = private_key.public_key().public_bytes_raw()
-pub_b64 = base64.b64encode(pub_bytes).decode()
-
-# Step 4: Get a challenge nonce
-# COMMON MISTAKE: The nonce expires in 30 seconds. Slow code = failed registration.
-challenge = requests.get(f"{broker_url}/v1/challenge").json()
-nonce_hex = challenge["nonce"]
-
-# Step 5: Sign the nonce
-# COMMON MISTAKE: Signing the hex string instead of the decoded bytes.
-nonce_bytes = bytes.fromhex(nonce_hex)
-signature = base64.b64encode(private_key.sign(nonce_bytes)).decode()
-
-# Step 6: Register the agent
-reg_resp = requests.post(f"{broker_url}/v1/register", json={
-    "launch_token": launch_token, "nonce": nonce_hex,
-    "public_key": pub_b64, "signature": signature,
-    "orch_id": "my-orch", "task_id": "my-task",
-    "requested_scope": ["read:data:*"]
-})
-token = reg_resp.json()["access_token"]
-
-# You STILL need to handle: token caching, renewal, app JWT renewal,
-# retry with backoff, thread safety, secret protection...
+app = AgentWritApp(broker_url, client_id, client_secret)
 ```
 
-### With the SDK (3 lines)
+### Agent
+
+An ephemeral identity created by your application for a specific task. The agent:
+- Has a unique SPIFFE identity (e.g., `spiffe://agentwrit.local/agent/my-service/task-001/a1b2c3d4`)
+- Holds a short-lived JWT with specific scope
+- Can renew its token, release it, or delegate to other agents
+- Cannot create other agents — only the app can do that
+
+When you call `create_agent()`, you get back an `Agent` object:
 
 ```python
-from agentauth import AgentAuthClient
-
-client = AgentAuthClient(broker_url, client_id, client_secret)
-token = client.get_token("reader", ["read:data:*"])
-```
-
-The SDK eliminates three categories of bugs:
-
-**Cryptographic mistakes.** DER vs raw key encoding (the most common integration issue). Signing the hex string vs the decoded bytes. Both produce valid-looking base64 that the broker rejects with an opaque "invalid signature" error.
-
-**Timing bugs.** The nonce has a 30-second TTL. If your code does anything slow between getting the nonce and registering, registration fails silently. The SDK fetches the nonce and registers in the same flow — well under 1 second.
-
-**State management.** App JWT renewal, token caching, retry with backoff, thread safety — all handled internally.
-
----
-
-## Key Concepts
-
-### Scopes
-
-Scopes follow the format `action:resource:identifier`:
-
-```
-read:data:*              — read any data resource
-read:data:customers      — read only customer data
-write:data:records       — write to records
-admin:system:*           — full admin access (if your app ceiling allows it)
-```
-
-The wildcard `*` only works in the identifier position. `read:*:*` is an invalid scope.
-
-Your app has a **scope ceiling** set by the operator. You can request anything within that ceiling. Requesting beyond it raises `ScopeCeilingError`.
-
-```mermaid
-graph LR
-    subgraph Ceiling["🔒 Operator-Defined Scope Ceiling"]
-        direction TB
-        CeilingScopes["Allowed: read:data:* · write:data:*"]
-
-        subgraph Pass["✅ Within Ceiling"]
-            R1["read:data:customers"]
-            R2["write:data:records"]
-        end
-
-        subgraph Fail["❌ Outside Ceiling"]
-            R3["admin:system:*"]
-            R4["delete:data:*"]
-        end
-    end
-
-    Pass -->|"Token Issued"| OK["🎫 JWT"]
-    Fail -->|"Rejected"| ERR["⚠️ ScopeCeilingError"]
-
-    style Ceiling fill:#f0f9ff,stroke:#0ea5e9,stroke-width:2px
-    style Pass fill:#dcfce7,stroke:#22c55e,stroke-width:2px
-    style Fail fill:#fee2e2,stroke:#ef4444,stroke-width:2px
-    style OK fill:#bbf7d0,stroke:#16a34a
-    style ERR fill:#fecaca,stroke:#dc2626
-```
-
-### SPIFFE Identities
-
-Every agent gets a SPIFFE-format identity:
-
-```
-spiffe://agentauth.local/agent/{orch_id}/{task_id}/{instance_id}
-```
-
-For example: `spiffe://agentauth.local/agent/pipeline-alpha/quarterly-review/a1b2c3d4`
-
-This identity is:
-- **Unique per instance** — two agents with the same name and scope get different identities
-- **Cryptographically bound** — tied to the Ed25519 keypair generated for this specific registration
-- **Task-aware** — the `task_id` and `orch_id` are embedded in the identity path
-
-### Delegation
-
-Agent A can give Agent B a subset of its own permissions:
-
-```python
-delegated = client.delegate(
-    token=agent_a_token,
-    to_agent_id=agent_b_spiffe_id,
-    scope=["read:data:results"],  # must be narrower than A's scope
-    ttl=60,
+agent = app.create_agent(
+    orch_id="my-service",
+    task_id="task-001",
+    requested_scope=["read:data:customers"],
 )
 ```
 
-```mermaid
-sequenceDiagram
-    participant A as 🤖 Orchestrator (Agent A)
-    participant B as 🔐 Broker
-    participant C as 🤖 Worker (Agent B)
+### The Authority Chain
 
-    A->>B: delegate(scope=["read:data:results"], ttl=60)
-
-    rect rgb(254, 243, 199)
-        Note over B: Validation Checks
-        B->>B: ✓ Agent A's token valid
-        B->>B: ✓ Scope ⊆ A's scope
-        B->>B: ✓ Chain depth < 5
-        B->>B: ✓ Sign delegation link
-    end
-
-    B-->>A: delegated_jwt
-    A->>C: Forward delegated_jwt
-    C->>C: Use as Bearer auth → API
+```
+Operator (root of trust)
+  │  sets scope ceiling: ["read:data:*", "write:data:*"]
+  ▼
+Application (your code)
+  │  creates agents within ceiling
+  ▼
+Agent (ephemeral worker)
+  │  delegation cannot widen scope (equal or narrower allowed)
+  ▼
+Delegated Agent (sub-worker, max 5 hops)
 ```
 
-Delegation rules:
-- Scope can only **narrow** at each hop, never widen
-- Maximum delegation depth is 5 hops
-- Each link in the chain is cryptographically signed
-- Revoking Agent A's token invalidates all downstream delegations
-
-### Token Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> Active: get_token()
-
-    state Active {
-        [*] --> Valid
-        Valid --> Valid: Cache hit (instant)
-        Valid --> Renewing: 80% TTL reached
-        Renewing --> Valid: New JWT issued
-    }
-
-    Active --> Revoked: revoke_token()
-    Active --> Expired: TTL expires
-
-    Revoked --> [*]: Broker rejects all requests
-    Expired --> [*]: Must call get_token() again
-```
-
-- `get_token()` executes the full 8-step flow (or returns cached token)
-- Active tokens are valid for their TTL (default 5 minutes)
-- `revoke_token()` invalidates immediately
-- `validate_token()` checks current status against the broker
-- The SDK proactively renews tokens at 80% of their TTL
+At every step, authority cannot widen. Equal or narrower is accepted; no step can exceed the step above it. The operator defines what apps can do. Apps define what agents can do. Agents define what sub-agents can do — and a delegator can pass along its full scope unchanged if the task calls for it.
 
 ---
 
-## Security Model
+## Scopes
 
-The SDK enforces these security properties automatically:
+Scopes are the most important concept in the SDK. Every agent has a scope that defines exactly what it can do. Getting scopes wrong is the #1 source of bugs.
 
-| Property | How It Works |
-|----------|-------------|
-| **Ephemeral keys** | Every `get_token()` call generates a fresh Ed25519 keypair in memory. The private key never touches disk. Even if the process memory is dumped, the key only exists in volatile memory and goes out of scope after signing. |
-| **Task-scoped tokens** | Agents can only access what they request, within the app's scope ceiling. No master keys, no broad permissions. |
-| **Short TTLs** | Tokens expire in minutes. A stolen token becomes useless quickly — unlike the 24-hour OAuth tokens common in traditional systems. |
+### The 3-Segment Format
 
-| **Scope attenuation** | Delegation can only narrow permissions. An agent cannot grant more access than it was given. |
-| **Thread safety** | Token cache and app authentication state are protected by `threading.Lock`. Safe for concurrent agents in multi-threaded applications. |
-| **TLS by default** | Broker connections verify TLS certificates. The `verify` parameter defaults to `True` per NIST SP 800-207 guidance. |
-| **No secret leakage** | `client_secret` never appears in error messages, `repr()` output, or logs — enforced across all modules. |
+Every scope has exactly three parts separated by colons:
+
+```
+action:resource:identifier
+```
+
+| Part | What it means | Examples |
+|------|---------------|----------|
+| **action** | What operation | `read`, `write`, `delete` |
+| **resource** | What category of thing | `data`, `logs`, `config` |
+| **identifier** | Which specific thing | `customers`, `partition-7`, `report-q3` |
+
+Real examples:
+```
+read:data:customers          — read customer data
+write:data:order-abc-123     — write to a specific order
+read:data:partition-7        — read partition 7
+write:logs:cleanup-result    — write a cleanup log entry
+```
+
+### Wildcards
+
+The wildcard `*` only works in the **identifier** position (the third segment):
+
+```
+read:data:*                  — read ANY data resource
+write:data:*                 — write to ANY data resource
+```
+
+Wildcards do NOT work in action or resource positions:
+
+```
+*:data:customers             — INVALID, will not match anything
+read:*:customers             — INVALID, will not match anything
+*:*:*                        — INVALID, will not match anything
+```
+
+This is critical to understand. The broker enforces exact match on action and resource. Only the identifier supports wildcards.
+
+### Scope Matching Rules
+
+The SDK provides `scope_is_subset()` to check if a requested scope is covered by an allowed scope:
+
+```python
+from agentwrit import scope_is_subset
+
+# Exact match — works
+scope_is_subset(["read:data:customers"], ["read:data:customers"])  # True
+
+# Wildcard covers specific — works
+scope_is_subset(["read:data:customers"], ["read:data:*"])  # True
+
+# Different identifier — blocked
+scope_is_subset(["read:data:orders"], ["read:data:customers"])  # False
+
+# Different action — blocked
+scope_is_subset(["write:data:customers"], ["read:data:customers"])  # False
+
+# Different resource — blocked
+scope_is_subset(["read:logs:customers"], ["read:data:customers"])  # False
+```
+
+### Common Scope Mistakes
+
+These are patterns that trip up new users. All three are enforced by the broker's scope checks — verified against the acceptance test suite.
+
+**Mistake 1: Wrong resource segment**
+
+```python
+# WRONG — "analytics" is the resource, "project-x" is the identifier
+scope = ["read:analytics:project-x"]
+
+# RIGHT — "data" is the resource, "analytics-project-x" is the identifier
+scope = ["read:data:analytics-project-x"]
+```
+
+The resource must match what your operator configured in the scope ceiling. If the ceiling is `["read:data:*"]`, the resource must be `data`.
+
+**Mistake 2: Thinking action mismatch is the only check**
+
+```python
+agent_scope = ["read:data:email-user-42"]
+
+# This is blocked, but not ONLY because write != read.
+# It's blocked because BOTH action AND resource must match.
+scope_is_subset(["write:email:user-42"], agent_scope)  # False
+# "write" != "read" (action mismatch)
+# "email" != "data" (resource mismatch)
+# "user-42" != "email-user-42" (identifier mismatch)
+# All three are wrong. The scope format matters.
+```
+
+**Mistake 3: Forgetting the identifier is the full third segment**
+
+```python
+# The scope "read:data:partition-7" has:
+#   action = "read"
+#   resource = "data"  
+#   identifier = "partition-7"
+
+# NOT:
+#   action = "read"
+#   resource = "data"
+#   identifier = "partition"
+#   sub-identifier = "7"
+```
+
+There are exactly 3 segments. Everything after the second colon is the identifier, even if it contains hyphens.
+
+### Using scope_is_subset() as a Gatekeeper
+
+Scopes should always be **dynamic** — derived from runtime context like a request, a task, or a user session. Hardcoding scope identifiers defeats the purpose of per-task isolation. If every agent gets `"read:data:customer-artis"`, you've just built a static API key with extra steps.
+
+The pattern: **the request determines the scope, the scope determines the agent's authority.**
+
+**Simple case — one scope, one agent:**
+
+```python
+from agentwrit import scope_is_subset
+
+# The customer ID comes from the request — never hardcoded
+customer_id = request.customer_id  # e.g. "customer-7291"
+
+agent = app.create_agent(
+    orch_id="customer-service",
+    task_id="lookup",
+    requested_scope=[f"read:data:{customer_id}"],
+)
+
+# Before any action, check if the agent is authorized for THIS customer
+required = [f"read:data:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    result = fetch_customer_data(customer_id)
+else:
+    raise PermissionError(f"Agent not authorized for {customer_id}")
+
+# Agent tries to access a different customer — blocked
+other_customer = "customer-9999"
+scope_is_subset([f"read:data:{other_customer}"], agent.scope)  # False
+
+# Agent tries to WRITE — blocked (read-only agent)
+scope_is_subset([f"write:data:{customer_id}"], agent.scope)  # False
+```
+
+**Real-world case — multiple scopes per agent:**
+
+Most tasks need more than one scope. A support ticket agent needs to read customer data, read billing history, and write case notes — but not issue refunds:
+
+```python
+customer_id = request.customer_id
+
+agent = app.create_agent(
+    orch_id="customer-service",
+    task_id="support-ticket",
+    requested_scope=[
+        f"read:data:{customer_id}",
+        f"read:billing:{customer_id}",
+        f"write:notes:{customer_id}",
+    ],
+)
+
+# The agent has 3 scopes, but each tool checks only what IT needs:
+
+# Look up customer profile — authorized
+required = [f"read:data:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    profile = fetch_customer_data(customer_id)
+
+# Check billing history — authorized
+required = [f"read:billing:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    billing = fetch_billing_history(customer_id)
+
+# Save case notes — authorized
+required = [f"write:notes:{customer_id}"]
+if scope_is_subset(required, agent.scope):
+    save_case_notes(customer_id, notes="Resolved billing dispute")
+
+# Issue a refund — BLOCKED (has read:billing, not write:billing)
+required = [f"write:billing:{customer_id}"]
+scope_is_subset(required, agent.scope)  # False
+
+# Access a different customer — BLOCKED (scoped to one customer)
+other_customer = "customer-9999"
+scope_is_subset([f"read:data:{other_customer}"], agent.scope)  # False
+```
+
+This is the app's responsibility. The broker sets the scope at creation time, but the app must enforce it before every action. The MedAssist demo shows this pattern end-to-end: each tool declares a scope template (e.g. `"read:records:{patient_id}"`), and the pipeline resolves it with the real patient ID at runtime — see `demo/pipeline/tools.py` for the implementation.
+
+---
+
+## Agent Lifecycle
+
+An agent goes through a simple lifecycle:
+
+```
+Created → Active → Released (or Expired)
+```
+
+### Created
+
+`create_agent()` registers the agent with the broker and returns an `Agent` object.
+
+```python
+agent = app.create_agent(
+    orch_id="my-service",
+    task_id="my-task",
+    requested_scope=["read:data:customers"],
+)
+```
+
+### Active
+
+While active, the agent can:
+- Use its `access_token` as a Bearer credential
+- Call `renew()` to get a fresh token (same identity, old token revoked)
+- Call `delegate()` to pass a subset of its scope to another agent (equal or narrower)
+- Be validated by any service via `validate(app.broker_url, token)`
+
+### Released
+
+When the task is done, the agent calls `release()`:
+
+```python
+agent.release()
+```
+
+After release:
+- The broker rejects the token on all future requests
+- `renew()` raises `AgentWritError`
+- `delegate()` raises `AgentWritError`
+- Calling `release()` again is safe (no-op)
+
+### Expired
+
+If the agent doesn't release and doesn't renew, the token expires naturally after its TTL (default 300 seconds). After expiry, `validate()` returns `valid=False`.
+
+---
+
+## Delegation
+
+Delegation is how one agent passes a subset of its authority to another agent. The broker issues a new token for the delegate scoped to what was requested — equal to or narrower than the delegator's own scope. Delegation cannot widen authority; any scope the delegator doesn't hold is rejected.
+
+### How It Works
+
+```python
+# Agent A has two scopes
+agent_a = app.create_agent(
+    orch_id="pipeline",
+    task_id="orchestrator",
+    requested_scope=["read:data:partition-7", "read:data:partition-8"],
+)
+
+# Agent B exists (created separately)
+agent_b = app.create_agent(
+    orch_id="pipeline",
+    task_id="worker",
+    requested_scope=["read:data:partition-7"],
+)
+
+# A delegates ONLY partition-7 to B
+delegated = agent_a.delegate(
+    delegate_to=agent_b.agent_id,
+    scope=["read:data:partition-7"],
+)
+```
+
+`delegated` is a `DelegatedToken` with:
+- `access_token` — a new JWT for agent B with only `["read:data:partition-7"]`
+- `expires_in` — TTL (default 60 seconds)
+- `delegation_chain` — records of who delegated what
+
+### Delegation Rules
+
+All rules below are enforced by the broker and verified against the live broker via the acceptance suite.
+
+1. **Scope must be subset of delegator's scope.** Agent A has `["read:data:partition-7", "read:data:partition-8"]`. It can delegate `["read:data:partition-7"]` but NOT `["read:data:partition-9"]`.
+
+2. **The broker rejects escalation.** If agent A tries to delegate scope it doesn't have, the broker returns 403 and the SDK raises `AuthorizationError`.
+
+3. **Delegation chain is tracked.** Each delegation records who delegated, what scope they had, and when. Auditors can trace authority back to the source.
+
+4. **Maximum depth is 5.** A→B→C→D→E→F is the deepest chain allowed.
+
+5. **Same-scope delegation is allowed.** The broker treats equal as a valid subset. If A has `["read:data:partition-7"]` and delegates `["read:data:partition-7"]` to B, the broker accepts it.
+
+### Multi-Hop Delegation Limit
+
+> **SDK limitation:** `agent.delegate()` always signs with the agent's own *registration* token. If agent B receives a delegated token from A and calls `agent_b.delegate()`, the broker starts a fresh chain rooted at B — it does not continue A's chain. To extend a real chain (A→B→C), the second hop has to bypass the SDK and hit `/v1/delegate` directly with the delegated token. A future release may add `DelegatedToken.delegate()` to remove this workaround.
+
+Example of the workaround:
+
+```python
+import httpx
+
+# Hop 1: A delegates to B (SDK)
+delegated_ab = agent_a.delegate(
+    delegate_to=agent_b.agent_id,
+    scope=["read:data:partition-7"],
+)
+
+# Hop 2: B delegates to C using the delegated token (raw HTTP)
+resp = httpx.post(
+    f"{broker_url}/v1/delegate",
+    json={
+        "delegate_to": agent_c.agent_id,
+        "scope": ["read:data:partition-7"],
+    },
+    headers={"Authorization": f"Bearer {delegated_ab.access_token}"},
+)
+```
+
+Single-hop delegation works cleanly through the SDK. Multi-hop chains need the raw-HTTP escape hatch above until the SDK grows `DelegatedToken.delegate()`.
+
+---
+
+## Validation
+
+Any service can validate a token by asking the broker:
+
+```python
+from agentwrit import validate
+
+result = validate(app.broker_url, agent.access_token)
+```
+
+`validate()` is a module-level function. It doesn't need an `AgentWritApp` — just the broker URL and the token. This is how downstream services verify agent tokens.
+
+The broker returns `valid=True` with claims, or `valid=False` with an error message. At the `validate()` endpoint specifically, the broker intentionally returns the same generic error ("token is invalid or expired") for every failure case — expired, revoked, malformed, or unknown — to prevent information leakage. Other endpoints (auth middleware, registration) return more specific messages by design.
+
+---
+
+## Error Model
+
+When the broker rejects a request, it returns an RFC 7807 Problem Detail. The SDK parses this into structured exceptions.
+
+### Exception Hierarchy
+
+```
+AgentWritError (base — catch this to handle any SDK error)
+├── ProblemResponseError (broker returned an error response)
+│   ├── AuthenticationError (401 — bad credentials)
+│   ├── AuthorizationError (403 — scope violation, delegation rejected)
+│   └── RateLimitError (429 — too many requests)
+├── TransportError (network failure — broker unreachable)
+└── CryptoError (Ed25519 failure — key generation or signing)
+```
+
+### ProblemDetail Fields
+
+When you catch a `ProblemResponseError` (or any subclass), you get structured error info:
+
+```python
+from agentwrit.errors import AuthorizationError
+
+try:
+    agent_a.delegate(delegate_to=agent_b.agent_id, scope=["read:data:something-else"])
+except AuthorizationError as e:
+    print(e.status_code)          # 403
+    print(e.problem.type)         # urn:agentwrit:error:scope_violation
+    print(e.problem.title)        # Forbidden
+    print(e.problem.detail)       # delegated scope exceeds delegator scope
+    print(e.problem.error_code)   # scope_violation
+    print(e.problem.instance)     # /v1/delegate
+    print(e.problem.request_id)   # bd4b257e53efe7f2 (broker trace ID)
+```
+
+Every field is available for logging, alerting, or debugging. The `request_id` matches the broker's `X-Request-ID` header for cross-referencing with broker logs.
+
+---
+
+## SPIFFE Identities
+
+Every agent gets a unique SPIFFE identity:
+
+```
+spiffe://agentwrit.local/agent/{orch_id}/{task_id}/{instance_id}
+```
+
+For example:
+```
+spiffe://agentwrit.local/agent/data-pipeline/manager/8ece9e2d8a22fdb8
+```
+
+This identity is:
+- **Unique per instance** — two agents with the same orch_id and task_id get different instance IDs
+- **Cryptographically bound** — tied to the Ed25519 keypair generated during registration
+- **Embedded in the JWT** — the `sub` claim in the token contains this SPIFFE URI
+- **Preserved across renewals** — `renew()` issues a new token but the agent_id stays the same
 
 ---
 
 ## Standards Alignment
 
-The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.2.md) pattern (v1.2), with six core components:
+The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.3.md) pattern (v1.3), which aligns with:
 
-| Component | Standard | What It Does |
-|-----------|----------|-------------|
-| **C1: Ephemeral Identity Issuance** | NIST IR 8596 | Unique agent identity via Ed25519 challenge-response + SPIFFE ID |
-| **C2: Task-Scoped Tokens** | NIST IR 8596 | `action:resource:identifier` scopes with ceiling enforcement |
-| **C3: Zero-Trust Enforcement** | NIST SP 800-207 | Every request validated independently; no implicit trust |
-| **C4: Expiration & Revocation** | OWASP ASI03 | Short TTLs + explicit `revoke_token()` + broker-side JTI revocation |
-
-| **C6: Comprehensive Audit** | SOC 2 / NIST | All credential operations logged with agent identity and scope |
-| **C7: Delegation Chain Verification** | IETF WIMSE | Scope attenuation + chain signing at every delegation hop |
-
-Additional standards alignment:
-- **OWASP Top 10 for Agentic AI (2026)** — Addresses ASI03 (Identity/Privilege Abuse) and ASI07 (Insecure Inter-Agent Communication)
-- **Cloud Security Alliance (Aug 2025)** — Addresses fundamental IAM inadequacy for AI workloads
-- **IETF draft-klrc-aiagent-auth-00 (Mar 2026)** — OAuth/WIMSE/SPIFFE framework alignment
+| Standard | What it addresses |
+|----------|-------------------|
+| **NIST IR 8596** | Unique AI agent identities via SPIFFE IDs |
+| **NIST SP 800-207** | Zero-trust per-request validation |
+| **OWASP Top 10 for Agentic AI (2026)** | ASI03 (Identity/Privilege Abuse), ASI07 (Insecure Inter-Agent Communication) |
+| **IETF WIMSE** (draft-ietf-wimse-arch-06) | Delegation chain re-binding |
+| **IETF draft-klrc-aiagent-auth-00** | OAuth/WIMSE/SPIFFE framework for AI agents |
 
 ---
 
 ## Next Steps
 
-| Where to Go | What You'll Learn |
-|-------------|-------------------|
-| [Getting Started](getting-started.md) | Install the SDK, connect to a broker, issue your first credential |
-| [Developer Guide](developer-guide.md) | Multi-agent delegation, error handling, complete examples |
-| [API Reference](api-reference.md) | Complete method signatures, exceptions, caching behavior |
+| Guide | What You'll Learn |
+|-------|-------------------|
+| [Getting Started](getting-started.md) | Install, connect, create your first agent |
+| [Developer Guide](developer-guide.md) | Real patterns: delegation, scope gating, error handling |
+| [API Reference](api-reference.md) | Every class, method, parameter, and exception |
+| [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
+| [MedAssist Demo](../demo/) | The concepts above running in a working healthcare app |

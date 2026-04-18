@@ -1,0 +1,34 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 11 — RFC 7807 ERROR STRUCTURE
+-----------------------------------------------------------------
+WHO:      App receiving a rejection from the broker
+WHAT:     SDK parses the error into a structured ProblemDetail
+WHY:      Developers need actionable error info, not raw HTTP
+EXPECTED: AuthorizationError contains ProblemDetail with
+          type, title, status, detail, and error_code
+=================================================================
+  Agent A: spiffe://agentwrit.local/agent/error-test/trigger-403/2eefc09f1143bb0e
+  Agent A scope: ['read:data:only-this']
+
+  Triggering 403 by delegating scope agent doesn't have...
+  Caught: AuthorizationError
+  exception.status_code: 403
+
+  ProblemDetail fields:
+    type:       urn:agentwrit:error:scope_violation
+    title:      Forbidden
+    status:     403
+    detail:     delegated scope exceeds delegator scope
+    instance:   /v1/delegate
+    error_code: scope_violation
+    request_id: 44e1b6e877801b01
+    hint:       None
+
+  PASS: status_code is 403
+  PASS: type is present: urn:agentwrit:error:scope_violation
+  PASS: title is present: Forbidden
+  PASS: detail is present: delegated scope exceeds delegator scope
+  PASS: error_code is present: scope_violation
+
+═══ STORY 11: PASS ═══

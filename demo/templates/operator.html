@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="operator-page">
+    <div class="operator-grid">
+        <!-- Health Status -->
+        <div class="panel">
+            <h2>Broker Health</h2>
+            {% if error %}
+            <div class="error-banner">{{ error }}</div>
+            {% else %}
+            <div class="health-grid">
+                <div class="health-item">
+                    <span class="health-label">Status</span>
+                    <span class="health-value status-{{ health.get('status', 'unknown') }}">{{ health.get('status', 'unknown') }}</span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Version</span>
+                    <span class="health-value">{{ health.get('version', '?') }}</span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Uptime</span>
+                    <span class="health-value">{{ health.get('uptime', 0) }}s</span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Database</span>
+                    <span class="health-value {% if health.get('db_connected') %}status-ok{% else %}status-error{% endif %}">
+                        {{ 'Connected' if health.get('db_connected') else 'Disconnected' }}
+                    </span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Audit Events</span>
+                    <span class="health-value">{{ health.get('audit_events_count', 0) }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Scope Ceiling -->
+        <div class="panel">
+            <h2>App Scope Ceiling</h2>
+            <p class="description">The maximum scopes this application can grant to agents. Set by the operator at app registration. Each agent gets a subset of this ceiling, typically scoped to a specific patient.</p>
+            <div class="scope-list">
+                {% for scope in scope_ceiling %}
+                <span class="scope-badge ceiling">{{ scope }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Revocation Controls -->
+        <div class="panel">
+            <h2>Emergency Revocation</h2>
+            <p class="description">Revoke credentials at four levels: individual token, agent identity, entire task, or delegation chain.</p>
+            <div class="revoke-form">
+                <select id="revoke-level">
+                    <option value="token">Token (JTI)</option>
+                    <option value="agent">Agent (SPIFFE ID)</option>
+                    <option value="task">Task (task_id)</option>
+                    <option value="chain">Chain (root delegator)</option>
+                </select>
+                <input type="text" id="revoke-target" placeholder="Target identifier...">
+                <button class="btn-danger" onclick="executeRevoke()">Revoke</button>
+            </div>
+            <div id="revoke-result"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function executeRevoke() {
+    const level = document.getElementById('revoke-level').value;
+    const target = document.getElementById('revoke-target').value;
+    if (!target) return;
+
+    const resp = await fetch(`/api/revoke?level=${level}&target=${encodeURIComponent(target)}`, {method: 'POST'});
+    const data = await resp.json();
+    document.getElementById('revoke-result').innerHTML =
+        `<div class="revoke-result ${data.revoked ? 'success' : 'error'}">
+            ${data.revoked ? 'Revoked' : 'Failed'} — level: ${data.level}, target: ${data.target}, count: ${data.count || 0}
+        </div>`;
+}
+</script>
+{% endblock %}

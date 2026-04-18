@@ -1,224 +1,139 @@
-"""Unit tests for agentauth.errors -- exception hierarchy and parse_error_response."""
+"""Unit tests for agentwrit.errors — exception hierarchy.
 
-import json
+Verifies inheritance, ProblemResponseError construction with ProblemDetail,
+and that each subclass maps to the correct HTTP status code semantics.
 
-import pytest
+Spec: Section 9 (Error Model)
+"""
+from __future__ import annotations
 
-from agentauth.errors import (
-    AgentAuthError,
+from agentwrit.errors import (
+    AgentWritError,
     AuthenticationError,
-    BrokerUnavailableError,
+    AuthorizationError,
+    CryptoError,
+    ProblemResponseError,
     RateLimitError,
-    ScopeCeilingError,
-    TokenExpiredError,
-    parse_error_response,
+    TransportError,
 )
+from agentwrit.models import ProblemDetail
 
-# ── Hierarchy ──────────────────────────────────────────────────────────────
+# --- Hierarchy ---
 
 
 class TestExceptionHierarchy:
-    """All custom errors inherit from AgentAuthError, which inherits from Exception."""
+    """All custom errors inherit from AgentWritError → Exception."""
 
     def test_base_inherits_from_exception(self):
-        assert issubclass(AgentAuthError, Exception)
+        assert issubclass(AgentWritError, Exception)
+
+    def test_problem_response_inherits_from_base(self):
+        assert issubclass(ProblemResponseError, AgentWritError)
 
     def test_authentication_error_inherits(self):
-        assert issubclass(AuthenticationError, AgentAuthError)
+        assert issubclass(AuthenticationError, ProblemResponseError)
 
-    def test_scope_ceiling_error_inherits(self):
-        assert issubclass(ScopeCeilingError, AgentAuthError)
+    def test_authorization_error_inherits(self):
+        assert issubclass(AuthorizationError, ProblemResponseError)
 
     def test_rate_limit_error_inherits(self):
-        assert issubclass(RateLimitError, AgentAuthError)
+        assert issubclass(RateLimitError, ProblemResponseError)
 
-    def test_broker_unavailable_error_inherits(self):
-        assert issubclass(BrokerUnavailableError, AgentAuthError)
+    def test_transport_error_is_not_problem_response(self):
+        assert issubclass(TransportError, AgentWritError)
+        assert not issubclass(TransportError, ProblemResponseError)
 
-    def test_token_expired_error_inherits(self):
-        assert issubclass(TokenExpiredError, AgentAuthError)
+    def test_crypto_error_is_not_problem_response(self):
+        assert issubclass(CryptoError, AgentWritError)
+        assert not issubclass(CryptoError, ProblemResponseError)
 
-
-# ── Base Error ─────────────────────────────────────────────────────────────
-
-
-class TestAgentAuthError:
-    def test_message(self):
-        err = AgentAuthError("something broke")
-        assert str(err) == "something broke"
-
-    def test_status_code(self):
-        err = AgentAuthError("bad", status_code=500)
-        assert err.status_code == 500
-
-    def test_error_code(self):
-        err = AgentAuthError("bad", error_code="unknown")
-        assert err.error_code == "unknown"
-
-    def test_defaults_none(self):
-        err = AgentAuthError("x")
-        assert err.status_code is None
-        assert err.error_code is None
-
-    def test_catchable_as_exception(self):
-        with pytest.raises(Exception):
-            raise AgentAuthError("boom")
+    def test_all_catchable_via_base(self):
+        """A single except AgentWritError catches every SDK exception."""
+        problem = ProblemDetail(type="t", title="T", detail="d", instance="/")
+        errors = [
+            ProblemResponseError(problem, 400),
+            AuthenticationError(problem, 401),
+            AuthorizationError(problem, 403),
+            RateLimitError(problem, 429),
+            TransportError("fail"),
+            CryptoError("fail"),
+        ]
+        for err in errors:
+            assert isinstance(err, AgentWritError)
 
 
-# ── AuthenticationError ────────────────────────────────────────────────────
+# --- ProblemResponseError ---
+
+
+class TestProblemResponseError:
+    def test_stores_problem_and_status(self):
+        problem = ProblemDetail(
+            type="urn:agentwrit:error:forbidden",
+            title="Forbidden",
+            detail="scope exceeds ceiling",
+            instance="/v1/app/launch-tokens",
+            status=403,
+            error_code="forbidden",
+        )
+        err = ProblemResponseError(problem, 403)
+        assert err.problem is problem
+        assert err.status_code == 403
+
+    def test_str_contains_title_and_detail(self):
+        problem = ProblemDetail(
+            type="t", title="Bad Request", detail="missing field", instance="/",
+        )
+        err = ProblemResponseError(problem, 400)
+        msg = str(err)
+        assert "Bad Request" in msg
+        assert "missing field" in msg
+
+
+# --- Specific error types ---
 
 
 class TestAuthenticationError:
-    def test_client_id_in_message(self):
-        err = AuthenticationError("invalid credentials", client_id="app-123")
-        assert "app-123" in str(err)
-
-    def test_client_id_attribute(self):
-        err = AuthenticationError("bad", client_id="app-xyz")
-        assert err.client_id == "app-xyz"
-
-    def test_secret_never_in_message(self):
-        """client_secret must NEVER appear in error output."""
-        err = AuthenticationError("invalid credentials", client_id="app-123", status_code=401)
-        msg = str(err)
-        assert "secret" not in msg.lower()
-
-    def test_secret_never_in_repr(self):
-        err = AuthenticationError("bad", client_id="app-123")
-        assert "secret" not in repr(err).lower()
-
-    def test_inherits_status_code(self):
-        err = AuthenticationError("bad", client_id="c1", status_code=401)
+    def test_401_construction(self):
+        problem = ProblemDetail(
+            type="t", title="Unauthorized", detail="invalid credentials",
+            instance="/v1/app/auth",
+        )
+        err = AuthenticationError(problem, 401)
         assert err.status_code == 401
+        assert "invalid credentials" in str(err)
 
 
-# ── ScopeCeilingError ──────────────────────────────────────────────────────
-
-
-class TestScopeCeilingError:
-    def test_requested_scope_attribute(self):
-        err = ScopeCeilingError(
-            detail="scope violation",
-            requested_scope=["read:data:*", "write:data:*"],
+class TestAuthorizationError:
+    def test_403_scope_violation(self):
+        problem = ProblemDetail(
+            type="t", title="Forbidden",
+            detail="scope exceeds app ceiling",
+            instance="/v1/app/launch-tokens",
+            error_code="forbidden",
         )
-        assert err.requested_scope == ["read:data:*", "write:data:*"]
-
-    def test_message_includes_scope(self):
-        err = ScopeCeilingError(
-            detail="scope violation",
-            requested_scope=["read:data:*"],
-        )
-        assert "read:data:*" in str(err)
-
-    def test_message_includes_detail(self):
-        err = ScopeCeilingError(detail="scope exceeds app ceiling")
-        assert "scope exceeds app ceiling" in str(err)
-
-    def test_status_code_is_403(self):
-        err = ScopeCeilingError(detail="nope", status_code=403)
+        err = AuthorizationError(problem, 403)
         assert err.status_code == 403
-
-
-# ── RateLimitError ─────────────────────────────────────────────────────────
+        assert err.problem.error_code == "forbidden"
 
 
 class TestRateLimitError:
-    def test_retry_after_attribute(self):
-        err = RateLimitError("slow down", retry_after=30)
-        assert err.retry_after == 30
-
-    def test_retry_after_none(self):
-        err = RateLimitError("slow down")
-        assert err.retry_after is None
-
-    def test_status_code_is_429(self):
-        err = RateLimitError("slow down", retry_after=5)
-        assert err.status_code == 429
-
-
-# ── Simple subclasses ──────────────────────────────────────────────────────
-
-
-class TestSimpleSubclasses:
-    def test_broker_unavailable_instantiates(self):
-        err = BrokerUnavailableError("broker down")
-        assert str(err) == "broker down"
-
-    def test_token_expired_instantiates(self):
-        err = TokenExpiredError("token expired")
-        assert str(err) == "token expired"
-
-
-# ── parse_error_response ──────────────────────────────────────────────────
-
-
-class TestParseErrorResponse:
-    """parse_error_response dispatches on status_code and body content."""
-
-    def test_401_returns_authentication_error(self):
-        body = {
-            "type": "about:blank",
-            "title": "Unauthorized",
-            "status": 401,
-            "detail": "invalid client credentials",
-            "error_code": "authentication_failed",
-        }
-        err = parse_error_response(401, body, client_id="app-123")
-        assert isinstance(err, AuthenticationError)
-        assert err.client_id == "app-123"
-        assert err.status_code == 401
-
-    def test_403_scope_violation_returns_scope_ceiling_error(self):
-        body = {
-            "type": "about:blank",
-            "title": "Forbidden",
-            "status": 403,
-            "detail": "requested scope exceeds ceiling",
-            "error_code": "scope_violation",
-        }
-        err = parse_error_response(403, body)
-        assert isinstance(err, ScopeCeilingError)
-        assert err.status_code == 403
-
-    def test_429_returns_rate_limit_error(self):
-        body = {
-            "type": "about:blank",
-            "title": "Too Many Requests",
-            "status": 429,
-            "detail": "rate limit exceeded",
-            "error_code": "rate_limited",
-        }
-        err = parse_error_response(429, body, retry_after=60)
-        assert isinstance(err, RateLimitError)
-        assert err.retry_after == 60
-        assert err.status_code == 429
-
-    def test_unknown_status_returns_base_error(self):
-        body = {
-            "type": "about:blank",
-            "title": "Internal Server Error",
-            "status": 500,
-            "detail": "something went wrong",
-            "error_code": "internal",
-        }
-        err = parse_error_response(500, body)
-        assert isinstance(err, AgentAuthError)
-        assert err.status_code == 500
-
-    def test_empty_body_returns_base_error(self):
-        err = parse_error_response(502, {})
-        assert isinstance(err, AgentAuthError)
-
-    def test_body_as_string_json(self):
-        """parse_error_response should handle body passed as a JSON string."""
-        body_str = json.dumps(
-            {
-                "type": "about:blank",
-                "title": "Unauthorized",
-                "status": 401,
-                "detail": "bad creds",
-                "error_code": "authentication_failed",
-            }
+    def test_429_construction(self):
+        problem = ProblemDetail(
+            type="t", title="Too Many Requests",
+            detail="rate limit exceeded",
+            instance="/v1/app/auth",
         )
-        err = parse_error_response(401, body_str, client_id="app-1")
-        assert isinstance(err, AuthenticationError)
+        err = RateLimitError(problem, 429)
+        assert err.status_code == 429
+
+
+class TestTransportError:
+    def test_string_message(self):
+        err = TransportError("broker unreachable at http://localhost:8080")
+        assert "broker unreachable" in str(err)
+
+
+class TestCryptoError:
+    def test_string_message(self):
+        err = CryptoError("Ed25519 signing failed")
+        assert "Ed25519" in str(err)

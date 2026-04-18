@@ -1,38 +1,38 @@
 # Changelog
 
-## v0.1.0 (2026-03-07)
+## v0.3.0 — Initial AgentWrit Public Release (2026-04-14)
 
-Initial release of the AgentAuth Python SDK.
+First public release of the AgentWrit Python SDK. Complete rewrite from the internal v0.1.0/v0.2.0 codebase.
 
-### Features
+### Core API
 
-- **AgentAuthClient** -- main entry point with app authentication on init
-- **get_token()** -- full 8-step credential flow (app auth, launch token, Ed25519 challenge-response, caching)
-- **HITL support** -- `HITLApprovalRequired` exception with `approval_id` and `expires_at`, retry with `approval_token`
-- **delegate()** -- scope-attenuated delegation to another registered agent (C7 Delegation Chain)
-- **revoke_token()** -- self-revocation for credential cleanup (C4 Expiration & Revocation)
-- **validate_token()** -- online token validation against the broker (C3 Zero-Trust)
-- **Token caching** -- by (agent_name, scope) key, proactive renewal at 80% TTL, thread-safe
-- **Retry with backoff** -- exponential backoff on 5xx/connection errors, Retry-After on 429
-- **Error hierarchy** -- AgentAuthError, AuthenticationError, ScopeCeilingError, HITLApprovalRequired, RateLimitError, BrokerUnavailableError, TokenExpiredError
-- **Type safety** -- mypy strict mode, no Any in source, TypedDict for all broker responses
-- **Security** -- ephemeral Ed25519 keys (never on disk), client_secret never in output, TLS verified by default, thread-safe app token state
+- **AgentWritApp** — main entry point; authenticates with the broker on first use (lazy auth)
+- **create_agent()** — registers an agent with Ed25519 challenge-response, returns an `Agent` object
+- **Agent** — lifecycle management: `renew()`, `release()`, `delegate()`
+- **validate()** — module-level online token validation against the broker
+- **scope_is_subset()** — module-level scope comparison utility
+
+### Models
+
+- `AgentClaims`, `ValidateResult`, `RegisterResult`, `HealthStatus`, `DelegatedToken`, `ProblemDetail` — typed dataclasses for all broker responses
+
+### Error Handling
+
+- `AgentWritError` base exception with RFC 7807 `ProblemDetail` support
+- Typed hierarchy: `AuthenticationError`, `AuthorizationError`, `RateLimitError`, `ProblemResponseError`, `TransportError`
+
+### Transport
+
+- `httpx`-based HTTP transport with automatic error dispatch
+- User-Agent: `agentwrit-python/0.3.0`
 
 ### Testing
 
-- 122 unit tests (no broker required)
-- 16 integration tests (live broker)
-- 7 live acceptance test scripts (SDK-S1 through SDK-S8)
-- Security review: all HIGH/MEDIUM findings resolved
+- 99 unit tests (no broker required)
+- 15 acceptance stories against live broker
+- Integration test suite with session-scoped fixtures
 
-### Demo
+### Demos
 
-- Interactive HITL demo app (FastAPI + HTMX) with pattern/NIST annotations
-- 6 scenarios: Read Data, Write (HITL), Scope Violation, Delegation, Full Lifecycle, Blast Radius
-
-### Documentation
-
-- README with full API, security properties, and pattern component mapping
-- API reference (docs/api-reference.md)
-- Getting started guide (docs/getting-started.md)
-- Pattern component annotations in all module docstrings
+- MedAssist AI (FastAPI + HTMX) — multi-agent medical encounter pipeline
+- Support Tickets (Flask + HTMX + SSE) — triage/knowledge/response agent pipeline

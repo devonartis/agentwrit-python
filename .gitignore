@@ -31,5 +31,19 @@ htmlcov/
 .env.*
 !.env.example
 
-# Local AI tooling artifacts (on main only — develop keeps .claude tracked)
+# Local AI tooling artifacts
 .playwright-mcp/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.DS_Store
+
+# Local archive (historical artifacts, not for repo)
+archive/
+
+# Dev-internal artifacts (live in ~/proj/devflow/agentwrit-python/ per Decision 019)
+MEMORY.md
+FLOW.md
+AGENTS.md
+.plans/
+.agents/
+.claude/skills/

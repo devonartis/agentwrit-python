@@ -1,0 +1,25 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 9 — AGENT BLOCKED BY SCOPE CHECK
+-----------------------------------------------------------------
+WHO:      Agent with access to one customer's data
+WHAT:     Agent tries to read ALL customers — app blocks it
+WHY:      The app is the gatekeeper. scope_is_subset() is the lock.
+EXPECTED: Authorized action passes scope check,
+          unauthorized action is blocked before it happens
+=================================================================
+  Agent scope: ['read:data:customer-artis']
+
+  Action: read customer-artis
+  Scope check: True
+  PASS: Authorized action allowed
+
+  Action: read all-customers
+  Scope check: False
+  PASS: Unauthorized action blocked by scope check
+
+  Action: write customer-artis
+  Scope check: False
+  PASS: Write blocked — agent has read-only scope
+
+═══ STORY 9: PASS ═══

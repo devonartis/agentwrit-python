@@ -1,0 +1,23 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 15 — HEALTH CHECK
+-----------------------------------------------------------------
+WHO:      App checking if the broker is ready
+WHAT:     App calls health() before creating any agents
+WHY:      Don't attempt work if the broker is down
+EXPECTED: HealthStatus with status='ok', version, uptime,
+          and db_connected=true
+=================================================================
+  health() returned:
+    status:              ok
+    version:             2.0.0
+    uptime:              146s
+    db_connected:        True
+    audit_events_count:  96
+
+  PASS: Broker status is 'ok'
+  PASS: Version reported: 2.0.0
+  PASS: Uptime is 146s (broker is running)
+  PASS: Database is connected
+
+═══ STORY 15: PASS ═══

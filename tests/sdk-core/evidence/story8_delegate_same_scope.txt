@@ -1,0 +1,33 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 8 — DELEGATE ALL SCOPE (NO NARROWING)
+-----------------------------------------------------------------
+WHO:      Agent delegating its exact scope to another agent
+WHAT:     Agent A delegates [read:data:partition-7] — the same
+          scope it holds — to Agent B
+WHY:      Delegation is supposed to narrow authority. Does the
+          broker require strict narrowing, or accept equal scope?
+EXPECTED: This test discovers and documents the broker's behavior
+=================================================================
+  Agent A: spiffe://agentauth.local/agent/delegation-test/delegator/183d823721e04ef2
+  Agent A scope: ['read:data:partition-7']
+  Agent B: spiffe://agentauth.local/agent/delegation-test/delegate-target/0efaedd0c89f584d
+  Agent B scope: ['read:data:partition-7']
+
+  A delegates exact same scope to B...
+  RESULT: Broker ACCEPTED same-scope delegation
+  delegate() returned:
+    access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+    expires_in:   60s
+    chain_length: 1
+    chain[0]: agent=elegator/183d823721e04ef2 scope=['read:data:partition-7'] at=2026-04-07T17:21:02.038503751Z
+
+  Validating delegated token with broker...
+  validate() returned: valid=True
+    sub:   spiffe://agentauth.local/agent/delegation-test/delegate-target/0efaedd0c89f584d
+    scope: ['read:data:partition-7']
+  PASS: Delegated token has same scope (equal is subset)
+
+  DOCUMENTED: broker_accepts_same_scope = True
+
+═══ STORY 8: PASS ═══

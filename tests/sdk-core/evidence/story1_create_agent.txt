@@ -1,0 +1,21 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 1 — CREATE AGENT
+-----------------------------------------------------------------
+WHO:      App creating an agent for a specific task
+WHAT:     App calls create_agent() with a scope
+WHY:      Every agent must have a verifiable identity and scope
+EXPECTED: Agent has a SPIFFE ID containing the orch_id,
+          and scope matches exactly what was requested
+=================================================================
+  agent_id:   spiffe://agentwrit.local/agent/data-service/lookup-artis/8d345a20521992c8
+  scope:      ['read:data:customer-artis']
+  token:      eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+  expires_in: 300s
+  orch_id:    data-service
+  task_id:    lookup-artis
+
+  PASS: SPIFFE ID contains orch_id 'data-service'
+  PASS: Scope matches requested ['read:data:customer-artis']
+
+═══ STORY 1: PASS ═══

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentWrit Live — Support Ticket Demo</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- ── Top Bar ──────────────────────────────────────── -->
+    <header class="top-bar">
+        <div class="logo">
+            <span class="logo-icon">🔐</span>
+            <h1>AgentWrit <span class="live-dot">Live</span></h1>
+            <span class="subtitle">LLM-DRIVEN ZERO-TRUST</span>
+        </div>
+    </header>
+
+    <!-- ── Ticket Input ─────────────────────────────────── -->
+    <div class="input-bar">
+        <div class="quick-fills">
+            <span class="quick-label">QUICK FILLS:</span>
+            {% for key, qf in quick_fills.items() %}
+            <button class="quick-btn quick-{{ qf.color }}"
+                    onclick="document.getElementById('ticket-input').value = '{{ qf.ticket|e }}'">
+                {{ qf.label }}
+            </button>
+            {% endfor %}
+        </div>
+        <form id="ticket-form" class="ticket-form">
+            <input type="text" id="ticket-input" name="ticket"
+                   placeholder="Type a support ticket or use a quick fill..."
+                   autocomplete="off">
+            <button type="submit" class="submit-btn" id="submit-btn">
+                <span class="submit-icon">✈</span> Submit
+            </button>
+        </form>
+    </div>
+
+    <!-- ── Three-Panel Layout ───────────────────────────── -->
+    <div class="panels">
+        <!-- Left: Agent Lifecycle -->
+        <div class="panel panel-left">
+            <div class="panel-header">
+                <span class="panel-icon">⚡</span>
+                AGENT LIFECYCLE
+            </div>
+            <div id="agent-cards"></div>
+        </div>
+
+        <!-- Center: Live Pipeline Stream -->
+        <div class="panel panel-center">
+            <div class="panel-header">
+                <span class="panel-icon">📡</span>
+                LIVE PIPELINE STREAM
+                <span class="live-indicator" id="live-indicator"></span>
+            </div>
+            <div id="stream" class="stream"></div>
+        </div>
+
+        <!-- Right: Scope Enforcement -->
+        <div class="panel panel-right">
+            <div class="panel-header">
+                <span class="panel-icon">🛡️</span>
+                SCOPE ENFORCEMENT
+            </div>
+            <div id="scope-cards"></div>
+        </div>
+    </div>
+
+    <!-- ── Closing Response ─────────────────────────────── -->
+    <div id="final-response" class="final-response" style="display:none">
+        <div class="final-header">CLOSING RESPONSE</div>
+        <div id="final-content" class="final-content"></div>
+    </div>
+
+    <script>
+    const form = document.getElementById('ticket-form');
+    const stream = document.getElementById('stream');
+    const scopeCards = document.getElementById('scope-cards');
+    const liveIndicator = document.getElementById('live-indicator');
+    const finalResponse = document.getElementById('final-response');
+    const finalContent = document.getElementById('final-content');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function formatTime(ts) {
+        const d = new Date(ts * 1000);
+        return d.toLocaleTimeString('en-US', {hour12: false});
+    }
+
+    function typeClass(eventType) {
+        const map = {
+            'system': 'type-system',
+            'scope': 'type-scope',
+            'info': 'type-info',
+            'agent_created': 'type-system',
+            'token_validated': 'type-info',
+            'tool_call': 'type-info',
+            'scope_denied': 'type-denied',
+            'error': 'type-denied',
+            'llm_response': 'type-info',
+            'complete': 'type-system',
+        };
+        return map[eventType] || 'type-info';
+    }
+
+    function typeLabel(eventType) {
+        const map = {
+            'system': 'SYSTEM',
+            'scope': 'SCOPE',
+            'info': 'INFO',
+            'agent_created': 'AGENT',
+            'token_validated': 'TOKEN',
+            'tool_call': 'TOOL',
+            'scope_denied': 'DENIED',
+            'error': 'ERROR',
+            'llm_response': 'RESPONSE',
+            'complete': 'DONE',
+        };
+        return map[eventType] || 'EVENT';
+    }
+
+    function formatStreamMessage(event) {
+        const d = event.data;
+        const type = event.event_type;
+
+        if (type === 'agent_created') {
+            return `${d.message}<br><span class="spiffe-id">${d.agent_id || ''}</span>`;
+        }
+        if (type === 'tool_call') {
+            const parsed = typeof d === 'string' ? JSON.parse(d) : d;
+            const tool = parsed.tool || d.tool || '';
+            const auth = parsed.authorized !== false ? '✅' : '⛔';
+            const scope = (parsed.required_scope || []).join(', ');
+            return `${auth} ${tool}<br><span class="scope-inline">${scope}</span>`;
+        }
+        if (type === 'scope_denied') {
+            const tool = d.tool || '';
+            const scope = (d.required_scope || []).join(', ');
+            return `⛔ ${d.message || 'Scope denied'}<br><span class="scope-inline">${scope}</span>`;
+        }
+        return d.message || JSON.stringify(d);
+    }
+
+    function addStreamEntry(event) {
+        const el = document.createElement('div');
+        el.className = 'stream-entry';
+        el.innerHTML = `
+            <span class="stream-time">[${formatTime(event.timestamp)}]</span>
+            <span class="stream-type ${typeClass(event.event_type)}">${typeLabel(event.event_type)}</span>
+            <span class="stream-msg">${formatStreamMessage(event)}</span>
+        `;
+        stream.appendChild(el);
+        stream.scrollTop = stream.scrollHeight;
+    }
+
+    const agentIcons = { triage: '📋', knowledge: '📚', response: '💬' };
+    const agentNames = { triage: 'Triage Agent', knowledge: 'Knowledge Agent', response: 'Response Agent' };
+
+    function createAgentCard(role, agentId, scope) {
+        const cards = document.getElementById('agent-cards');
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.id = 'agent-' + role;
+        card.innerHTML = `
+            <div class="agent-icon">${agentIcons[role] || '🤖'}</div>
+            <div class="agent-info">
+                <div class="agent-name">${agentNames[role] || role}</div>
+                <div class="agent-spiffe">${agentId}</div>
+            </div>
+            <span class="agent-dot dot-active"></span>
+            <div class="agent-status status-active">Token active</div>
+        `;
+        cards.appendChild(card);
+    }
+
+    function updateAgentCard(role, status) {
+        const card = document.getElementById('agent-' + role);
+        if (!card) return;
+        const dot = card.querySelector('.agent-dot');
+        const statusEl = card.querySelector('.agent-status');
+
+        if (status === 'revoked') {
+            dot.className = 'agent-dot dot-revoked';
+            statusEl.textContent = 'Token revoked';
+            statusEl.className = 'agent-status status-revoked';
+        }
+    }
+
+    function addScopeCard(role, scopes, allowed, detail) {
+        const card = document.createElement('div');
+        const statusClass = allowed ? 'scope-allowed' : 'scope-denied';
+        const statusLabel = allowed ? '✅ ALLOWED' : '⛔ DENIED';
+        const roleName = role.toUpperCase() + ' AGENT';
+        const scopeStr = (scopes || []).join(', ');
+
+        card.className = `scope-card ${statusClass}`;
+        card.innerHTML = `
+            <div class="scope-status">${statusLabel}</div>
+            <div class="scope-role">${roleName}</div>
+            <div class="scope-value">${scopeStr}</div>
+            <div class="scope-detail">${detail || ''}</div>
+        `;
+        scopeCards.appendChild(card);
+    }
+
+    function resetUI() {
+        stream.innerHTML = '';
+        scopeCards.innerHTML = '';
+        document.getElementById('agent-cards').innerHTML = '';
+        finalResponse.style.display = 'none';
+        finalContent.textContent = '';
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const ticket = document.getElementById('ticket-input').value.trim();
+        if (!ticket) return;
+
+        resetUI();
+        submitBtn.disabled = true;
+        liveIndicator.className = 'live-indicator live-on';
+
+        const formData = new FormData();
+        formData.append('ticket', ticket);
+
+        fetch('/api/run', {method: 'POST', body: formData})
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                function processStream() {
+                    reader.read().then(({done, value}) => {
+                        if (done) {
+                            submitBtn.disabled = false;
+                            liveIndicator.className = 'live-indicator';
+                            return;
+                        }
+
+                        buffer += decoder.decode(value, {stream: true});
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                handleEvent(event);
+                            } catch (e) {}
+                        }
+
+                        processStream();
+                    });
+                }
+
+                processStream();
+            });
+    });
+
+    function handleEvent(event) {
+        addStreamEntry(event);
+
+        const role = event.agent_role;
+        const type = event.event_type;
+        const d = event.data;
+
+        if (type === 'agent_created') {
+            createAgentCard(role, d.agent_id || '', d.scope);
+            addScopeCard(role, d.scope, true,
+                role === 'triage' ? 'Auto-approved (read-only base scope)' :
+                role === 'knowledge' ? 'Auto-approved (read-only base scope)' :
+                'Scoped to identified customer');
+        }
+
+        if (type === 'scope_denied') {
+            addScopeCard(role, d.required_scope, false,
+                d.message || 'Scope violation — request denied');
+        }
+
+        if (type === 'system' && d.message && d.message.includes('revoked')) {
+            updateAgentCard(role, 'revoked');
+        }
+
+        if (type === 'llm_response') {
+            finalResponse.style.display = 'block';
+            finalContent.textContent = d.message;
+        }
+
+        if (type === 'complete') {
+            submitBtn.disabled = false;
+            liveIndicator.className = 'live-indicator';
+        }
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 7 — DELEGATION CHAIN A → B → C
+-----------------------------------------------------------------
+WHO:      Manager (A), Analyst (B), Reader (C)
+WHAT:     A delegates 2 of 3 scopes to B, B delegates 1 to C
+WHY:      Each hop narrows authority — auditors trace the chain
+EXPECTED: C's token has only 1 scope, chain records both hops
+=================================================================
+  Agent A (manager):  spiffe://agentwrit.local/agent/data-pipeline/manager/68e49e03f55f5123
+  Agent A scope:      ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
+  Agent B (analyst):  spiffe://agentwrit.local/agent/data-pipeline/analyst/2712dd082ee0e5e6
+  Agent B scope:      ['read:data:partition-7', 'read:data:partition-8']
+  Agent C (reader):   spiffe://agentwrit.local/agent/data-pipeline/reader/353b7729309d02f6
+  Agent C scope:      ['read:data:partition-7']
+
+  Hop 1: A delegates [partition-7, partition-8] to B (drops write)...
+  delegate() A→B returned:
+    access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+    expires_in:   60s
+    chain_length: 1
+    chain[0]: agent=spiffe://agentwrit.local/agent/data-pipeline/manager/68e49e03f55f5123 scope=['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results'] at=2026-04-14T20:26:27.257796884Z
+
+  Hop 2: B delegates [partition-7] to C using delegated token (raw HTTP)...
+  HTTP status: 200
+  Hop 2 returned:
+    access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+    expires_in:   60s
+    chain_length: 2
+    chain[0]: agent=spiffe://agentwrit.local/agent/data-pipeline/manager/68e49e03f55f5123 scope=['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results'] at=2026-04-14T20:26:27.257796884Z
+    chain[1]: agent=spiffe://agentwrit.local/agent/data-pipeline/analyst/2712dd082ee0e5e6 scope=['read:data:partition-7', 'read:data:partition-8'] at=2026-04-14T20:26:27.279029467Z
+
+  Validating C's final delegated token...
+  validate() returned: valid=True
+    sub:     spiffe://agentwrit.local/agent/data-pipeline/reader/353b7729309d02f6
+    scope:   ['read:data:partition-7']
+    orch_id: data-pipeline
+    task_id: manager
+
+  PASS: C has only partition-7 (narrowed twice)
+  PASS: C does NOT have partition-8
+  PASS: C does NOT have write access
+  PASS: Chain has 2 entries (both hops recorded)
+
+═══ STORY 7: PASS ═══

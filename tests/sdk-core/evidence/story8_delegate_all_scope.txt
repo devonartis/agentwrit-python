@@ -1,0 +1,33 @@
+
+=================================================================
+ACCEPTANCE TEST: STORY 8 — DELEGATE ALL SCOPE (NO NARROWING)
+-----------------------------------------------------------------
+WHO:      Agent A with 3 scopes, Agent B with 1 scope
+WHAT:     A delegates ALL 3 of its scopes to B — no narrowing
+WHY:      Delegation is supposed to narrow authority. Does the
+          broker require strict narrowing, or accept equal scope?
+EXPECTED: This test discovers and documents the broker's behavior
+=================================================================
+  Agent A: spiffe://agentwrit.local/agent/no-narrow-test/delegator/96399da8ea1759fc
+  Agent A scope: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
+  Agent B: spiffe://agentwrit.local/agent/no-narrow-test/receiver/57162dbebad703ff
+  Agent B scope: ['read:data:partition-7']
+
+  A delegates ALL 3 scopes to B: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
+  RESULT: Broker ACCEPTED full-scope delegation
+  delegate() returned:
+    access_token: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+    expires_in:   60s
+    chain_length: 1
+    chain[0]: agent=spiffe://agentwrit.local/agent/no-narrow-test/delegator/96399da8ea1759fc scope=['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results'] at=2026-04-14T20:26:33.36095847Z
+
+  Validating delegated token with broker...
+  validate() returned: valid=True
+    sub:   spiffe://agentwrit.local/agent/no-narrow-test/receiver/57162dbebad703ff
+    scope: ['read:data:partition-7', 'read:data:partition-8', 'write:data:pipeline-results']
+
+  PASS: B received all 3 scopes (no narrowing accepted)
+
+  DOCUMENTED: broker_accepts_full_delegation = True
+
+═══ STORY 8: PASS ═══

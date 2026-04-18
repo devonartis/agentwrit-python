@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run ruff check .
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run mypy --strict src/
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --all-extras --python ${{ matrix.python-version }}
+      - run: uv run pytest tests/unit/ -q
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      broker:
+        image: devonartis/agentwrit:latest
+        ports:
+          - 8080:8080
+        env:
+          AA_PORT: "8080"
+          AA_BIND_ADDRESS: "0.0.0.0"
+          # Broker binary uses AA_ prefix (devonartis/agentwrit#44)
+          AA_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
+        options: >-
+          --health-cmd "wget --spider -q http://localhost:8080/v1/health"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - name: Register test app with broker
+        id: register-app
+        env:
+          AGENTWRIT_BROKER_URL: http://localhost:8080
+          AA_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
+        run: |
+          # Authenticate as admin
+          ADMIN_TOKEN=$(curl -sf -X POST "${AGENTWRIT_BROKER_URL}/v1/admin/auth" \
+            -H "Content-Type: application/json" \
+            -d "{\"secret\":\"${AA_ADMIN_SECRET}\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+          # Register a test app with broad scope ceiling
+          APP_JSON=$(curl -sf -X POST "${AGENTWRIT_BROKER_URL}/v1/admin/apps" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -d '{"name":"ci-integration","scopes":["read:data:*","write:data:*"]}')
+
+          # Extract credentials and mask the secret
+          CLIENT_ID=$(echo "${APP_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['client_id'])")
+          CLIENT_SECRET=$(echo "${APP_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['client_secret'])")
+
+          echo "::add-mask::${CLIENT_SECRET}"
+          echo "client_id=${CLIENT_ID}" >> "$GITHUB_OUTPUT"
+          echo "client_secret=${CLIENT_SECRET}" >> "$GITHUB_OUTPUT"
+          echo "Registered test app: ${CLIENT_ID}"
+      - name: Run integration tests (all 15 stories)
+        env:
+          AGENTWRIT_BROKER_URL: http://localhost:8080
+          AGENTWRIT_ADMIN_SECRET: ${{ secrets.AGENTWRIT_ADMIN_SECRET }}
+          AGENTWRIT_CLIENT_ID: ${{ steps.register-app.outputs.client_id }}
+          AGENTWRIT_CLIENT_SECRET: ${{ steps.register-app.outputs.client_secret }}
+        run: |
+          result=$(uv run pytest -m integration -v 2>&1)
+          echo "${result}"
+
+          # Fail if any tests were skipped — no silent skips allowed
+          if echo "${result}" | grep -q "skipped"; then
+            echo "::error::Integration tests had skipped stories — all 15 must run"
+            exit 1
+          fi
+
+  sast:
+    name: SAST (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run bandit -r src/ -q
+
+  dep-audit:
+    name: Dependency Audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync --all-extras
+      - run: uv run pip-audit
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  no-ignored-tracked:
+    name: No Ignored Files Tracked
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for tracked files that should be ignored
+        run: |
+          tracked_ignored=$(git ls-files -i --exclude-standard 2>/dev/null || true)
+          if [ -n "$tracked_ignored" ]; then
+            echo "ERROR: These tracked files are in .gitignore:"
+            echo "$tracked_ignored"
+            exit 1
+          fi
+          echo "Clean — no tracked files match .gitignore patterns."
