@@ -495,4 +495,5 @@ async def handle_request():
 | [Concepts](concepts.md) | Trust model, roles, scopes, and standards |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
 | [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
-| [MedAssist Demo](../demo/) | See every capability in a working healthcare app |
+| [MedAssist demo](../demo/README.md) | See every capability in a working healthcare app |
+| [Support-ticket demo](../demo2/README.md) | A three-agent pipeline with identity gating and tool-level denial |

@@ -21,6 +21,16 @@ These approaches share three failures:
 2. Credentials are too broad
 3. No way to trace what each agent did
 
+### An analogy for the shape of the fix
+
+Every office building has three kinds of keys:
+
+- **The master key** lives with the building manager. It opens everything, all the time. If it goes missing, every tenant has to rekey their locks. That's a shared service-account credential.
+- **The tenant key** lets a person into the whole floor their company leases. It lasts as long as they work there. That's a long-lived user credential the agent inherits.
+- **The visitor badge** is printed at reception the morning you arrive. It opens one conference room, for four hours, and it's logged on the way in and the way out. Lose it in the parking garage and nothing bad happens — it's already expired.
+
+AgentWrit is the visitor badge. The broker prints one per task, scopes it to exactly one action-and-resource-and-identifier, expires it in minutes, and leaves a tamper-evident record of every time it was used.
+
 ---
 
 ## The Three Roles
@@ -68,6 +78,8 @@ agent = app.create_agent(
     requested_scope=["read:data:customers"],
 )
 ```
+
+> **Trust the token, not the object.** `agent.scope` is populated from the scope you *requested* — it's useful for gating calls inside your own process, but it is a client-side field, not the broker's cryptographically-signed answer. The authoritative scope lives in the JWT claims, retrieved via `validate(app.broker_url, agent.access_token)`. If you're making a security decision (for example, enforcing a privileged operation in a downstream service), always validate. This is the same zero-trust posture that keeps a compromised agent from forging its own authority.
 
 ### The Authority Chain
 
@@ -281,7 +293,7 @@ other_customer = "customer-9999"
 scope_is_subset([f"read:data:{other_customer}"], agent.scope)  # False
 ```
 
-This is the app's responsibility. The broker sets the scope at creation time, but the app must enforce it before every action. The MedAssist demo shows this pattern end-to-end: each tool declares a scope template (e.g. `"read:records:{patient_id}"`), and the pipeline resolves it with the real patient ID at runtime — see `demo/pipeline/tools.py` for the implementation.
+This is the app's responsibility. The broker sets the scope at creation time, but the app must enforce it before every action. The [MedAssist demo](../demo/README.md) shows this pattern end-to-end: each tool declares a scope template (e.g. `"read:records:{patient_id}"`), and the pipeline resolves it with the real patient ID at runtime. The implementation lives in [`demo/pipeline/tools.py`](../demo/pipeline/tools.py).
 
 ---
 
@@ -424,6 +436,14 @@ result = validate(app.broker_url, agent.access_token)
 
 The broker returns `valid=True` with claims, or `valid=False` with an error message. At the `validate()` endpoint specifically, the broker intentionally returns the same generic error ("token is invalid or expired") for every failure case — expired, revoked, malformed, or unknown — to prevent information leakage. Other endpoints (auth middleware, registration) return more specific messages by design.
 
+### Why `Agent` has no `validate()` method
+
+An agent does not validate itself. There is deliberately no `agent.validate()` on the `Agent` class — only the module-level `validate(broker_url, token)` and the app-level `AgentWritApp.validate(token)` convenience shortcut.
+
+The reason is a zero-trust one. If an agent's process is compromised, an attacker who calls `agent.validate()` and trusts the result is trusting the thing they already can't trust. Validation is a check that some *other* service does about a token it received — not a check the holder does about its own token. The SDK makes this physically awkward by not giving `Agent` a validate method at all. (This is recorded as ADR SDK-006 in the SDK.)
+
+The same reasoning sits behind `agent.scope` being the requested scope rather than a broker-signed value. If you need the authoritative scope for a security decision, validate.
+
 ---
 
 ## Error Model
@@ -508,4 +528,5 @@ The SDK implements the [Ephemeral Agent Credentialing](https://github.com/devona
 | [Developer Guide](developer-guide.md) | Real patterns: delegation, scope gating, error handling |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
 | [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
-| [MedAssist Demo](../demo/) | The concepts above running in a working healthcare app |
+| [MedAssist demo](../demo/README.md) | The concepts above running in a working healthcare app |
+| [Support-ticket demo](../demo2/README.md) | A three-agent pipeline with identity gating and tool-level denial |
