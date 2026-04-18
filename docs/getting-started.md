@@ -43,6 +43,8 @@ pip install git+https://github.com/devonartis/agentwrit-python.git
 
 The SDK depends on `httpx` (HTTP) and `cryptography` (Ed25519 operations). Both are installed automatically.
 
+> **Heads-up: the SDK is synchronous.** v0.3.0 uses `httpx`'s sync client. If you're inside an async framework (FastAPI, Starlette, Sanic), wrap the SDK calls in `asyncio.to_thread()` so they don't block the event loop. The [Developer Guide](developer-guide.md#async--await-support) shows the pattern.
+
 ---
 
 ## Step 1: Set Up Your Credentials
@@ -77,7 +79,7 @@ app = AgentWritApp(
 )
 ```
 
-This creates your app instance. No broker call happens yet — the SDK authenticates lazily on the first `create_agent()` call.
+This creates your app instance. No broker call happens yet — the SDK authenticates lazily on the first `create_agent()` call. Once the app token has been issued, the SDK caches it and automatically re-authenticates when it drops below 60 seconds of remaining life, so you don't have to manage the session yourself.
 
 > **If your first `create_agent()` call raises:** `AuthenticationError` means the `client_id` or `client_secret` is wrong (or rotated). `TransportError` means the broker URL is unreachable.
 
@@ -98,9 +100,11 @@ The SDK just did a lot of work behind the scenes:
 1. Authenticated your app with the broker (`POST /v1/app/auth`)
 2. Created a launch token with your requested scope (`POST /v1/app/launch-tokens`)
 3. Got a challenge nonce from the broker (`GET /v1/challenge`)
-4. Generated a fresh Ed25519 keypair in memory
+4. Generated a fresh Ed25519 keypair in memory (unless you passed `private_key=`)
 5. Signed the nonce with the private key
 6. Registered the agent (`POST /v1/register`)
+
+Steps 3–5 are a standard challenge-response handshake. The broker hands the SDK a random nonce, the SDK signs the nonce with the new private key, and the SDK ships the signature *plus* the matching public key to `/v1/register`. The broker verifies the signature against the public key — if that check passes, the broker has proof that whoever posted the registration holds the private key, without the private key ever leaving the calling process. The launch token ties that proof to your app and the scope ceiling you're allowed to mint inside.
 
 You get back an `Agent` object with:
 
@@ -189,4 +193,5 @@ Exactly the scope needed, a unique cryptographic identity, and a token revoked t
 | [Developer Guide](developer-guide.md) | Delegation, scope gating, error handling, and real patterns |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |
 | [Testing Guide](testing-guide.md) | Unit tests, integration tests, running the test suite |
-| [MedAssist Demo](../demo/) | See every capability in a working healthcare app |
+| [MedAssist demo](../demo/README.md) | See every capability in a working healthcare app |
+| [Support-ticket demo](../demo2/README.md) | A three-agent pipeline — identity gating, cross-customer denial, natural TTL expiry |

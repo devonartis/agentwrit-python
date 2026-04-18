@@ -129,10 +129,12 @@ An ephemeral agent created by `AgentWritApp.create_agent()`. Holds the agent JWT
 | `agent_id` | `str` | SPIFFE URI (e.g., `spiffe://agentwrit.local/agent/orch/task/instance`) |
 | `access_token` | `str` | JWT string (EdDSA-signed) |
 | `expires_in` | `int` | Token TTL in seconds (snapshot from creation or last renewal) |
-| `scope` | `list[str]` | Granted scope list |
+| `scope` | `list[str]` | Scope the agent *requested* at creation. See note below. |
 | `orch_id` | `str` | Orchestrator identifier |
 | `task_id` | `str` | Task identifier |
 | `bearer_header` | `dict[str, str]` | `{"Authorization": "Bearer <token>"}` for HTTP requests |
+
+> **`agent.scope` is the requested scope, not the broker's signed answer.** The broker only accepts a registration whose scope is covered by the launch token, so in practice the two match. But when making a security-critical decision in a downstream service, don't trust a client-side field — call `validate(app.broker_url, agent.access_token)` and read `result.claims.scope`.
 
 ### renew()
 
