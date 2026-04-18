@@ -937,5 +937,6 @@ The loop will detect the dead token, print `"Token invalid: token_revoked"`, and
 | Guide | What You'll Learn |
 |-------|-------------------|
 | [Developer Guide](developer-guide.md) | Delegation chains, error handling, multi-agent patterns |
-| [MedAssist Demo](../demo/) | Full multi-agent healthcare pipeline with LLM tool-calling |
+| [MedAssist demo](../demo/README.md) | Full multi-agent healthcare pipeline with LLM tool-calling |
+| [Support-ticket demo](../demo2/README.md) | Three-agent pipeline with identity gating and tool-level denial |
 | [API Reference](api-reference.md) | Every class, method, parameter, and exception |

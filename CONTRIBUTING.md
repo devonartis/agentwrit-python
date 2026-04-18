@@ -72,7 +72,7 @@ So reviewers can tell the change was actually verified:
 - **Never** paste client secrets, admin tokens, or other credentials.
 - If you cannot run integration tests (no broker, blocked network), say so **explicitly** in the PR and describe what you did verify. Maintainers may still ask for a re-run or a broker-backed check before merge.
 
-Demo work under [`demo/`](demo/) should follow the same rule: run against a real broker and describe how you tested.
+Demo work under [`demo/`](demo/README.md) (MedAssist) or [`demo2/`](demo2/README.md) (Support Tickets) should follow the same rule: run against a real broker and describe how you tested.
 
 ## Pull requests
 

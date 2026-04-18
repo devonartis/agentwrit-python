@@ -51,9 +51,9 @@ The broker enforces: requested ⊆ ceiling
 
 | Scope | Valid? | Why |
 |-------|--------|-----|
-| `read:data:*` | ✅ | Wildcard in identifier — covers any specific identifier |
-| `*:data:customers` | ❌ | Wildcard in action — broker rejects this |
-| `read:*:customers` | ❌ | Wildcard in resource — broker rejects this |
+| `read:data:*` | **Yes** | Wildcard in identifier — covers any specific identifier |
+| `*:data:customers` | **No** | Wildcard in action — broker rejects this |
+| `read:*:customers` | **No** | Wildcard in resource — broker rejects this |
 
 This means your ceiling specifies which **actions** on which **resources** your app can ever use, with flexibility on the **specific identifier**.
 
@@ -164,4 +164,5 @@ Each app document follows the same format:
 | Concept explanations (scopes, roles, delegation) | [Concepts](../concepts.md) |
 | Real patterns for production code | [Developer Guide](../developer-guide.md) |
 | Every method and parameter | [API Reference](../api-reference.md) |
-| Full-stack healthcare demo with LLM + UI | `demo/` directory |
+| Full-stack healthcare demo with LLM + UI | [MedAssist demo](../../demo/README.md) |
+| Three-agent support-ticket pipeline | [Support-ticket demo](../../demo2/README.md) |

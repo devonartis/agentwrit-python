@@ -14,276 +14,161 @@
 </p>
 
 <p align="center">
-  Ephemeral, task-scoped credentials for AI agents.<br>
-  Built on Ed25519 challenge-response and the <a href="https://github.com/devonartis/AI-Security-Blueprints/blob/main/patterns/ephemeral-agent-credentialing/versions/v1.3.md">Ephemeral Agent Credentialing v1.3</a> pattern.
+  The Python client for the <a href="https://github.com/devonartis/agentwrit">AgentWrit broker</a> — ephemeral, task-scoped credentials for AI agents.
 </p>
 
 <p align="center">
-  <a href="#why-agentwrit">Why</a> ·
-  <a href="#installation">Install</a> ·
-  <a href="#prerequisites">Prerequisites</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#agent-lifecycle">Lifecycle</a> ·
-  <a href="#medassist-ai-demo">MedAssist Demo</a> ·
-  <a href="#support-ticket-demo">Tickets Demo</a> ·
-  <a href="#scope-format">Scopes</a> ·
-  <a href="#delegation">Delegation</a> ·
-  <a href="#error-handling">Errors</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#documentation">Docs</a>
+  <a href="#-install">Install</a> ·
+  <a href="#-quick-start">Quick start</a> ·
+  <a href="#-core-ideas">Core ideas</a> ·
+  <a href="#-demos">Demos</a> ·
+  <a href="#-documentation">Docs</a>
 </p>
 
 ---
 
-## Why AgentWrit?
+## 💡 Why you'd reach for this
 
-AI agents need credentials to access databases, APIs, and file systems. Most teams give agents shared API keys or inherit user permissions — both create over-privileged, long-lived, unauditable access. AgentWrit takes a different approach:
+Hand an AI agent a long-lived API key and a compromised agent becomes a compromised tenant — no expiry, no blast-radius, no audit. The AgentWrit broker issues short-lived JWTs scoped to one task per token instead. This SDK is the Python client: it registers agents, delegates scope, validates tokens, and cleans up when the task ends.
 
-- **Ephemeral identities** — every agent gets a unique Ed25519 keypair, generated in memory and never persisted to disk
-- **Task-scoped tokens** — credentials are limited to exactly what the agent needs (`read:data:customers`, not `read:*:*`)
-- **Short-lived by default** — tokens expire in minutes, not hours or days
-- **Delegation chains** — agents can delegate a subset of their permissions to other agents; the broker rejects any attempt to widen
+In five SDK lines:
 
-This SDK is the Python client for the [AgentWrit broker](https://github.com/devonartis/agentwrit) — the broker is the credential authority, and this SDK is how your Python code talks to it.
-
-## Installation
-
-Install from GitHub (not yet on PyPI):
-
-```bash
-uv add git+https://github.com/devonartis/agentwrit-python.git
+```python
+app = AgentWritApp(broker_url, client_id, client_secret)
+agent = app.create_agent("my-service", "task-1", ["read:data:customer-7291"])
+httpx.get("https://api/customers/7291", headers=agent.bearer_header)
+validate(app.broker_url, agent.access_token)   # any service can verify
+agent.release()                                  # token dies at the broker
 ```
 
-Or with pip:
+---
+
+## 📦 Install
 
 ```bash
-pip install git+https://github.com/devonartis/agentwrit-python.git
+uv add agentwrit           # or: pip install agentwrit
 ```
 
-For local development:
+Requires **Python 3.10+**. The SDK pulls in `httpx` and `cryptography` automatically.
 
-```bash
-git clone https://github.com/devonartis/agentwrit-python.git
-cd agentwrit-python
-uv sync --all-extras
-```
+> ⚠️ **The SDK is synchronous.** v0.3.0 uses `httpx`'s sync client. On FastAPI, Starlette, or Sanic, wrap SDK calls in `asyncio.to_thread(...)` so they don't block the event loop — see the [Developer Guide](docs/developer-guide.md#async--await-support).
 
-**Requirements:** Python 3.10+. The SDK also needs a broker and credentials — see [Prerequisites](#prerequisites).
+---
 
-## Prerequisites
+## ⚡ Quick start
 
-The SDK is a client. It does **not** run the broker, and it does **not** mint its own credentials. Before any code in [Quick Start](#quick-start) will work, you need three things:
-
-**1. A reachable AgentWrit broker.**
-The broker is a separate service that issues and validates tokens.
-
-- *Have a platform team running one?* Ask them for the broker URL.
-- *Running it yourself?* Stand one up locally — the [broker repo](https://github.com/devonartis/agentwrit) ships a `docker compose` setup. From this repo:
-  ```bash
-  docker compose up -d   # pulls devonartis/agentwrit from Docker Hub
-  ```
-
-**2. App credentials (`client_id` + `client_secret`).**
-These are issued by the **broker operator/admin** when they register your app and set its scope ceiling. The SDK cannot create them for you.
-
-- *Have a broker admin?* Ask them to register your app and send you the `client_id` and `client_secret`.
-- *You are the admin?* Use the included setup script (it registers an app and prints both values):
-  ```bash
-  export AGENTWRIT_ADMIN_SECRET="<your-broker-admin-secret>"
-  uv run python demo/setup.py
-  ```
-
-**3. Environment variables set** on the process that uses the SDK:
-```bash
-export AGENTWRIT_BROKER_URL="http://localhost:8080"   # from step 1
-export AGENTWRIT_CLIENT_ID="<from step 2>"
-export AGENTWRIT_CLIENT_SECRET="<from step 2>"
-```
-
-> Auth is lazy — the SDK doesn't talk to the broker until your first `create_agent()` call. If that call raises `AuthenticationError`, your `client_id` or `client_secret` is wrong (or the operator rotated them). If it raises `TransportError`, the broker URL is unreachable.
-
-## Quick Start
-
-> Assumes [Prerequisites](#prerequisites) are met — broker reachable, app registered, env vars set.
+> **Prerequisites.** The SDK is a client. You need a reachable broker, app credentials (`client_id` + `client_secret` from the broker operator), and three env vars set. If you're starting from zero, [Getting Started](docs/getting-started.md) walks you through all three in about five minutes.
 
 ```python
 import os
+import httpx
 from agentwrit import AgentWritApp, validate
 
-# Connect to the broker (lazy — no auth until first create_agent)
 app = AgentWritApp(
     broker_url=os.environ["AGENTWRIT_BROKER_URL"],
-    client_id=os.environ["AGENTWRIT_CLIENT_ID"],          # from broker admin
-    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],  # from broker admin
+    client_id=os.environ["AGENTWRIT_CLIENT_ID"],
+    client_secret=os.environ["AGENTWRIT_CLIENT_SECRET"],
 )
 
-# Create an agent with specific scope
 agent = app.create_agent(
     orch_id="my-service",
     task_id="read-customer-data",
-    requested_scope=["read:data:customers"],
+    requested_scope=["read:data:customer-7291"],
 )
 
-# Use the token as a Bearer credential
-import httpx
-resp = httpx.get(
-    "https://your-api/data/customers",
-    headers=agent.bearer_header,
-)
+# Use the JWT as a Bearer credential anywhere
+resp = httpx.get("https://your-api/data/customers", headers=agent.bearer_header)
 
-# Validate the token (any service can do this)
+# Any service can verify a token — no AgentWritApp needed, just the broker URL
 result = validate(app.broker_url, agent.access_token)
-print(result.claims.scope)  # ['read:data:customers']
+print(result.claims.scope)   # ['read:data:customer-7291']
 
-# Release when done — token is dead immediately
+# Release the moment the task is done
 agent.release()
 ```
 
-## Agent Lifecycle
+One agent, one scope, one token used, one token killed.
 
-```python
-# Create — agent gets a SPIFFE identity and scoped JWT
-agent = app.create_agent(orch_id="svc", task_id="task", requested_scope=["read:data:x"])
+---
 
-# Use — agent.access_token is a standard Bearer JWT
-print(agent.agent_id)      # spiffe://agentwrit.local/agent/svc/task/a1b2c3d4
-print(agent.scope)         # ['read:data:x']
-print(agent.expires_in)    # 300 (seconds)
+## 🧠 Core ideas
 
-# Renew — new token, same identity, old token revoked
-agent.renew()
+Everything else in the SDK builds on these five.
 
-# Delegate — pass a subset of scope to another agent (equal or narrower)
-delegated = agent.delegate(delegate_to=other.agent_id, scope=["read:data:x"])
+### Ephemeral identities
 
-# Release — self-revoke, idempotent
-agent.release()
-```
+Each agent gets a unique Ed25519 keypair (generated in-memory by default — pass `private_key=` if you need a custom source) and a SPIFFE ID like `spiffe://agentwrit.local/agent/my-service/task-001/a1b2c3d4`. The ID is preserved across `renew()`, discarded after `release()`.
 
-## MedAssist AI Demo
+### Three-segment scopes
 
-The [`demo/`](demo/) directory contains **MedAssist AI** — an interactive healthcare demo that showcases every AgentWrit capability against a live broker.
-
-**What it does:** A FastAPI web app where you enter a patient ID and a plain-language request. A local LLM (OpenAI-compatible) chooses which tools to call, and the app dynamically creates broker agents with only the scopes those tools need for that specific patient. Every step — scope enforcement, cross-patient denial, delegation, token renewal, release — appears in a real-time execution trace.
-
-**What it demonstrates:**
-
-| Capability | How the demo shows it |
-|------------|----------------------|
-| **Dynamic agent creation** | Agents spawn on demand as the LLM selects tools — clinical, billing, prescription |
-| **Per-patient scope isolation** | Each agent's scopes are parameterized to one patient ID |
-| **Cross-patient denial** | LLM asks for another patient's records → `scope_denied` in the trace |
-| **Delegation** | Clinical agent delegates `write:prescriptions:{patient}` to the prescription agent |
-| **Token lifecycle** | Renewal and release shown at end of each encounter |
-| **Audit trail** | Dedicated audit tab showing hash-chained broker events |
-
-### Running with Docker (recommended)
-
-```bash
-AGENTWRIT_ADMIN_SECRET="your-secret" \
-LLM_API_KEY="your-llm-key" \
-docker compose up -d broker medassist
-```
-
-Open [http://localhost:5000](http://localhost:5000). The demo auto-registers with the broker on startup — no manual setup needed. You only need an OpenAI-compatible LLM endpoint (set `LLM_BASE_URL` and `LLM_MODEL` if not using OpenAI).
-
-### Running from source
-
-```bash
-# 1. Start the broker
-docker compose up -d broker
-
-# 2. Register the demo app (one-time)
-export AGENTWRIT_ADMIN_SECRET="your-admin-secret"
-uv run python demo/setup.py
-
-# 3. Configure demo/.env (copy from demo/.env.example)
-cp demo/.env.example demo/.env
-
-# 4. Run it
-uv run uvicorn demo.app:app --reload --port 5000
-```
-
-For architecture diagrams and a live presentation script, see [`demo/BEGINNERS_GUIDE.md`](demo/BEGINNERS_GUIDE.md) and [`demo/PRESENTERS_GUIDE.md`](demo/PRESENTERS_GUIDE.md).
-
-## Support Ticket Demo
-
-The [`demo2/`](demo2/) directory contains **AgentWrit Live** — a support ticket pipeline where three LLM-driven agents (triage, knowledge, response) process customer requests under zero-trust scoped credentials.
-
-```bash
-AGENTWRIT_ADMIN_SECRET="your-secret" \
-LLM_API_KEY="your-llm-key" \
-docker compose up -d broker support-tickets
-```
-
-Open [http://localhost:5001](http://localhost:5001).
-
-| Capability | How the demo shows it |
-|------------|----------------------|
-| **Identity-gated pipeline** | Anonymous tickets halt at triage — no customer-scoped agents spawn |
-| **Per-customer scope isolation** | Each agent is scoped to the verified customer only |
-| **Cross-customer denial** | Asking about another customer's data → scope denied |
-| **Tool-level enforcement** | `delete_account` and `send_external_email` blocked by scope |
-| **Natural token expiry** | 5-second TTL credential expires on its own |
-
-## Scope Format
-
-Scopes are three segments: `action:resource:identifier`
+Scopes are `action:resource:identifier`. Wildcards only live in the identifier slot.
 
 ```
-read:data:customers          — read customer data
-write:data:order-abc-123     — write to a specific order
-read:data:*                  — wildcard: read ANY data resource
+read:data:customer-7291      ✓ specific
+read:data:*                  ✓ any identifier
+read:*:customers             ✗ wildcard in resource — rejected
+*:data:customers             ✗ wildcard in action — rejected
 ```
 
-Wildcard `*` only works in the identifier (third) position. Action and resource must match exactly.
+Use `scope_is_subset(required, held)` to gate every action in your app.
 
-```python
-from agentwrit import scope_is_subset
+### Delegation only narrows
 
-scope_is_subset(["read:data:customers"], ["read:data:*"])     # True
-scope_is_subset(["write:data:customers"], ["read:data:*"])    # False (write != read)
-scope_is_subset(["read:logs:customers"], ["read:data:*"])     # False (logs != data)
-```
+`agent.delegate()` accepts equal or narrower scope and refuses to widen. Max chain depth is 5. If a delegator tries to hand over authority it doesn't hold, the broker returns `403 scope_violation`.
 
-## Delegation
+### Trust the token, not the object
 
-Agents delegate a subset of their scope to other agents. Delegation cannot widen authority — equal or narrower scope is accepted; any scope the delegator doesn't hold is rejected.
+`agent.scope` reflects what you *requested* — useful for gating inside your own process, but client-side. The authoritative, cryptographically signed scope lives in the JWT claims and surfaces via `validate(broker_url, token).claims.scope`. Never make a security decision off `agent.scope` alone.
 
-```python
-# A has broad scope
-agent_a = app.create_agent(
-    orch_id="pipeline", task_id="orchestrator",
-    requested_scope=["read:data:partition-7", "read:data:partition-8"],
-)
+### Revocable at four levels
 
-# A delegates ONLY partition-7 to B
-delegated = agent_a.delegate(
-    delegate_to=agent_b.agent_id,
-    scope=["read:data:partition-7"],
-)
+One token, one agent, one task, or an entire delegation chain — killed on demand by the operator or the agent itself.
 
-# Validate: delegated token has only partition-7
-result = validate(app.broker_url, delegated.access_token)
-print(result.claims.scope)  # ['read:data:partition-7']
-```
+→ Full model, scope gotchas, and trust chain in **[Concepts](docs/concepts.md)**.
 
-## Error Handling
+---
+
+## 🎬 Demos
+
+Two complete apps ship with the repo. Both have splash pages that frame what you're looking at before you dive into code.
+
+### 🏥 MedAssist — healthcare walkthrough
+
+A FastAPI clinical assistant. You ask a plain-language question about a patient; an LLM picks tools (records, labs, billing, prescriptions); the app spawns broker agents on demand, each scoped to *one patient and one category*. Cross-patient questions are denied. Prescription writes flow through a delegation chain.
+
+**[demo/README.md](demo/README.md)** — run instructions, scenario playbook, code map.
+
+### 🎫 Support Tickets — three-agent pipeline
+
+Flask + HTMX + SSE. Three LLM-driven agents (triage → knowledge → response) process customer tickets. Anonymous tickets halt at triage. Dangerous tools (`delete_account`, `send_external_email`) are in the LLM's tool list but not in the agent's scope — so they never execute. One scenario deliberately skips `release()` to watch a 5-second TTL die on its own.
+
+**[demo2/README.md](demo2/README.md)** — run instructions, five scenarios, code map.
+
+---
+
+## ⚠️ Errors
+
+The broker returns RFC 7807 problem details. The SDK parses them into structured exceptions:
 
 ```python
 from agentwrit.errors import AuthorizationError, TransportError
 
 try:
-    agent = app.create_agent(orch_id="svc", task_id="t", requested_scope=scope)
+    agent = app.create_agent(...)
 except AuthorizationError as e:
-    print(e.status_code)        # 403
-    print(e.problem.detail)     # "scope exceeds app ceiling"
-    print(e.problem.error_code) # "scope_violation"
+    print(e.status_code)          # 403
+    print(e.problem.detail)       # "scope exceeds app ceiling"
+    print(e.problem.error_code)   # "scope_violation"
+    print(e.problem.request_id)   # matches broker X-Request-ID for log correlation
 except TransportError:
     print("Broker unreachable")
 ```
 
-## Architecture
+→ Full hierarchy and every `ProblemDetail` field: **[Developer Guide › Error handling](docs/developer-guide.md#error-handling)**.
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TB
@@ -302,8 +187,9 @@ graph TB
     Agents["Your AI Agents"]
     APIs["Protected APIs"]
 
-    Client ==>|"HTTPS"| Broker
+    Client ==>|"app session"| Broker
     Client -.->|"create_agent()"| Agents
+    Agents -.->|"renew / release / delegate (agent JWT)"| Broker
     Agents ==>|"Bearer JWT"| APIs
 
     style App fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
@@ -312,61 +198,38 @@ graph TB
     style APIs fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
 ```
 
-## Authority Chain
+**Authority narrows at every hop.** Operator sets the app's scope ceiling → app creates agents inside that ceiling → each agent can delegate equal or narrower, up to five hops deep.
 
-```
-Operator (root of trust)
-  │  registers app, sets scope ceiling
-  ▼
-Application (your code — AgentWritApp)
-  │  creates agents within ceiling
-  ▼
-Agent (ephemeral SPIFFE identity + scoped JWT)
-  │  delegation cannot widen scope (equal or narrower allowed)
-  ▼
-Delegated Agent (sub-agent, max 5 hops)
-```
+---
 
-## Documentation
+## 📚 Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [Concepts](docs/concepts.md) | Roles, scopes, delegation, trust model, and standards |
-| [Getting Started](docs/getting-started.md) | Install, connect, and create your first agent |
-| [Developer Guide](docs/developer-guide.md) | Delegation patterns, scope gating, error handling |
-| [API Reference](docs/api-reference.md) | Every class, method, parameter, and exception |
-| [Testing Guide](docs/testing-guide.md) | Unit tests, integration tests, running the test suite |
+| I want to… | Go to |
+|-|-|
+| Run my first agent in 5 minutes | [Getting Started](docs/getting-started.md) |
+| Understand roles, scopes, delegation, trust | [Concepts](docs/concepts.md) |
+| Write real code — renewal loops, scope gating, errors | [Developer Guide](docs/developer-guide.md) |
+| Look up every class, method, exception | [API Reference](docs/api-reference.md) |
+| Run unit, integration, and acceptance tests | [Testing Guide](docs/testing-guide.md) |
+| Study eight focused example apps | [Sample Apps](docs/sample-apps/README.md) |
 
-For broker setup and administration, see the [AgentWrit broker documentation](https://github.com/devonartis/agentwrit/tree/main/docs).
+For broker setup, admin APIs, or operator workflows see the **[broker repo](https://github.com/devonartis/agentwrit)** — it's a separate project.
 
-## Standards Alignment
+---
 
-| Standard | What it addresses |
-|----------|-------------------|
-| **NIST IR 8596** | Unique AI agent identities via SPIFFE IDs |
-| **NIST SP 800-207** | Zero-trust per-request validation |
-| **OWASP Top 10 for Agentic AI (2026)** | ASI03 (Identity/Privilege Abuse), ASI07 (Insecure Inter-Agent Communication) |
-| **IETF WIMSE** | Delegation chain re-binding |
-| **IETF draft-klrc-aiagent-auth-00** | OAuth/WIMSE/SPIFFE framework for AI agents |
+## 🤝 Contributing
 
-## Contributing
-
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full workflow: `uv` setup, **live-broker** verification (clone [agentwrit](https://github.com/devonartis/agentwrit) or use your own broker), and **evidence to include in PRs** so maintainers can review broker-facing changes confidently.
-
-Quick local checks (no broker required for unit tests):
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for `uv` setup, the live-broker requirement, and the evidence maintainers need before merging broker-facing changes.
 
 ```bash
-git clone https://github.com/devonartis/agentwrit-python.git
-cd agentwrit-python
 uv sync --all-extras
-
 uv run ruff check .
 uv run mypy --strict src/
 uv run pytest tests/unit/
 ```
 
-## License
+---
 
-This SDK is licensed under the [MIT License](LICENSE).
+## 📄 License
 
-The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under PolyForm Internal Use 1.0.0. See the broker repo for details.
+MIT. See [LICENSE](LICENSE). The [AgentWrit broker](https://github.com/devonartis/agentwrit) is licensed separately under PolyForm Internal Use 1.0.0.
